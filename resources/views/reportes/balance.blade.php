@@ -35,7 +35,7 @@
                 <tr>
                     <td class="text-start">{{ $nombre }}</td>
                     <td>{{ $m->cantidad ?? 0 }}</td>
-                    <td>{{ number_format($m->total_bs ?? 0, 2) }}</td>
+                    <td>Bs {{ number_format($m->total_bs ?? 0, 2) }}</td>
                     <td>${{ number_format($m->total_usd ?? 0, 2) }}</td>
                 </tr>
             @endforeach
@@ -44,7 +44,7 @@
             <tr>
                 <td>Total</td>
                 <td>{{ $mensual->sum('cantidad') }}</td>
-                <td>{{ number_format($mensual->sum('total_bs'), 2) }}</td>
+                <td>Bs {{ number_format($mensual->sum('total_bs'), 2) }}</td>
                 <td>${{ number_format($mensual->sum('total_usd'), 2) }}</td>
             </tr>
         </tfoot>

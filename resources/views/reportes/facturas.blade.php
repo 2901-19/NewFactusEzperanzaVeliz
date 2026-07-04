@@ -36,7 +36,7 @@
             <tr>
                 <td><a href="{{ route('facturas.show', $f->id) }}">{{ $f->correlativo }}</a></td>
                 <td class="text-start">{{ $f->cliente->nombre ?? 'Contado' }}</td>
-                <td>{{ number_format($f->total_bs, 2) }}</td>
+                <td>Bs {{ number_format($f->total_bs, 2) }}</td>
                 <td>${{ number_format($f->total_usd, 2) }}</td>
                 <td>{{ $f->fecha_venta }}</td>
                 <td>
@@ -52,7 +52,7 @@
         <tfoot>
             <tr class="fw-bold">
                 <td colspan="2" class="text-end">Totales:</td>
-                <td>{{ number_format($totalBs, 2) }}</td>
+                <td>Bs {{ number_format($totalBs, 2) }}</td>
                 <td>${{ number_format($totalUsd, 2) }}</td>
                 <td colspan="2">{{ $facturas->count() }} facturas</td>
             </tr>

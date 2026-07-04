@@ -32,8 +32,8 @@
                     <th>Producto</th>
                     <th>Cantidad</th>
                     <th>Tipo</th>
-                    <th>Precio USD</th>
                     <th>Precio Bs</th>
+                    <th>Precio USD</th>
                     <th>Subtotal Bs</th>
                 </tr>
             </thead>
@@ -43,24 +43,24 @@
                     <td>{{ $item->producto->nombre ?? 'Producto' }}</td>
                     <td>{{ $item->cantidad }}</td>
                     <td><span class="badge bg-info">{{ ucfirst($item->tipo_venta) }}</span></td>
+                    <td>Bs {{ number_format($item->precio_unitario_bs, 2) }}</td>
                     <td>${{ number_format($item->precio_unitario_usd, 2) }}</td>
-                    <td>{{ number_format($item->precio_unitario_bs, 2) }}</td>
-                    <td>{{ number_format($item->subtotal, 2) }}</td>
+                    <td>Bs {{ number_format($item->subtotal, 2) }}</td>
                 </tr>
                 @endforeach
             </tbody>
             <tfoot>
                 <tr>
                     <td colspan="5" class="text-end"><strong>Subtotal Bs:</strong></td>
-                    <td>{{ number_format($factura->subtotal_bs, 2) }}</td>
+                    <td>Bs {{ number_format($factura->subtotal_bs, 2) }}</td>
                 </tr>
                 <tr>
                     <td colspan="5" class="text-end"><strong>IVA (16%):</strong></td>
-                    <td>{{ number_format($factura->iva_bs, 2) }}</td>
+                    <td>Bs {{ number_format($factura->iva_bs, 2) }}</td>
                 </tr>
                 <tr class="fw-bold">
                     <td colspan="5" class="text-end"><strong>Total Bs:</strong></td>
-                    <td>{{ number_format($factura->total_bs, 2) }}</td>
+                    <td>Bs {{ number_format($factura->total_bs, 2) }}</td>
                 </tr>
                 <tr>
                     <td colspan="5" class="text-end"><strong>Total USD:</strong></td>

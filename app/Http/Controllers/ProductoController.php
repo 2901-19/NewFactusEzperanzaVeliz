@@ -11,7 +11,8 @@ class ProductoController extends Controller
     public function index()
     {
         $productos = Producto::withTrashed()->get();
-        return view('productos.index', compact('productos'));
+        $tasas = \App\Models\TasaCambio::pluck('monto', 'tipo');
+        return view('productos.index', compact('productos', 'tasas'));
     }
 
     public function create()

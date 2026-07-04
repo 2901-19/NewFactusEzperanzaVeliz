@@ -22,7 +22,7 @@
             <tr class="{{ $f->estado_credito === 'cancelado' ? 'table-success' : '' }}">
                 <td>{{ $f->correlativo }}</td>
                 <td class="text-start">{{ $f->cliente->nombre ?? 'N/A' }}</td>
-                <td>{{ number_format($f->total_bs, 2) }}</td>
+                <td>Bs {{ number_format($f->total_bs, 2) }}</td>
                 <td>${{ number_format($f->total_usd, 2) }}</td>
                 <td>{{ $f->fecha_venta }}</td>
                 <td>

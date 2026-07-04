@@ -175,7 +175,7 @@ class HerramientasController extends Controller
         $items = $factura->items->map(function ($item) {
             return [
                 'nombre' => $item->producto->nombre ?? 'Producto',
-                'precio_unitario' => $item->precio_unitario_usd,
+                'precio_unitario' => $item->precio_unitario_bs,
                 'cantidad' => $item->cantidad,
                 'total' => $item->subtotal,
             ];
@@ -207,7 +207,9 @@ class HerramientasController extends Controller
             ->orderBy('nombre')
             ->get();
 
-        return view('herramientas.precios', compact('productos'));
+        $tasas = \App\Models\TasaCambio::pluck('monto', 'tipo');
+
+        return view('herramientas.precios', compact('productos', 'tasas'));
     }
 
     public function preciosPdf()
@@ -217,9 +219,10 @@ class HerramientasController extends Controller
             ->orderBy('nombre')
             ->get();
 
+        $tasas = \App\Models\TasaCambio::pluck('monto', 'tipo');
         $fecha = now()->format('d/m/Y H:i');
 
-        $pdf = Pdf::loadView('herramientas.precios-pdf', compact('productos', 'fecha'));
+        $pdf = Pdf::loadView('herramientas.precios-pdf', compact('productos', 'tasas', 'fecha'));
         $pdf->setPaper('letter', 'portrait');
 
         return $pdf->download('lista_precios_' . now()->format('Y_m_d') . '.pdf');

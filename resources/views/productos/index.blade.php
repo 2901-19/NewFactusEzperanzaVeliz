@@ -22,12 +22,17 @@
         </thead>
         <tbody>
             @foreach ($productos as $p)
+            @php
+                $tasaValor = $tasas[$p->fuente_tasa] ?? 1;
+                $puBs = $p->precio_unitario_usd * $tasaValor;
+                $pmBs = $p->precio_mayor_usd * $tasaValor;
+            @endphp
             <tr class="{{ $p->trashed() ? 'table-secondary text-muted' : '' }}">
                 <td class="text-start">{{ $p->nombre }}</td>
                 <td>{{ $p->categoria->nombre ?? '-' }}</td>
                 <td>{{ $p->stock_total }} uds</td>
-                <td>${{ number_format($p->precio_unitario_usd, 2) }}</td>
-                <td>${{ number_format($p->precio_mayor_usd, 2) }}</td>
+                <td>Bs {{ number_format($puBs, 2) }} <small class="text-muted">(${{ number_format($p->precio_unitario_usd, 2) }})</small></td>
+                <td>Bs {{ number_format($pmBs, 2) }} <small class="text-muted">(${{ number_format($p->precio_mayor_usd, 2) }})</small></td>
                 <td>
                     @if ($p->trashed())
                         <span class="badge bg-secondary">Inactivo</span>

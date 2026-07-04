@@ -21,11 +21,16 @@
                     </thead>
                     <tbody>
                         @foreach ($productos as $p)
+                        @php
+                            $tasaValorPos = $tasas[$p->fuente_tasa]->monto ?? 1;
+                            $puBsPos = $p->precio_unitario_usd * $tasaValorPos;
+                            $pmBsPos = $p->precio_mayor_usd * $tasaValorPos;
+                        @endphp
                         <tr>
                             <td class="text-start">{{ $p->nombre }}</td>
                             <td>{{ $p->stock_total }} uds</td>
-                            <td>${{ number_format($p->precio_unitario_usd, 2) }}</td>
-                            <td>${{ number_format($p->precio_mayor_usd, 2) }} <small class="text-muted">({{ $p->cantidad_minima_mayor }}+)</small></td>
+                            <td>Bs {{ number_format($puBsPos, 2) }} <small class="text-muted">(${{ number_format($p->precio_unitario_usd, 2) }})</small></td>
+                            <td>Bs {{ number_format($pmBsPos, 2) }} <small class="text-muted">(${{ number_format($p->precio_mayor_usd, 2) }})</small> <small class="text-muted">({{ $p->cantidad_minima_mayor }}+)</small></td>
                             <td class="text-center">
                                 <button class="btn btn-sm btn-outline-primary agregar-producto" data-id="{{ $p->id }}" title="Agregar al carrito">
                                     <i class="bi bi-cart-plus"></i>
@@ -56,9 +61,9 @@
                             <button class="btn btn-sm btn-outline-secondary" @click="item.cantidad > 1 && item.cantidad--">-</button>
                             <input type="number" x-model="item.cantidad" @input="item.cantidad = Math.max(1, parseInt(item.cantidad) || 1)" class="form-control form-control-sm text-center" style="width: 60px;" min="1">
                             <button class="btn btn-sm btn-outline-secondary" @click="item.cantidad++">+</button>
-                            <span class="ms-auto small" x-text="'$' + (item.precioUnitario * item.cantidad).toFixed(2)"></span>
+                            <span class="ms-auto small" x-text="'Bs ' + getBsPriceTotal(index).toFixed(2)"></span>
                         </div>
-                        <div class="text-muted small" x-text="'Precio: $' + item.precioUnitario.toFixed(2) + (item.cantidad >= item.cantidad_minima_mayor ? ' (Mayor)' : ' (Unitario)')"></div>
+                        <div class="text-muted small" x-text="'Precio: Bs ' + getBsPrice(index).toFixed(2) + (item.cantidad >= item.cantidad_minima_mayor ? ' (Mayor)' : ' (Unitario)')"></div>
                     </div>
                 </template>
                 <div class="text-center text-muted small py-3" x-show="carrito.length === 0">
@@ -258,6 +263,24 @@ document.addEventListener('alpine:init', () => {
             return this.carrito.reduce((sum, i) => {
                 return sum + (i.precioUnitario * i.cantidad);
             }, 0);
+        },
+
+        getBsPrice(index) {
+            const i = this.carrito[index];
+            if (!i) return 0;
+            const tasa = this.tasas[i.fuente_tasa]
+                ? parseFloat(this.tasas[i.fuente_tasa].monto)
+                : 1;
+            return i.precioUnitario * tasa;
+        },
+
+        getBsPriceTotal(index) {
+            const i = this.carrito[index];
+            if (!i) return 0;
+            const tasa = this.tasas[i.fuente_tasa]
+                ? parseFloat(this.tasas[i.fuente_tasa].monto)
+                : 1;
+            return i.precioUnitario * i.cantidad * tasa;
         },
 
         confirmarFactura() {

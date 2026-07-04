@@ -12,18 +12,23 @@
         <thead class="table-dark">
             <tr>
                 <th class="text-start">Producto</th>
-                <th>Precio Unitario USD</th>
-                <th>Precio Mayor USD</th>
+                <th>Precio Unitario</th>
+                <th>Precio Mayor</th>
                 <th>Cant. Mín. Mayor</th>
                 <th>IVA</th>
             </tr>
         </thead>
         <tbody>
             @foreach ($productos as $p)
+            @php
+                $tasaValor = $tasas[$p->fuente_tasa] ?? 1;
+                $puBs = $p->precio_unitario_usd * $tasaValor;
+                $pmBs = $p->precio_mayor_usd * $tasaValor;
+            @endphp
             <tr>
                 <td class="text-start">{{ $p->nombre }}</td>
-                <td>${{ number_format($p->precio_unitario_usd, 2) }}</td>
-                <td>${{ number_format($p->precio_mayor_usd, 2) }}</td>
+                <td>Bs {{ number_format($puBs, 2) }} <small class="text-muted">(${{ number_format($p->precio_unitario_usd, 2) }})</small></td>
+                <td>Bs {{ number_format($pmBs, 2) }} <small class="text-muted">(${{ number_format($p->precio_mayor_usd, 2) }})</small></td>
                 <td>{{ $p->cantidad_minima_mayor }}</td>
                 <td>{{ $p->tiene_iva ? 'Sí' : 'No' }}</td>
             </tr>
