@@ -1,31 +1,42 @@
 @extends('layouts.app')
 @section('titulo', 'Punto de Venta')
 @section('contenido')
-<div x-data="pos()" class="row">
+<div x-data="pos" class="row">
     <div class="col-md-7">
-        <div class="card mb-3">
-            <div class="card-body d-flex gap-2">
-                <input type="text" class="form-control form-control-lg" placeholder="Buscar producto (código o nombre)..." x-model="busqueda" @input="filtrarProductos" x-ref="buscador" id="buscador">
-                <button class="btn btn-outline-secondary" @click="busqueda = ''; filtrarProductos()" x-show="busqueda.length > 0">&times;</button>
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-box"></i> Productos</span>
+                <span class="small text-muted" x-text="'Agregados: ' + carrito.length"></span>
             </div>
-        </div>
-        <div class="row g-2" style="max-height: 60vh; overflow-y: auto;">
-            <template x-for="p in productosFiltrados" :key="p.id">
-                <div class="col-md-4">
-                    <div class="card h-100 text-center cursor-pointer" style="cursor: pointer;" @click="agregar(p)">
-                        <div class="card-body p-2">
-                            <strong x-text="p.nombre" class="small"></strong>
-                            <div class="text-muted small" x-text="'Stock: ' + p.stock_total + ' uds'"></div>
-                            <div class="mt-1">
-                                <span class="badge bg-primary" x-text="'$' + parseFloat(p.precio_unitario_usd).toFixed(2)"></span>
-                                <span class="badge bg-success" x-text="'$' + parseFloat(p.precio_mayor_usd).toFixed(2) + ' (' + p.cantidad_minima_mayor + '+)'"></span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </template>
-            <div class="col-12 text-center text-muted" x-show="productosFiltrados.length === 0">
-                No se encontraron productos.
+            <div class="card-body">
+                <table id="productosTable" class="table table-sm table-hover" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Stock</th>
+                            <th>Precio Unit.</th>
+                            <th>Precio Mayor</th>
+                            <th style="width:60px"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($productos as $p)
+                        <tr>
+                            <td>{{ $p->id }}</td>
+                            <td>{{ $p->nombre }}</td>
+                            <td>{{ $p->stock_total }} uds</td>
+                            <td>${{ number_format($p->precio_unitario_usd, 2) }}</td>
+                            <td>${{ number_format($p->precio_mayor_usd, 2) }} <small class="text-muted">({{ $p->cantidad_minima_mayor }}+)</small></td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-primary agregar-producto" data-id="{{ $p->id }}" title="Agregar al carrito">
+                                    <i class="bi bi-cart-plus"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -156,9 +167,8 @@
 
 @push('scripts')
 <script>
-function pos() {
-    return {
-        busqueda: '',
+document.addEventListener('alpine:init', () => {
+    Alpine.data('pos', () => ({
         productos: @json($productos),
         clientes: @json($clientes),
         tasas: @json($tasas),
@@ -170,10 +180,31 @@ function pos() {
         cargando: false,
 
         init() {
+            if ($.fn.DataTable) {
+                this.dataTable = $('#productosTable').DataTable({
+                    language: {
+                        url: '//cdn.datatables.net/plug-ins/2.2.2/i18n/es-ES.json',
+                    },
+                    pageLength: 15,
+                    lengthMenu: [10, 15, 25, 50],
+                    order: [[0, 'asc']],
+                    columnDefs: [
+                        { targets: 5, orderable: false },
+                    ],
+                });
+
+                $('#productosTable tbody').on('click', '.agregar-producto', (e) => {
+                    const id = parseInt($(e.currentTarget).data('id'));
+                    const producto = this.productos.find(p => p.id === id);
+                    if (producto) this.agregar(producto);
+                });
+            }
+
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'F2') {
                     e.preventDefault();
-                    this.$refs.buscador.focus();
+                    const input = document.querySelector('.dataTables_filter input');
+                    if (input) input.focus();
                 }
                 if (e.key === 'F8' && this.carrito.length > 0) {
                     e.preventDefault();
@@ -181,18 +212,6 @@ function pos() {
                 }
             });
         },
-
-        get productosFiltrados() {
-            if (!this.busqueda) return this.productos;
-            const b = this.busqueda.toLowerCase();
-            return this.productos.filter(p =>
-                String(p.id).includes(b) ||
-                p.nombre.toLowerCase().includes(b) ||
-                (p.descripcion && p.descripcion.toLowerCase().includes(b))
-            );
-        },
-
-        filtrarProductos() {},
 
         agregar(p) {
             const existente = this.carrito.find(i => i.id === p.id);
@@ -215,7 +234,6 @@ function pos() {
                     }
                 });
             }
-            this.busqueda = '';
         },
 
         get subtotalBs() {
@@ -311,8 +329,8 @@ function pos() {
             const toast = new bootstrap.Toast(document.getElementById('errorToast'));
             toast.show();
         },
-    };
-}
+    }));
+});
 </script>
 @endpush
 @endsection

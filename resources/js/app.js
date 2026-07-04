@@ -1,16 +1,15 @@
 import './bootstrap';
-import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+import * as bootstrap from 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import Alpine from 'alpinejs';
 import $ from 'jquery';
 import 'datatables.net-bs5';
 import Swal from 'sweetalert2';
 
+window.bootstrap = bootstrap;
 window.Alpine = Alpine;
 window.$ = $;
 window.jQuery = $;
 window.Swal = Swal;
-
-Alpine.start();
 
 // SweetAlert2 config por defecto
 const Toast = Swal.mixin({
@@ -46,5 +45,6 @@ $.extend($.fn.dataTable.defaults, {
     },
     pageLength: 25,
     lengthMenu: [10, 25, 50, 100],
-    responsive: true,
 });
+
+Alpine.start();
