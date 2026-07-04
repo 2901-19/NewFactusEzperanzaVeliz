@@ -6,15 +6,16 @@ use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\ImpuestoController;
 use App\Http\Controllers\TasaCambioController;
 use App\Http\Controllers\FacturaController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ReporteController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return redirect()->route('login');
 });
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth'])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -32,6 +33,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/creditos', [FacturaController::class, 'creditos'])->name('facturas.creditos');
     Route::get('/facturas/{factura}', [FacturaController::class, 'show'])->name('facturas.show');
     Route::post('/facturas/{factura}/pagar-credito', [FacturaController::class, 'pagarCredito'])->name('facturas.pagar-credito');
+
+    Route::get('/reportes/facturas', [ReporteController::class, 'facturas'])->name('reportes.facturas');
+    Route::get('/reportes/balance', [ReporteController::class, 'balance'])->name('reportes.balance');
+    Route::get('/reportes/stock', [ReporteController::class, 'stock'])->name('reportes.stock');
 });
 
 require __DIR__.'/auth.php';
