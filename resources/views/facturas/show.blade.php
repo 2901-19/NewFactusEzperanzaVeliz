@@ -77,14 +77,16 @@
         </button>
 @push('scripts')
 <script>
-document.getElementById('btn-imprimir-ticket')?.addEventListener('click', function () {
-    Swal.fire({
-        title: '¿Imprimir ticket?',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Sí, imprimir',
-        cancelButtonText: 'Cancelar',
-    }).then((r) => { if (r.isConfirmed) window.location.href = '{{ route("herramientas.imprimir-factura", $factura->id) }}'; });
+document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('btn-imprimir-ticket')?.addEventListener('click', function () {
+        Swal.fire({
+            title: '¿Imprimir ticket?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, imprimir',
+            cancelButtonText: 'Cancelar',
+        }).then((r) => { if (r.isConfirmed) window.location.href = '{{ route("herramientas.imprimir-factura", $factura->id) }}'; });
+    });
 });
 </script>
 @endpush

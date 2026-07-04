@@ -57,17 +57,19 @@
 @endsection
 @push('scripts')
 <script>
-$(document).on('click', '.btn-pagar', function () {
-    const btn = $(this);
-    Swal.fire({
-        title: '¿Marcar como pagado?',
-        text: 'Crédito #' + btn.data('correlativo'),
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#198754',
-        confirmButtonText: 'Sí, pagado',
-        cancelButtonText: 'Cancelar',
-    }).then((r) => { if (r.isConfirmed) $.post(btn.data('url'), { _token: csrf }).then(() => location.reload()); });
+document.addEventListener('DOMContentLoaded', function () {
+    $(document).on('click', '.btn-pagar', function () {
+        const btn = $(this);
+        Swal.fire({
+            title: '¿Marcar como pagado?',
+            text: 'Crédito #' + btn.data('correlativo'),
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#198754',
+            confirmButtonText: 'Sí, pagado',
+            cancelButtonText: 'Cancelar',
+        }).then((r) => { if (r.isConfirmed) $.post(btn.data('url'), { _token: csrf }).then(() => location.reload()); });
+    });
 });
 </script>
 @endpush

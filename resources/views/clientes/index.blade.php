@@ -37,18 +37,20 @@
 @endsection
 @push('scripts')
 <script>
-$('#dt-clientes').DataTable({ order: [[0, 'desc']], columnDefs: [{ orderable: false, targets: -1 }] });
-$(document).on('click', '.btn-delete', function () {
-    const btn = $(this);
-    Swal.fire({
-        title: '¿Eliminar cliente?',
-        text: 'Las facturas asociadas quedarán sin cliente.',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc3545',
-        confirmButtonText: 'Sí, eliminar',
-        cancelButtonText: 'Cancelar',
-    }).then((r) => { if (r.isConfirmed) $.post(btn.data('url'), { _token: csrf, _method: 'DELETE' }).then(() => location.reload()); });
+document.addEventListener('DOMContentLoaded', function () {
+    if ($.fn.DataTable) { $('#dt-clientes').DataTable({ order: [[0, 'desc']], columnDefs: [{ orderable: false, targets: -1 }] }); }
+    $(document).on('click', '.btn-delete', function () {
+        const btn = $(this);
+        Swal.fire({
+            title: '¿Eliminar cliente?',
+            text: 'Las facturas asociadas quedarán sin cliente.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar',
+        }).then((r) => { if (r.isConfirmed) $.post(btn.data('url'), { _token: csrf, _method: 'DELETE' }).then(() => location.reload()); });
+    });
 });
 </script>
 @endpush

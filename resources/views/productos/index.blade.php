@@ -59,32 +59,36 @@
 @endsection
 @push('scripts')
 <script>
-$('#dt-productos').DataTable({
-    order: [[0, 'desc']],
-    columnDefs: [{ orderable: false, targets: -1 }],
-});
-$(document).on('click', '.btn-delete', function () {
-    const btn = $(this);
-    Swal.fire({
-        title: '¿Desactivar producto?',
-        text: 'El producto quedará inactivo, pero podrás restaurarlo después.',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc3545',
-        confirmButtonText: 'Sí, desactivar',
-        cancelButtonText: 'Cancelar',
-    }).then((r) => { if (r.isConfirmed) $.post(btn.data('url'), { _token: csrf, _method: 'DELETE' }).then(() => location.reload()); });
-});
-$(document).on('click', '.btn-restore', function () {
-    const btn = $(this);
-    Swal.fire({
-        title: '¿Activar producto?',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#198754',
-        confirmButtonText: 'Sí, activar',
-        cancelButtonText: 'Cancelar',
-    }).then((r) => { if (r.isConfirmed) $.post(btn.data('url'), { _token: csrf }).then(() => location.reload()); });
+document.addEventListener('DOMContentLoaded', function () {
+    if ($.fn.DataTable) {
+        $('#dt-productos').DataTable({
+            order: [[0, 'desc']],
+            columnDefs: [{ orderable: false, targets: -1 }],
+        });
+    }
+    $(document).on('click', '.btn-delete', function () {
+        const btn = $(this);
+        Swal.fire({
+            title: '¿Desactivar producto?',
+            text: 'El producto quedará inactivo, pero podrás restaurarlo después.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            confirmButtonText: 'Sí, desactivar',
+            cancelButtonText: 'Cancelar',
+        }).then((r) => { if (r.isConfirmed) $.post(btn.data('url'), { _token: csrf, _method: 'DELETE' }).then(() => location.reload()); });
+    });
+    $(document).on('click', '.btn-restore', function () {
+        const btn = $(this);
+        Swal.fire({
+            title: '¿Activar producto?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#198754',
+            confirmButtonText: 'Sí, activar',
+            cancelButtonText: 'Cancelar',
+        }).then((r) => { if (r.isConfirmed) $.post(btn.data('url'), { _token: csrf }).then(() => location.reload()); });
+    });
 });
 </script>
 @endpush

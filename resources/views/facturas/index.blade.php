@@ -61,17 +61,19 @@
 @endsection
 @push('scripts')
 <script>
-$(document).on('click', '.btn-anular', function () {
-    const btn = $(this);
-    Swal.fire({
-        title: '¿Anular factura?',
-        text: 'Se restaurará el stock de todos los productos.',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc3545',
-        confirmButtonText: 'Sí, anular',
-        cancelButtonText: 'Cancelar',
-    }).then((r) => { if (r.isConfirmed) $.post(btn.data('url'), { _token: csrf }).then(() => location.reload()); });
+document.addEventListener('DOMContentLoaded', function () {
+    $(document).on('click', '.btn-anular', function () {
+        const btn = $(this);
+        Swal.fire({
+            title: '¿Anular factura?',
+            text: 'Se restaurará el stock de todos los productos.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            confirmButtonText: 'Sí, anular',
+            cancelButtonText: 'Cancelar',
+        }).then((r) => { if (r.isConfirmed) $.post(btn.data('url'), { _token: csrf }).then(() => location.reload()); });
+    });
 });
 </script>
 @endpush
