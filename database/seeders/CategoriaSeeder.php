@@ -10,16 +10,11 @@ class CategoriaSeeder extends Seeder
     public function run(): void
     {
         $categorias = [
-            'Alimentos' => 'Arroz, harina, pasta, azúcar, café, aceite',
+            'Alimentos' => 'Arroz, harina, pasta, café',
             'Bebidas' => 'Gaseosas, jugos, agua, maltín',
-            'Licores' => 'Ron, cerveza, whisky, vino',
-            'Aseo Personal' => 'Jabón, shampoo, desodorante, pasta dental',
-            'Limpieza' => 'Cloro, detergente, desinfectante, lavaplatos',
-            'Mascotas' => 'Comida para perros y gatos',
-            'Golosinas' => 'Chocolate, papas, chicles',
-            'Electrónicos' => 'Pilas, bombillos, cables',
+            'Aseo Personal' => 'Jabón, shampoo, desodorante',
+            'Limpieza' => 'Cloro, detergente, desinfectante',
             'Lácteos' => 'Leche, queso, margarina, huevos',
-            'Carnes y Embutidos' => 'Jamón, salchicha, mortadela',
         ];
 
         foreach ($categorias as $nombre => $desc) {

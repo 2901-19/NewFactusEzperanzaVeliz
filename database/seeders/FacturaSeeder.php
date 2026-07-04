@@ -20,13 +20,13 @@ class FacturaSeeder extends Seeder
         $iva = Impuesto::latest('fecha')->first();
         $ivaPorcentaje = $iva ? (float) $iva->porcentaje / 100 : 0.16;
 
-        // Generar facturas de los últimos 45 días
-        $inicio = now()->subDays(45);
+        // Generar facturas de los últimos 3 días
+        $inicio = now()->subDays(3);
         $totalFacturas = 0;
 
-        for ($dia = 0; $dia <= 45; $dia++) {
+        for ($dia = 0; $dia < 3; $dia++) {
             $fecha = $inicio->copy()->addDays($dia);
-            $facturasDelDia = rand(3, 12);
+            $facturasDelDia = rand(2, 4);
 
             for ($f = 0; $f < $facturasDelDia; $f++) {
                 $esCredito = rand(1, 100) <= 25; // 25% chance de crédito
