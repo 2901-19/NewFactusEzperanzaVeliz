@@ -15,7 +15,7 @@
             </tr>
         </thead>
         <tbody>
-            @forelse ($productos as $p)
+            @foreach ($productos as $p)
             <tr>
                 <td>{{ $p->nombre }}</td>
                 <td>{{ $p->stock_paquetes }}</td>
@@ -26,9 +26,7 @@
                     </span>
                 </td>
             </tr>
-            @empty
-            <tr><td colspan="4" class="text-center text-muted">Todos los productos tienen stock suficiente.</td></tr>
-            @endforelse
+            @endforeach
         </tbody>
     </table>
 </div>

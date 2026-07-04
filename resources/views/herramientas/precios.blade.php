@@ -19,7 +19,7 @@
             </tr>
         </thead>
         <tbody>
-            @forelse ($productos as $p)
+            @foreach ($productos as $p)
             <tr>
                 <td>{{ $p->nombre }}</td>
                 <td>${{ number_format($p->precio_unitario_usd, 2) }}</td>
@@ -27,9 +27,7 @@
                 <td>{{ $p->cantidad_minima_mayor }}</td>
                 <td>{{ $p->tiene_iva ? 'Sí' : 'No' }}</td>
             </tr>
-            @empty
-            <tr><td colspan="5" class="text-center text-muted">No hay productos disponibles.</td></tr>
-            @endforelse
+            @endforeach
         </tbody>
     </table>
 </div>

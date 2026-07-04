@@ -18,7 +18,7 @@
             </tr>
         </thead>
         <tbody>
-            @forelse ($facturas as $f)
+            @foreach ($facturas as $f)
             <tr class="{{ $f->estado_credito === 'cancelado' ? 'table-success' : '' }}">
                 <td>{{ $f->correlativo }}</td>
                 <td>{{ $f->cliente->nombre ?? 'N/A' }}</td>
@@ -43,11 +43,7 @@
                     @endif
                 </td>
             </tr>
-            @empty
-            <tr>
-                <td colspan="7" class="text-center text-muted">No hay facturas a crédito.</td>
-            </tr>
-            @endforelse
+            @endforeach
         </tbody>
     </table>
 </div>

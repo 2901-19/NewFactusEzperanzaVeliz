@@ -32,7 +32,7 @@
             </tr>
         </thead>
         <tbody>
-            @forelse ($facturas as $f)
+            @foreach ($facturas as $f)
             <tr>
                 <td><a href="{{ route('facturas.show', $f->id) }}">{{ $f->correlativo }}</a></td>
                 <td>{{ $f->cliente->nombre ?? 'Contado' }}</td>
@@ -47,9 +47,7 @@
                     @endif
                 </td>
             </tr>
-            @empty
-            <tr><td colspan="6" class="text-center text-muted">No hay facturas en este rango.</td></tr>
-            @endforelse
+            @endforeach
         </tbody>
         <tfoot>
             <tr class="fw-bold">

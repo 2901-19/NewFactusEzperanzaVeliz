@@ -19,7 +19,7 @@
             </tr>
         </thead>
         <tbody>
-            @forelse ($facturas as $f)
+            @foreach ($facturas as $f)
             <tr class="{{ $f->estado === 'anulada' ? 'table-danger text-muted' : '' }}">
                 <td>{{ $f->correlativo }}</td>
                 <td>{{ $f->cliente->nombre ?? 'Contado' }}</td>
@@ -49,9 +49,7 @@
                     @endif
                 </td>
             </tr>
-            @empty
-            <tr><td colspan="8" class="text-center text-muted">No hay facturas registradas.</td></tr>
-            @endforelse
+            @endforeach
         </tbody>
     </table>
 </div>
