@@ -8,7 +8,7 @@
     </a>
 </div>
 <div class="table-responsive">
-    <table class="table table-bordered table-striped">
+    <table id="preciosTable" class="table table-bordered table-striped">
         <thead class="table-dark">
             <tr>
                 <th>Producto</th>
@@ -34,3 +34,14 @@
     </table>
 </div>
 @endsection
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    $('#preciosTable').DataTable({
+        language: window.DataTableSpanish,
+        order: [[0, 'asc']],
+        pageLength: 25,
+    });
+});
+</script>
+@endpush
