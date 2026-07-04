@@ -1,42 +1,19 @@
-<section>
-    <header>
-        <h2 class="text-lg font-medium text-gray-900">
-            {{ __('Profile Information') }}
-        </h2>
-
-        <p class="mt-1 text-sm text-gray-600">
-            {{ __("Actualiza la información de tu perfil.") }}
-        </p>
-    </header>
-
-    <form method="post" action="{{ route('profile.update') }}" class="mt-6 space-y-6">
-        @csrf
-        @method('patch')
-
-        <div>
-            <x-input-label for="name" :value="__('Name')" />
-            <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" :value="old('name', $user->name)" required autofocus autocomplete="name" />
-            <x-input-error class="mt-2" :messages="$errors->get('name')" />
-        </div>
-
-        <div>
-            <x-input-label for="usuario" :value="__('Usuario')" />
-            <x-text-input id="usuario" name="usuario" type="text" class="mt-1 block w-full" :value="old('usuario', $user->usuario)" required autocomplete="username" />
-            <x-input-error class="mt-2" :messages="$errors->get('usuario')" />
-        </div>
-
-        <div class="flex items-center gap-4">
-            <x-primary-button>{{ __('Save') }}</x-primary-button>
-
-            @if (session('status') === 'profile-updated')
-                <p
-                    x-data="{ show: true }"
-                    x-show="show"
-                    x-transition
-                    x-init="setTimeout(() => show = false, 2000)"
-                    class="text-sm text-gray-600"
-                >{{ __('Saved.') }}</p>
-            @endif
-        </div>
-    </form>
-</section>
+<form method="post" action="{{ route('profile.update') }}">
+    @csrf @method('patch')
+    <div class="mb-3">
+        <label for="name" class="form-label">Nombre</label>
+        <input id="name" name="name" type="text" class="form-control @error('name') is-invalid @enderror" value="{{ old('name', $user->name) }}" required>
+        @error('name') <div class="invalid-feedback">{{ $message }}</div> @enderror
+    </div>
+    <div class="mb-3">
+        <label for="usuario" class="form-label">Usuario</label>
+        <input id="usuario" name="usuario" type="text" class="form-control @error('usuario') is-invalid @enderror" value="{{ old('usuario', $user->usuario) }}" required>
+        @error('usuario') <div class="invalid-feedback">{{ $message }}</div> @enderror
+    </div>
+    <div class="d-flex align-items-center gap-3">
+        <button type="submit" class="btn btn-primary">Guardar</button>
+        @if (session('status') === 'profile-updated')
+            <small class="text-success" x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 2000)">Guardado.</small>
+        @endif
+    </div>
+</form>
