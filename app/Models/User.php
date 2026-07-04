@@ -58,4 +58,30 @@ class User extends Authenticatable
     {
         return $this->hasMany(Factura::class);
     }
+
+    public function permisosDirectos()
+    {
+        return $this->belongsToMany(Permiso::class);
+    }
+
+    public function permisos(): \Illuminate\Support\Collection
+    {
+        $permisosRol = Permiso::whereIn('id', function ($q) {
+            $q->select('permiso_id')->from('permiso_rol')->where('rol', $this->rol);
+        })->pluck('slug');
+
+        $permisosUser = $this->permisosDirectos->pluck('slug');
+
+        return $permisosRol->merge($permisosUser)->unique();
+    }
+
+    public function hasPermiso(string $slug): bool
+    {
+        return $this->permisos()->contains($slug);
+    }
+
+    public function esAdmin(): bool
+    {
+        return $this->rol === 'admin';
+    }
 }

@@ -18,51 +18,50 @@ Route::get('/', function () {
 });
 
 Route::get('/dashboard', [DashboardController::class, 'index'])
-    ->middleware(['auth'])->name('dashboard');
+    ->middleware(['auth', 'permiso:ver-dashboard'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    Route::resource('productos', ProductoController::class)->except('show');
-    Route::post('productos/{id}/restore', [ProductoController::class, 'restore'])->name('productos.restore');
-    Route::resource('clientes', ClienteController::class)->except('show');
-    Route::resource('impuestos', ImpuestoController::class)->except('show')->middleware('rol:admin');
-    Route::get('/tasas-cambio', [TasaCambioController::class, 'index'])->name('tasas-cambio.index')->middleware('rol:admin');
-    Route::post('/tasas-cambio/actualizar', [TasaCambioController::class, 'actualizar'])->name('tasas-cambio.actualizar')->middleware('rol:admin');
-    Route::resource('categorias', CategoriaController::class)->except('show')->middleware('rol:admin');
+    Route::resource('productos', ProductoController::class)->except('show')->middleware('permiso:gestionar-productos');
+    Route::post('productos/{id}/restore', [ProductoController::class, 'restore'])->name('productos.restore')->middleware('permiso:gestionar-productos');
+    Route::resource('clientes', ClienteController::class)->except('show')->middleware('permiso:gestionar-clientes');
+    Route::post('clientes/rapido', [ClienteController::class, 'storeRapido'])->name('clientes.rapido')->middleware('permiso:gestionar-clientes');
+    Route::resource('impuestos', ImpuestoController::class)->except('show')->middleware('permiso:gestionar-impuestos');
+    Route::get('/tasas-cambio', [TasaCambioController::class, 'index'])->name('tasas-cambio.index')->middleware('permiso:gestionar-tasas');
+    Route::post('/tasas-cambio/actualizar', [TasaCambioController::class, 'actualizar'])->name('tasas-cambio.actualizar')->middleware('permiso:gestionar-tasas');
+    Route::resource('categorias', CategoriaController::class)->except('show')->middleware('permiso:gestionar-categorias');
 
-    Route::get('/pos', [FacturaController::class, 'pos'])->name('facturas.pos');
-    Route::post('/facturas', [FacturaController::class, 'store'])->name('facturas.store');
-    Route::get('/facturas', [FacturaController::class, 'index'])->name('facturas.index');
-    Route::get('/creditos', [FacturaController::class, 'creditos'])->name('facturas.creditos');
-    Route::get('/facturas/{factura}', [FacturaController::class, 'show'])->name('facturas.show');
-    Route::post('/facturas/{factura}/pagar-credito', [FacturaController::class, 'pagarCredito'])->name('facturas.pagar-credito');
-    Route::post('/facturas/{factura}/anular', [FacturaController::class, 'anular'])->name('facturas.anular');
+    Route::get('/pos', [FacturaController::class, 'pos'])->name('facturas.pos')->middleware('permiso:usar-pos');
+    Route::post('/facturas', [FacturaController::class, 'store'])->name('facturas.store')->middleware('permiso:crear-facturas');
+    Route::get('/facturas', [FacturaController::class, 'index'])->name('facturas.index')->middleware('permiso:ver-facturas');
+    Route::get('/creditos', [FacturaController::class, 'creditos'])->name('facturas.creditos')->middleware('permiso:gestionar-creditos');
+    Route::get('/facturas/{factura}', [FacturaController::class, 'show'])->name('facturas.show')->middleware('permiso:ver-facturas');
+    Route::post('/facturas/{factura}/pagar-credito', [FacturaController::class, 'pagarCredito'])->name('facturas.pagar-credito')->middleware('permiso:gestionar-creditos');
+    Route::post('/facturas/{factura}/anular', [FacturaController::class, 'anular'])->name('facturas.anular')->middleware('permiso:anular-facturas');
 
-    Route::middleware('rol:admin')->group(function () {
-        Route::get('/reportes/facturas', [ReporteController::class, 'facturas'])->name('reportes.facturas');
-        Route::get('/reportes/balance', [ReporteController::class, 'balance'])->name('reportes.balance');
-        Route::get('/reportes/stock', [ReporteController::class, 'stock'])->name('reportes.stock');
+    Route::get('/reportes/facturas', [ReporteController::class, 'facturas'])->name('reportes.facturas')->middleware('permiso:ver-reporte-facturas');
+    Route::get('/reportes/balance', [ReporteController::class, 'balance'])->name('reportes.balance')->middleware('permiso:ver-balance');
+    Route::get('/reportes/stock', [ReporteController::class, 'stock'])->name('reportes.stock')->middleware('permiso:ver-stock-bajo');
 
-        Route::get('/herramientas/datos', [HerramientasController::class, 'datos'])->name('herramientas.datos');
-        Route::get('/herramientas/exportar', [HerramientasController::class, 'exportar'])->name('herramientas.exportar');
-        Route::post('/herramientas/importar', [HerramientasController::class, 'importar'])->name('herramientas.importar');
+    Route::get('/herramientas/datos', [HerramientasController::class, 'datos'])->name('herramientas.datos')->middleware('permiso:exportar-datos');
+    Route::get('/herramientas/exportar', [HerramientasController::class, 'exportar'])->name('herramientas.exportar')->middleware('permiso:exportar-datos');
+    Route::post('/herramientas/importar', [HerramientasController::class, 'importar'])->name('herramientas.importar')->middleware('permiso:importar-datos');
 
-        Route::get('/herramientas/impresora', [HerramientasController::class, 'imprimirConfig'])->name('herramientas.impresora');
-        Route::post('/herramientas/impresora', [HerramientasController::class, 'imprimirGuardar'])->name('herramientas.impresora.guardar');
-        Route::post('/herramientas/impresora/test', [HerramientasController::class, 'imprimirTest'])->name('herramientas.impresora.test');
-        Route::get('/herramientas/imprimir-factura/{factura}', [HerramientasController::class, 'imprimirFactura'])->name('herramientas.imprimir-factura');
+    Route::get('/herramientas/impresora', [HerramientasController::class, 'imprimirConfig'])->name('herramientas.impresora')->middleware('permiso:configurar-impresora');
+    Route::post('/herramientas/impresora', [HerramientasController::class, 'imprimirGuardar'])->name('herramientas.impresora.guardar')->middleware('permiso:configurar-impresora');
+    Route::post('/herramientas/impresora/test', [HerramientasController::class, 'imprimirTest'])->name('herramientas.impresora.test')->middleware('permiso:configurar-impresora');
+    Route::get('/herramientas/imprimir-factura/{factura}', [HerramientasController::class, 'imprimirFactura'])->name('herramientas.imprimir-factura')->middleware('permiso:configurar-impresora');
 
-        Route::get('/herramientas/precios', [HerramientasController::class, 'precios'])->name('herramientas.precios');
-        Route::get('/herramientas/precios/pdf', [HerramientasController::class, 'preciosPdf'])->name('herramientas.precios.pdf');
+    Route::get('/herramientas/precios', [HerramientasController::class, 'precios'])->name('herramientas.precios')->middleware('permiso:ver-lista-precios');
+    Route::get('/herramientas/precios/pdf', [HerramientasController::class, 'preciosPdf'])->name('herramientas.precios.pdf')->middleware('permiso:ver-lista-precios');
 
-        Route::get('/herramientas/configuracion', [HerramientasController::class, 'configuracion'])->name('herramientas.configuracion');
-        Route::post('/herramientas/configuracion', [HerramientasController::class, 'configuracionGuardar'])->name('herramientas.configuracion.guardar');
+    Route::get('/herramientas/configuracion', [HerramientasController::class, 'configuracion'])->name('herramientas.configuracion')->middleware('permiso:configuracion');
+    Route::post('/herramientas/configuracion', [HerramientasController::class, 'configuracionGuardar'])->name('herramientas.configuracion.guardar')->middleware('permiso:configuracion');
 
-        Route::resource('usuarios', UserController::class)->except('show');
-    });
+    Route::resource('usuarios', UserController::class)->except('show')->middleware('permiso:gestionar-usuarios');
 });
 
 require __DIR__.'/auth.php';
