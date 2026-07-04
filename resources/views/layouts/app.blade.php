@@ -33,8 +33,12 @@
     <script>
     const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     function toggleSidebar() {
-        document.getElementById('sidebar').classList.toggle('open');
-        document.getElementById('sidebarOverlay').classList.toggle('show');
+        if (window.innerWidth < 992) {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('sidebarOverlay').classList.toggle('show');
+        } else {
+            document.body.classList.toggle('sidebar-collapsed');
+        }
     }
     </script>
     @stack('scripts')

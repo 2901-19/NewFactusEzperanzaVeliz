@@ -48,7 +48,7 @@
                 <span><i class="bi bi-cart"></i> Carrito</span>
                 <span class="badge bg-secondary" x-text="carrito.length + ' items'"></span>
             </div>
-            <div class="card-body p-2" style="max-height: 35vh; overflow-y: auto;">
+            <div class="card-body p-2">
                 <template x-for="(item, index) in carrito" :key="index">
                     <div class="border-bottom pb-2 mb-2">
                         <div class="d-flex justify-content-between">
