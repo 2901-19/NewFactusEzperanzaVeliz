@@ -39,12 +39,9 @@
                         <i class="bi bi-eye"></i>
                     </a>
                     @if ($f->estado_credito === 'pendiente')
-                    <form action="{{ route('facturas.pagar-credito', $f->id) }}" method="POST" class="d-inline">
-                        @csrf
-                        <button class="btn btn-sm btn-success" onclick="return confirm('¿Cancelar crédito #{{ $f->correlativo }}?')">
+                        <button class="btn btn-sm btn-success btn-pagar" data-url="{{ route('facturas.pagar-credito', $f->id) }}" data-correlativo="{{ $f->correlativo }}">
                             <i class="bi bi-check-lg"></i> Pagar
                         </button>
-                    </form>
                     @endif
                 </td>
             </tr>
@@ -58,3 +55,19 @@
 </div>
 <div class="text-muted small">Total: {{ $facturas->count() }} facturas</div>
 @endsection
+@push('scripts')
+<script>
+$(document).on('click', '.btn-pagar', function () {
+    const btn = $(this);
+    Swal.fire({
+        title: '¿Marcar como pagado?',
+        text: 'Crédito #' + btn.data('correlativo'),
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#198754',
+        confirmButtonText: 'Sí, pagado',
+        cancelButtonText: 'Cancelar',
+    }).then((r) => { if (r.isConfirmed) $.post(btn.data('url'), { _token: csrf }).then(() => location.reload()); });
+});
+</script>
+@endpush

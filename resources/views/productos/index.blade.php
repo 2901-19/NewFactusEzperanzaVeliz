@@ -8,7 +8,7 @@
     </a>
 </div>
 <div class="table-responsive">
-    <table class="table table-bordered table-striped">
+    <table id="dt-productos" class="table table-bordered table-striped">
         <thead class="table-dark">
             <tr>
                 <th>ID</th>
@@ -42,19 +42,13 @@
                         <i class="bi bi-pencil"></i>
                     </a>
                     @if ($p->trashed())
-                        <form action="{{ route('productos.restore', $p->id) }}" method="POST" class="d-inline">
-                            @csrf
-                            <button class="btn btn-sm btn-success" onclick="return confirm('¿Activar este producto?')">
-                                <i class="bi bi-arrow-counterclockwise"></i>
-                            </button>
-                        </form>
+                    <button class="btn btn-sm btn-success btn-restore" data-url="{{ route('productos.restore', $p->id) }}">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </button>
                     @else
-                        <form action="{{ route('productos.destroy', $p->id) }}" method="POST" class="d-inline">
-                            @csrf @method('DELETE')
-                            <button class="btn btn-sm btn-danger" onclick="return confirm('¿Desactivar este producto?')">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </form>
+                    <button class="btn btn-sm btn-danger btn-delete" data-url="{{ route('productos.destroy', $p->id) }}">
+                        <i class="bi bi-trash"></i>
+                    </button>
                     @endif
                 </td>
             </tr>
@@ -62,5 +56,35 @@
         </tbody>
     </table>
 </div>
-<div class="text-muted small">Total: {{ $productos->count() }} productos</div>
 @endsection
+@push('scripts')
+<script>
+$('#dt-productos').DataTable({
+    order: [[0, 'desc']],
+    columnDefs: [{ orderable: false, targets: -1 }],
+});
+$(document).on('click', '.btn-delete', function () {
+    const btn = $(this);
+    Swal.fire({
+        title: '¿Desactivar producto?',
+        text: 'El producto quedará inactivo, pero podrás restaurarlo después.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        confirmButtonText: 'Sí, desactivar',
+        cancelButtonText: 'Cancelar',
+    }).then((r) => { if (r.isConfirmed) $.post(btn.data('url'), { _token: csrf, _method: 'DELETE' }).then(() => location.reload()); });
+});
+$(document).on('click', '.btn-restore', function () {
+    const btn = $(this);
+    Swal.fire({
+        title: '¿Activar producto?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#198754',
+        confirmButtonText: 'Sí, activar',
+        cancelButtonText: 'Cancelar',
+    }).then((r) => { if (r.isConfirmed) $.post(btn.data('url'), { _token: csrf }).then(() => location.reload()); });
+});
+</script>
+@endpush

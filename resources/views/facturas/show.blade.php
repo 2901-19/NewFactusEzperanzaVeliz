@@ -72,9 +72,22 @@
         <a href="{{ url()->previous() }}" class="btn btn-secondary">
             <i class="bi bi-arrow-left"></i> Volver
         </a>
-        <a href="{{ route('herramientas.imprimir-factura', $factura->id) }}" class="btn btn-outline-primary ms-2" onclick="return confirm('¿Enviar a la impresora térmica?')">
+        <button class="btn btn-outline-primary ms-2" id="btn-imprimir-ticket">
             <i class="bi bi-printer"></i> Imprimir Ticket
-        </a>
+        </button>
+@push('scripts')
+<script>
+document.getElementById('btn-imprimir-ticket')?.addEventListener('click', function () {
+    Swal.fire({
+        title: '¿Imprimir ticket?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, imprimir',
+        cancelButtonText: 'Cancelar',
+    }).then((r) => { if (r.isConfirmed) window.location.href = '{{ route("herramientas.imprimir-factura", $factura->id) }}'; });
+});
+</script>
+@endpush
     </div>
 </div>
 @endsection

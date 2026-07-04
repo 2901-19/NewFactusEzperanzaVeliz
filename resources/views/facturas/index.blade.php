@@ -45,12 +45,9 @@
                         <i class="bi bi-eye"></i>
                     </a>
                     @if ($f->estado !== 'anulada')
-                        <form action="{{ route('facturas.anular', $f->id) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Anular esta factura? Se restaurará el stock.')">
-                            @csrf
-                            <button class="btn btn-sm btn-danger">
-                                <i class="bi bi-x-circle"></i>
-                            </button>
-                        </form>
+                        <button class="btn btn-sm btn-danger btn-anular" data-url="{{ route('facturas.anular', $f->id) }}" data-correlativo="{{ $f->correlativo }}">
+                            <i class="bi bi-x-circle"></i>
+                        </button>
                     @endif
                 </td>
             </tr>
@@ -62,3 +59,19 @@
     {{ $facturas->links() }}
 </div>
 @endsection
+@push('scripts')
+<script>
+$(document).on('click', '.btn-anular', function () {
+    const btn = $(this);
+    Swal.fire({
+        title: '¿Anular factura?',
+        text: 'Se restaurará el stock de todos los productos.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        confirmButtonText: 'Sí, anular',
+        cancelButtonText: 'Cancelar',
+    }).then((r) => { if (r.isConfirmed) $.post(btn.data('url'), { _token: csrf }).then(() => location.reload()); });
+});
+</script>
+@endpush

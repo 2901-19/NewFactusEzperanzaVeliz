@@ -8,21 +8,35 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body>
-    <div class="d-flex" style="min-height: 100vh;">
-        @include('layouts.sidebar')
-        <div class="flex-grow-1 d-flex flex-column">
-            @include('layouts.navbar')
-            <main class="p-4">
-                @if (session('success'))
-                    <div class="alert alert-success alert-dismissible fade show">
-                        {{ session('success') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                @endif
-                @yield('contenido')
-            </main>
-        </div>
+    {{-- Flash messages ocultos para SweetAlert2 --}}
+    @if (session('success'))
+        <input type="hidden" id="flash-success" value="{{ session('success') }}">
+    @endif
+    @if (session('error') || $errors->any())
+        <input type="hidden" id="flash-error" value="{{ session('error') ?: $errors->first() }}">
+    @endif
+
+    {{-- Overlay --}}
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+    {{-- Sidebar fijo --}}
+    @include('layouts.sidebar')
+
+    {{-- Contenido principal --}}
+    <div class="main-content">
+        @include('layouts.navbar')
+        <main class="p-3 p-md-4">
+            @yield('contenido')
+        </main>
     </div>
+
+    <script>
+    const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('open');
+        document.getElementById('sidebarOverlay').classList.toggle('show');
+    }
+    </script>
     @stack('scripts')
 </body>
 </html>

@@ -6,7 +6,7 @@
     <a href="{{ route('categorias.create') }}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Nueva</a>
 </div>
 <div class="table-responsive">
-    <table class="table table-bordered table-striped">
+    <table id="dt-categorias" class="table table-bordered table-striped">
         <thead class="table-dark">
             <tr>
                 <th>Nombre</th>
@@ -22,11 +22,8 @@
                 <td>{{ $c->descripcion ?? '-' }}</td>
                 <td><span class="badge bg-info">{{ $c->productos_count }}</span></td>
                 <td>
-                    <a href="{{ route('categorias.edit', $c->id) }}" class="btn btn-sm btn-warning">Editar</a>
-                    <form action="{{ route('categorias.destroy', $c->id) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar esta categoría?')">
-                        @csrf @method('DELETE')
-                        <button class="btn btn-sm btn-danger">Eliminar</button>
-                    </form>
+                    <a href="{{ route('categorias.edit', $c->id) }}" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>
+                    <button class="btn btn-sm btn-danger btn-delete" data-url="{{ route('categorias.destroy', $c->id) }}"><i class="bi bi-trash"></i></button>
                 </td>
             </tr>
             @empty
@@ -36,3 +33,19 @@
     </table>
 </div>
 @endsection
+@push('scripts')
+<script>
+$('#dt-categorias').DataTable({ columnDefs: [{ orderable: false, targets: -1 }] });
+$(document).on('click', '.btn-delete', function () {
+    const btn = $(this);
+    Swal.fire({
+        title: '¿Eliminar categoría?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar',
+    }).then((r) => { if (r.isConfirmed) $.post(btn.data('url'), { _token: csrf, _method: 'DELETE' }).then(() => location.reload()); });
+});
+</script>
+@endpush
