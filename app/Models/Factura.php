@@ -1,0 +1,41 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Factura extends Model
+{
+    protected $fillable = [
+        'correlativo',
+        'cliente_id',
+        'productos',
+        'tasa_cambio',
+        'metodo_pago',
+        'subtotal_bs',
+        'iva_bs',
+        'total_bs',
+        'total_usd',
+        'estado',
+        'estado_credito',
+        'fecha_venta',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'productos' => 'array',
+            'fecha_venta' => 'date',
+        ];
+    }
+
+    public function cliente()
+    {
+        return $this->belongsTo(Cliente::class);
+    }
+
+    public function items()
+    {
+        return $this->hasMany(ItemFactura::class);
+    }
+}
