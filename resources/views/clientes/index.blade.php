@@ -11,7 +11,6 @@
     <table id="dt-clientes" class="table table-bordered table-striped">
         <thead class="table-dark">
             <tr>
-                <th>ID</th>
                 <th>Cédula</th>
                 <th>Nombre</th>
                 <th>Teléfono</th>
@@ -21,7 +20,6 @@
         <tbody>
             @foreach ($clientes as $c)
             <tr>
-                <td>{{ $c->id }}</td>
                 <td>{{ $c->ci }}</td>
                 <td>{{ $c->nombre }}</td>
                 <td>{{ $c->telefono ?? '-' }}</td>
@@ -38,7 +36,7 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    if ($.fn.DataTable) { $('#dt-clientes').DataTable({ order: [[0, 'desc']], columnDefs: [{ orderable: false, targets: -1 }] }); }
+    if ($.fn.DataTable) { $('#dt-clientes').DataTable({ columnDefs: [{ orderable: false, targets: -1 }] }); }
     $(document).on('click', '.btn-delete', function () {
         const btn = $(this);
         Swal.fire({

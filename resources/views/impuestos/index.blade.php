@@ -9,7 +9,6 @@
     <table id="dt-impuestos" class="table table-bordered table-striped">
         <thead class="table-dark">
             <tr>
-                <th>ID</th>
                 <th>Nombre</th>
                 <th>Porcentaje</th>
                 <th>Fecha</th>
@@ -19,7 +18,6 @@
         <tbody>
             @foreach ($impuestos as $i)
             <tr>
-                <td>{{ $i->id }}</td>
                 <td>{{ $i->nombre }}</td>
                 <td>{{ $i->porcentaje }}%</td>
                 <td>{{ $i->fecha }}</td>
@@ -36,7 +34,7 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    if ($.fn.DataTable) { $('#dt-impuestos').DataTable({ order: [[0, 'desc']], columnDefs: [{ orderable: false, targets: -1 }] }); }
+    if ($.fn.DataTable) { $('#dt-impuestos').DataTable({ columnDefs: [{ orderable: false, targets: -1 }] }); }
     $(document).on('click', '.btn-delete', function () {
         const btn = $(this);
         Swal.fire({

@@ -8,7 +8,6 @@
     <table class="table table-bordered table-striped">
         <thead class="table-dark">
             <tr>
-                <th>#</th>
                 <th>Correlativo</th>
                 <th>Cliente</th>
                 <th>Usuario</th>
@@ -22,7 +21,6 @@
         <tbody>
             @forelse ($facturas as $f)
             <tr class="{{ $f->estado === 'anulada' ? 'table-danger text-muted' : '' }}">
-                <td>{{ $f->id }}</td>
                 <td>{{ $f->correlativo }}</td>
                 <td>{{ $f->cliente->nombre ?? 'Contado' }}</td>
                 <td>{{ $f->user->usuario ?? 'N/A' }}</td>
@@ -52,7 +50,7 @@
                 </td>
             </tr>
             @empty
-            <tr><td colspan="9" class="text-center text-muted">No hay facturas registradas.</td></tr>
+            <tr><td colspan="8" class="text-center text-muted">No hay facturas registradas.</td></tr>
             @endforelse
         </tbody>
     </table>

@@ -11,7 +11,6 @@
     <table id="dt-productos" class="table table-bordered table-striped">
         <thead class="table-dark">
             <tr>
-                <th>ID</th>
                 <th>Nombre</th>
                 <th>Categoría</th>
                 <th>Stock Total</th>
@@ -24,7 +23,6 @@
         <tbody>
             @foreach ($productos as $p)
             <tr class="{{ $p->trashed() ? 'table-secondary text-muted' : '' }}">
-                <td>{{ $p->id }}</td>
                 <td>{{ $p->nombre }}</td>
                 <td>{{ $p->categoria->nombre ?? '-' }}</td>
                 <td>{{ $p->stock_total }} uds</td>
@@ -62,7 +60,6 @@
 document.addEventListener('DOMContentLoaded', function () {
     if ($.fn.DataTable) {
         $('#dt-productos').DataTable({
-            order: [[0, 'desc']],
             columnDefs: [{ orderable: false, targets: -1 }],
         });
     }

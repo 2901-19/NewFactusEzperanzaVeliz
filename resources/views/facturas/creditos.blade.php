@@ -8,7 +8,6 @@
     <table class="table table-bordered table-striped">
         <thead class="table-dark">
             <tr>
-                <th>#</th>
                 <th>Correlativo</th>
                 <th>Cliente</th>
                 <th>Total Bs</th>
@@ -21,7 +20,6 @@
         <tbody>
             @forelse ($facturas as $f)
             <tr class="{{ $f->estado_credito === 'cancelado' ? 'table-success' : '' }}">
-                <td>{{ $f->id }}</td>
                 <td>{{ $f->correlativo }}</td>
                 <td>{{ $f->cliente->nombre ?? 'N/A' }}</td>
                 <td>{{ number_format($f->total_bs, 2) }}</td>
@@ -47,7 +45,7 @@
             </tr>
             @empty
             <tr>
-                <td colspan="8" class="text-center text-muted">No hay facturas a crédito.</td>
+                <td colspan="7" class="text-center text-muted">No hay facturas a crédito.</td>
             </tr>
             @endforelse
         </tbody>

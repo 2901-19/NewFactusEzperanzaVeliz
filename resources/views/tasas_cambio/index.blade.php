@@ -9,7 +9,6 @@
     <table id="dt-tasas" class="table table-bordered table-striped">
         <thead class="table-dark">
             <tr>
-                <th>ID</th>
                 <th>Tipo</th>
                 <th>Moneda</th>
                 <th>Monto</th>
@@ -20,7 +19,6 @@
         <tbody>
             @foreach ($tasas as $t)
             <tr>
-                <td>{{ $t->id }}</td>
                 <td><span class="badge bg-info">{{ ucfirst($t->tipo) }}</span></td>
                 <td>{{ $t->moneda }}</td>
                 <td>{{ number_format($t->monto, 2) }}</td>
@@ -38,7 +36,7 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    if ($.fn.DataTable) { $('#dt-tasas').DataTable({ order: [[0, 'desc']], columnDefs: [{ orderable: false, targets: -1 }] }); }
+    if ($.fn.DataTable) { $('#dt-tasas').DataTable({ columnDefs: [{ orderable: false, targets: -1 }] }); }
     $(document).on('click', '.btn-delete', function () {
         const btn = $(this);
         Swal.fire({

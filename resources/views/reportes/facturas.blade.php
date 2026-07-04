@@ -23,7 +23,6 @@
     <table class="table table-bordered table-striped">
         <thead class="table-dark">
             <tr>
-                <th>#</th>
                 <th>Correlativo</th>
                 <th>Cliente</th>
                 <th>Total Bs</th>
@@ -35,7 +34,6 @@
         <tbody>
             @forelse ($facturas as $f)
             <tr>
-                <td>{{ $f->id }}</td>
                 <td><a href="{{ route('facturas.show', $f->id) }}">{{ $f->correlativo }}</a></td>
                 <td>{{ $f->cliente->nombre ?? 'Contado' }}</td>
                 <td>{{ number_format($f->total_bs, 2) }}</td>
@@ -50,12 +48,12 @@
                 </td>
             </tr>
             @empty
-            <tr><td colspan="7" class="text-center text-muted">No hay facturas en este rango.</td></tr>
+            <tr><td colspan="6" class="text-center text-muted">No hay facturas en este rango.</td></tr>
             @endforelse
         </tbody>
         <tfoot>
             <tr class="fw-bold">
-                <td colspan="3" class="text-end">Totales:</td>
+                <td colspan="2" class="text-end">Totales:</td>
                 <td>{{ number_format($totalBs, 2) }}</td>
                 <td>${{ number_format($totalUsd, 2) }}</td>
                 <td colspan="2">{{ $facturas->count() }} facturas</td>

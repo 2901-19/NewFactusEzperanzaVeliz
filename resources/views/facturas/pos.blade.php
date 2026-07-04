@@ -12,7 +12,6 @@
                 <table id="productosTable" class="table table-sm table-hover" style="width:100%">
                     <thead>
                         <tr>
-                            <th>ID</th>
                             <th>Nombre</th>
                             <th>Stock</th>
                             <th>Precio Unit.</th>
@@ -23,7 +22,6 @@
                     <tbody>
                         @foreach ($productos as $p)
                         <tr>
-                            <td>{{ $p->id }}</td>
                             <td>{{ $p->nombre }}</td>
                             <td>{{ $p->stock_total }} uds</td>
                             <td>${{ number_format($p->precio_unitario_usd, 2) }}</td>
@@ -186,7 +184,7 @@ document.addEventListener('alpine:init', () => {
                     lengthMenu: [10, 15, 25, 50],
                     order: [[0, 'asc']],
                     columnDefs: [
-                        { targets: 5, orderable: false },
+                        { targets: 4, orderable: false },
                     ],
                 });
 
