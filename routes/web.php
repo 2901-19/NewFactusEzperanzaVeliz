@@ -29,6 +29,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/pos', [FacturaController::class, 'pos'])->name('facturas.pos');
     Route::post('/facturas', [FacturaController::class, 'store'])->name('facturas.store');
+    Route::get('/creditos', [FacturaController::class, 'creditos'])->name('facturas.creditos');
+    Route::get('/facturas/{factura}', [FacturaController::class, 'show'])->name('facturas.show');
+    Route::post('/facturas/{factura}/pagar-credito', [FacturaController::class, 'pagarCredito'])->name('facturas.pagar-credito');
 });
 
 require __DIR__.'/auth.php';

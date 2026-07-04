@@ -119,6 +119,33 @@ class FacturaController extends Controller
         }
     }
 
+    public function creditos()
+    {
+        $facturas = Factura::where('estado', 'credito')
+            ->with('cliente')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return view('facturas.creditos', compact('facturas'));
+    }
+
+    public function show(Factura $factura)
+    {
+        $factura->load('cliente', 'items.producto');
+        return view('facturas.show', compact('factura'));
+    }
+
+    public function pagarCredito(Factura $factura)
+    {
+        if ($factura->estado !== 'credito' || $factura->estado_credito === 'cancelado') {
+            return back()->withErrors(['error' => 'Esta factura no está pendiente de crédito.']);
+        }
+
+        $factura->update(['estado_credito' => 'cancelado']);
+
+        return redirect()->route('facturas.creditos')->with('success', 'Crédito #' . $factura->correlativo . ' cancelado correctamente.');
+    }
+
     private function descontarStock(Producto $producto, int $cantidad): void
     {
         $restantes = $cantidad;

@@ -21,6 +21,11 @@
             </a>
         </li>
         <li class="nav-item">
+            <a href="{{ route('facturas.creditos') }}" class="nav-link text-white {{ request()->routeIs('facturas.creditos') ? 'active' : '' }}">
+                <i class="bi bi-credit-card"></i> Créditos
+            </a>
+        </li>
+        <li class="nav-item">
             <a href="{{ route('clientes.index') }}" class="nav-link text-white {{ request()->routeIs('clientes.*') ? 'active' : '' }}">
                 <i class="bi bi-people"></i> Clientes
             </a>

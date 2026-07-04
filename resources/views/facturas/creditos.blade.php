@@ -1,0 +1,60 @@
+@extends('layouts.app')
+@section('titulo', 'Créditos')
+@section('contenido')
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Facturas a Crédito</h2>
+</div>
+<div class="table-responsive">
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>#</th>
+                <th>Correlativo</th>
+                <th>Cliente</th>
+                <th>Total Bs</th>
+                <th>Total USD</th>
+                <th>Fecha</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse ($facturas as $f)
+            <tr class="{{ $f->estado_credito === 'cancelado' ? 'table-success' : '' }}">
+                <td>{{ $f->id }}</td>
+                <td>{{ $f->correlativo }}</td>
+                <td>{{ $f->cliente->nombre ?? 'N/A' }}</td>
+                <td>{{ number_format($f->total_bs, 2) }}</td>
+                <td>${{ number_format($f->total_usd, 2) }}</td>
+                <td>{{ $f->fecha_venta }}</td>
+                <td>
+                    @if ($f->estado_credito === 'pendiente')
+                        <span class="badge bg-warning text-dark">Pendiente</span>
+                    @else
+                        <span class="badge bg-success">Cancelado</span>
+                    @endif
+                </td>
+                <td>
+                    <a href="{{ route('facturas.show', $f->id) }}" class="btn btn-sm btn-info">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    @if ($f->estado_credito === 'pendiente')
+                    <form action="{{ route('facturas.pagar-credito', $f->id) }}" method="POST" class="d-inline">
+                        @csrf
+                        <button class="btn btn-sm btn-success" onclick="return confirm('¿Cancelar crédito #{{ $f->correlativo }}?')">
+                            <i class="bi bi-check-lg"></i> Pagar
+                        </button>
+                    </form>
+                    @endif
+                </td>
+            </tr>
+            @empty
+            <tr>
+                <td colspan="8" class="text-center text-muted">No hay facturas a crédito.</td>
+            </tr>
+            @endforelse
+        </tbody>
+    </table>
+</div>
+<div class="text-muted small">Total: {{ $facturas->count() }} facturas</div>
+@endsection
