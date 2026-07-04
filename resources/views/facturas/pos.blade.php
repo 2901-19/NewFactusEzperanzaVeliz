@@ -181,6 +181,10 @@
                                 <span x-text="tipoFactura.charAt(0).toUpperCase() + tipoFactura.slice(1)"></span>
                             </div>
                         </div>
+                        <hr class="sep-double">
+                        <div class="text-center small" style="margin-top:0.5rem;">
+                            ¡Gracias por su compra!
+                        </div>
                     </div>
                 </div>
                 <div class="d-flex gap-2 p-2 justify-content-center no-print">
@@ -227,21 +231,7 @@
         </div>
     </div>
 
-    {{-- Toast de éxito --}}
-    <div class="toast-container position-fixed bottom-0 end-0 p-3">
-        <div id="successToast" class="toast align-items-center text-bg-success border-0" role="alert">
-            <div class="d-flex">
-                <div class="toast-body" id="toastMessage"></div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-            </div>
-        </div>
-        <div id="errorToast" class="toast align-items-center text-bg-danger border-0" role="alert">
-            <div class="d-flex">
-                <div class="toast-body" id="errorToastMessage"></div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-            </div>
-        </div>
-    </div>
+    {{-- SweetAlert se usa en mostrarExito / mostrarError --}}
 </div>
 
 @push('scripts')
@@ -455,15 +445,11 @@ document.addEventListener('alpine:init', () => {
         },
 
         mostrarExito(msg) {
-            document.getElementById('toastMessage').textContent = msg;
-            const toast = new bootstrap.Toast(document.getElementById('successToast'));
-            toast.show();
+            Swal.fire({ icon: 'success', title: 'Éxito', text: msg, timer: 3000, showConfirmButton: false });
         },
 
         mostrarError(msg) {
-            document.getElementById('errorToastMessage').textContent = msg;
-            const toast = new bootstrap.Toast(document.getElementById('errorToast'));
-            toast.show();
+            Swal.fire({ icon: 'error', title: 'Error', text: msg });
         },
     }));
 });

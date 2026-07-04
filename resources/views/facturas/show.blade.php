@@ -16,44 +16,21 @@
         <span>Fecha:</span>
         <span>{{ $factura->fecha_venta }}</span>
     </div>
-    <div class="row-item">
-        <span>Pago:</span>
-        <span>{{ ucfirst(str_replace('_', ' ', $factura->metodo_pago)) }}</span>
-    </div>
-    <div class="row-item">
-        <span>Tasa BCV:</span>
-        <span>Bs {{ number_format($factura->tasa_cambio, 2) }}</span>
-    </div>
-    <hr class="sep">
     @if ($factura->cliente)
     <div class="row-item">
         <span>Cliente:</span>
         <span>{{ $factura->cliente->nombre }}</span>
     </div>
-    <div class="row-item">
-        <span>Cédula:</span>
-        <span>{{ $factura->cliente->ci }}</span>
-    </div>
-    <div class="row-item">
-        <span>Teléfono:</span>
-        <span>{{ $factura->cliente->telefono ?? 'N/A' }}</span>
-    </div>
-    <hr class="sep">
-    @else
-    <div class="text-center small text-muted">Consumidor Final</div>
-    <hr class="sep">
     @endif
-    <div class="row-item fw-bold small">
-        <span class="desc">CANT  DESCRIPCIÓN</span>
-        <span class="monto">P/U      TOTAL</span>
-    </div>
-    <hr class="sep" style="border-top-style:solid">
+    <hr class="sep">
+
     @foreach ($factura->items as $item)
-    <div class="row-item" style="font-size:0.8rem;">
-        <span class="desc">{{ $item->cantidad }}   {{ $item->producto->nombre ?? 'Producto' }}</span>
-        <span class="monto">Bs {{ number_format($item->precio_unitario_bs, 2) }}  Bs {{ number_format($item->subtotal, 2) }}</span>
+    <div class="row-item">
+        <span class="desc">{{ $item->cantidad }}x {{ $item->producto->nombre ?? 'Producto' }}</span>
+        <span class="monto">Bs {{ number_format($item->subtotal, 2) }}</span>
     </div>
     @endforeach
+
     <hr class="sep">
     <div class="totales">
         <div class="row-item">
@@ -74,17 +51,6 @@
             <span>$ {{ number_format($factura->total_usd, 2) }}</span>
         </div>
     </div>
-    <hr class="sep">
-    <div class="row-item">
-        <span>Productos:</span>
-        <span>{{ $factura->items->count() }}</span>
-    </div>
-    @if ($factura->estado === 'credito')
-    <div class="row-item">
-        <span>Estado Crédito:</span>
-        <span>{{ ucfirst($factura->estado_credito) }}</span>
-    </div>
-    @endif
     <hr class="sep-double">
     <div class="text-center small" style="margin-top:0.5rem;">
         ¡Gracias por su compra!
@@ -97,9 +63,6 @@
     </a>
     <button class="btn btn-outline-primary ms-2" id="btn-imprimir-ticket">
         <i class="bi bi-printer"></i> Imprimir Ticket
-    </button>
-    <button class="btn btn-outline-secondary ms-2" onclick="window.print()">
-        <i class="bi bi-printer-fill"></i> Imprimir Vista
     </button>
 </div>
 
