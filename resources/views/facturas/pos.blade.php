@@ -13,7 +13,6 @@
                     <thead>
                         <tr>
                             <th class="text-start">Nombre</th>
-                            <th>Stock</th>
                             <th>Precio Unit.</th>
                             <th>Precio Mayor</th>
                             <th style="width:60px"></th>
@@ -28,7 +27,6 @@
                         @endphp
                         <tr>
                             <td class="text-start">{{ $p->nombre }}</td>
-                            <td>{{ $p->stock_total }} uds</td>
                             <td>Bs {{ number_format($puBsPos, 2) }} <small class="text-muted">(${{ number_format($p->precio_unitario_usd, 2) }})</small></td>
                             <td>Bs {{ number_format($pmBsPos, 2) }} <small class="text-muted">(${{ number_format($p->precio_mayor_usd, 2) }})</small> <small class="text-muted">({{ $p->cantidad_minima_mayor }}+)</small></td>
                             <td class="text-center">
@@ -189,7 +187,7 @@ document.addEventListener('alpine:init', () => {
                     lengthMenu: [10, 15, 25, 50],
                     order: [[0, 'asc']],
                     columnDefs: [
-                        { targets: 4, orderable: false },
+                        { targets: 3, orderable: false },
                     ],
                 });
 
