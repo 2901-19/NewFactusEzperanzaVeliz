@@ -5,7 +5,7 @@
     <h2>Productos con Stock Bajo (&le;10 uds)</h2>
 </div>
 <div class="table-responsive">
-    <table class="table table-bordered table-striped">
+    <table id="stockTable" class="table table-bordered table-striped">
         <thead class="table-dark">
             <tr>
                 <th>Producto</th>
@@ -33,3 +33,14 @@
     </table>
 </div>
 @endsection
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    $('#stockTable').DataTable({
+        language: window.DataTableSpanish,
+        order: [[3, 'asc']],
+        pageLength: 25,
+    });
+});
+</script>
+@endpush

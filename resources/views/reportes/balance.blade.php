@@ -20,7 +20,7 @@
 </div>
 
 <div class="table-responsive">
-    <table class="table table-bordered table-striped">
+    <table id="balanceTable" class="table table-bordered table-striped">
         <thead class="table-dark">
             <tr>
                 <th>Mes</th>
@@ -51,3 +51,17 @@
     </table>
 </div>
 @endsection
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    $('#balanceTable').DataTable({
+        language: window.DataTableSpanish,
+        order: [[0, 'asc']],
+        pageLength: 12,
+        paging: false,
+        info: false,
+        searching: false,
+    });
+});
+</script>
+@endpush

@@ -5,7 +5,7 @@
     <h2>Todas las Facturas</h2>
 </div>
 <div class="table-responsive">
-    <table class="table table-bordered table-striped">
+    <table id="facturasTable" class="table table-bordered table-striped">
         <thead class="table-dark">
             <tr>
                 <th>Correlativo</th>
@@ -54,12 +54,16 @@
             @endforelse
         </tbody>
     </table>
-    {{ $facturas->links() }}
 </div>
 @endsection
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    $('#facturasTable').DataTable({
+        language: window.DataTableSpanish,
+        order: [[5, 'desc']],
+        pageLength: 25,
+    });
     $(document).on('click', '.btn-anular', function () {
         const btn = $(this);
         Swal.fire({
