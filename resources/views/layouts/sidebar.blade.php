@@ -11,6 +11,11 @@
             </a>
         </li>
         <li class="nav-item">
+            <a href="{{ route('facturas.pos') }}" class="nav-link text-white {{ request()->routeIs('facturas.pos') ? 'active' : '' }}">
+                <i class="bi bi-cart3"></i> Punto de Venta
+            </a>
+        </li>
+        <li class="nav-item">
             <a href="{{ route('productos.index') }}" class="nav-link text-white {{ request()->routeIs('productos.*') ? 'active' : '' }}">
                 <i class="bi bi-box-seam"></i> Productos
             </a>

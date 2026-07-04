@@ -5,6 +5,7 @@ use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\ImpuestoController;
 use App\Http\Controllers\TasaCambioController;
+use App\Http\Controllers\FacturaController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -25,6 +26,9 @@ Route::middleware('auth')->group(function () {
     Route::resource('clientes', ClienteController::class)->except('show');
     Route::resource('impuestos', ImpuestoController::class)->except('show');
     Route::resource('tasas-cambio', TasaCambioController::class)->except('show');
+
+    Route::get('/pos', [FacturaController::class, 'pos'])->name('facturas.pos');
+    Route::post('/facturas', [FacturaController::class, 'store'])->name('facturas.store');
 });
 
 require __DIR__.'/auth.php';
