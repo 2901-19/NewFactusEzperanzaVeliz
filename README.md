@@ -1,6 +1,6 @@
 # FACTUS — Esperanza Veliz
 
-Sistema POS para ferretería venezolana con inventario, precios mayor/unitario, conversión USD/Bs, créditos e impresión térmica.
+Sistema POS para abasto general venezolano con inventario, precios mayor/unitario, conversión USD/Bs, créditos e impresión térmica.
 
 ## Requisitos
 
