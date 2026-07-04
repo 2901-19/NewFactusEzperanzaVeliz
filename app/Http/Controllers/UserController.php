@@ -36,17 +36,17 @@ class UserController extends Controller
         return redirect()->route('usuarios.index')->with('success', 'Usuario creado correctamente.');
     }
 
-    public function edit(User $user)
+    public function edit(User $usuario)
     {
-        return view('usuarios.edit', compact('user'));
+        return view('usuarios.edit', compact('usuario'));
     }
 
-    public function update(Request $request, User $user)
+    public function update(Request $request, User $usuario)
     {
         $data = $request->validate([
             'name' => 'required|string|max:255',
-            'usuario' => ['required', 'string', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'email' => ['nullable', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'usuario' => ['required', 'string', 'max:255', Rule::unique('users')->ignore($usuario->id)],
+            'email' => ['nullable', 'email', 'max:255', Rule::unique('users')->ignore($usuario->id)],
             'password' => 'nullable|string|min:6|confirmed',
             'rol' => 'required|in:admin,cajero',
         ]);
@@ -57,18 +57,18 @@ class UserController extends Controller
             unset($data['password']);
         }
 
-        $user->update($data);
+        $usuario->update($data);
 
         return redirect()->route('usuarios.index')->with('success', 'Usuario actualizado correctamente.');
     }
 
-    public function destroy(User $user)
+    public function destroy(User $usuario)
     {
-        if ($user->id === auth()->id()) {
+        if ($usuario->id === auth()->id()) {
             return back()->withErrors(['error' => 'No puedes eliminar tu propio usuario.']);
         }
 
-        $user->delete();
+        $usuario->delete();
 
         return redirect()->route('usuarios.index')->with('success', 'Usuario eliminado correctamente.');
     }
