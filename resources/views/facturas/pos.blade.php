@@ -90,12 +90,17 @@
                 </div>
                 <div x-show="tipoFactura === 'credito'" class="mb-2">
                     <label class="form-label small">Cliente *</label>
-                    <select x-model="clienteId" class="form-select form-select-sm" required>
-                        <option value="">Seleccione un cliente</option>
-                        @foreach ($clientes as $c)
-                            <option value="{{ $c->id }}">{{ $c->nombre }} ({{ $c->ci }})</option>
-                        @endforeach
-                    </select>
+                    <div class="input-group input-group-sm">
+                        <select x-model="clienteId" class="form-select" required>
+                            <option value="">Seleccione un cliente</option>
+                            <template x-for="c in clientes" :key="c.id">
+                                <option :value="c.id" x-text="c.nombre + ' (' + c.ci + ')'"></option>
+                            </template>
+                        </select>
+                        <button class="btn btn-outline-primary" type="button" @click="abrirModalCliente" title="Crear cliente rápido">
+                            <i class="bi bi-plus-lg"></i>
+                        </button>
+                    </div>
                 </div>
                 <hr>
                 <div class="d-flex justify-content-between small">
@@ -179,6 +184,9 @@ document.addEventListener('alpine:init', () => {
         tipoFactura: 'contado',
         clienteId: '',
         cargando: false,
+        nuevoCliente: { nombre: '', ci: '', telefono: '' },
+        errorCliente: '',
+        guardandoCliente: false,
 
         init() {
             if ($.fn.DataTable) {
@@ -279,6 +287,45 @@ document.addEventListener('alpine:init', () => {
                 ? parseFloat(this.tasas[i.fuente_tasa].monto)
                 : 1;
             return i.precioUnitario * i.cantidad * tasa;
+        },
+
+        abrirModalCliente() {
+            this.nuevoCliente = { nombre: '', ci: '', telefono: '' };
+            this.errorCliente = '';
+            const modal = new bootstrap.Modal(document.getElementById('clienteModal'));
+            modal.show();
+        },
+
+        async guardarClienteRapido() {
+            if (!this.nuevoCliente.nombre.trim() || !this.nuevoCliente.ci.trim()) {
+                this.errorCliente = 'Nombre y cédula son obligatorios.';
+                return;
+            }
+            this.guardandoCliente = true;
+            this.errorCliente = '';
+            try {
+                const res = await fetch('{{ route("clientes.rapido") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                    body: JSON.stringify(this.nuevoCliente),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    this.clientes.push(data.cliente);
+                    this.clienteId = data.cliente.id;
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('clienteModal'));
+                    if (modal) modal.hide();
+                } else {
+                    this.errorCliente = data.message || 'Error al guardar el cliente.';
+                }
+            } catch (e) {
+                this.errorCliente = 'Error al conectar con el servidor.';
+            } finally {
+                this.guardandoCliente = false;
+            }
         },
 
         confirmarFactura() {

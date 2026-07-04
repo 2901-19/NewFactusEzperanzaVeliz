@@ -54,4 +54,20 @@ class ClienteController extends Controller
         $cliente->delete();
         return redirect()->route('clientes.index')->with('success', 'Cliente eliminado correctamente.');
     }
+
+    public function storeRapido(Request $request)
+    {
+        $data = $request->validate([
+            'ci' => 'required|string|max:20|unique:clientes',
+            'nombre' => 'required|string|max:255',
+            'telefono' => 'nullable|string|max:20',
+        ]);
+
+        $cliente = Cliente::create($data);
+
+        return response()->json([
+            'success' => true,
+            'cliente' => $cliente,
+        ]);
+    }
 }
