@@ -16,7 +16,7 @@
             </tr>
         </thead>
         <tbody>
-            @forelse ($categorias as $c)
+            @foreach ($categorias as $c)
             <tr>
                 <td>{{ $c->nombre }}</td>
                 <td>{{ $c->descripcion ?? '-' }}</td>
@@ -26,9 +26,7 @@
                     <button class="btn btn-sm btn-danger btn-delete" data-url="{{ route('categorias.destroy', $c->id) }}"><i class="bi bi-trash"></i></button>
                 </td>
             </tr>
-            @empty
-            <tr><td colspan="4" class="text-center text-muted">No hay categorías registradas.</td></tr>
-            @endforelse
+            @endforeach
         </tbody>
     </table>
 </div>
