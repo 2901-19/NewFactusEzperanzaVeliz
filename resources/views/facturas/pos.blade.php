@@ -57,7 +57,7 @@
                         </div>
                         <div class="d-flex align-items-center gap-2 mt-1">
                             <button class="btn btn-sm btn-outline-secondary" @click="item.cantidad > 1 && item.cantidad--">-</button>
-                            <input type="number" x-model="item.cantidad" @input="item.cantidad = Math.max(1, parseInt(item.cantidad) || 1)" class="form-control form-control-sm text-center" style="width: 60px;" min="1">
+                            <input type="number" x-model="item.cantidad" @blur="item.cantidad = Math.max(1, parseInt(item.cantidad) || 1)" class="form-control form-control-sm text-center" style="width: 60px;" min="1">
                             <button class="btn btn-sm btn-outline-secondary" @click="item.cantidad++">+</button>
                             <span class="ms-auto small" x-text="'Bs ' + getBsPriceTotal(index).toFixed(2)"></span>
                         </div>
@@ -129,25 +129,98 @@
 
     {{-- Modal de confirmación --}}
     <div class="modal fade" id="confirmModal" tabindex="-1" data-bs-backdrop="static">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-body p-0">
+                    <div class="ticket">
+                        <div class="ticket-header">
+                            FACTUS<br>
+                            ESPERANZA VELIZ<br>
+                            FACTURA DE VENTA
+                        </div>
+                        <hr class="sep">
+
+                        <template x-for="(item, index) in carrito" :key="index">
+                            <div class="row-item">
+                                <span class="desc" x-text="item.cantidad + 'x ' + item.nombre"></span>
+                                <span class="monto" x-text="'Bs ' + getBsPriceTotal(index).toFixed(2)"></span>
+                            </div>
+                        </template>
+
+                        <div x-show="carrito.length === 0" class="text-center small text-muted">
+                            Sin productos
+                        </div>
+
+                        <hr class="sep">
+
+                        <div class="totales">
+                            <div class="row-item">
+                                <span>Subtotal Bs:</span>
+                                <span x-text="subtotalBs.toFixed(2)"></span>
+                            </div>
+                            <div class="row-item">
+                                <span>IVA ({{ $ivaPorcentaje }}%):</span>
+                                <span x-text="ivaBs.toFixed(2)"></span>
+                            </div>
+                            <hr class="sep-double">
+                            <div class="row-item total-final">
+                                <span>TOTAL Bs:</span>
+                                <span x-text="totalBs.toFixed(2)"></span>
+                            </div>
+                            <div class="row-item">
+                                <span>TOTAL USD:</span>
+                                <span>$ <span x-text="totalUsd.toFixed(2)"></span></span>
+                            </div>
+                            <hr class="sep">
+                            <div class="row-item">
+                                <span>Pago:</span>
+                                <span x-text="metodoPago.charAt(0).toUpperCase() + metodoPago.slice(1)"></span>
+                            </div>
+                            <div class="row-item">
+                                <span>Tipo:</span>
+                                <span x-text="tipoFactura.charAt(0).toUpperCase() + tipoFactura.slice(1)"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex gap-2 p-2 justify-content-center no-print">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-sm btn-success" @click="guardarFactura">
+                        <i class="bi bi-check-lg"></i> Facturar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Modal crear cliente rápido --}}
+    <div class="modal fade" id="clienteModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-sm">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Confirmar Factura</h5>
+                    <h5 class="modal-title">Nuevo Cliente</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p><strong>Items:</strong> <span x-text="carrito.length"></span></p>
-                    <p><strong>Subtotal Bs:</strong> <span x-text="subtotalBs.toFixed(2)"></span></p>
-                    <p><strong>IVA ({{ $ivaPorcentaje }}%):</strong> <span x-text="ivaBs.toFixed(2)"></span></p>
-                    <p class="fw-bold"><strong>Total Bs:</strong> <span x-text="totalBs.toFixed(2)"></span></p>
-                    <p><strong>Total USD:</strong> $<span x-text="totalUsd.toFixed(2)"></span></p>
-                    <p><strong>Método de Pago:</strong> <span x-text="metodoPago.charAt(0).toUpperCase() + metodoPago.slice(1)"></span></p>
-                    <p><strong>Tipo:</strong> <span x-text="tipoFactura.charAt(0).toUpperCase() + tipoFactura.slice(1)"></span></p>
+                    <div class="mb-2">
+                        <label class="form-label small">Nombre *</label>
+                        <input type="text" x-model="nuevoCliente.nombre" class="form-control form-control-sm" placeholder="Nombre del cliente">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Cédula *</label>
+                        <input type="text" x-model="nuevoCliente.ci" class="form-control form-control-sm" placeholder="V-12345678">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Teléfono</label>
+                        <input type="text" x-model="nuevoCliente.telefono" class="form-control form-control-sm" placeholder="0412-1234567">
+                    </div>
+                    <div x-show="errorCliente" class="text-danger small" x-text="errorCliente"></div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-success" @click="guardarFactura">
-                        <i class="bi bi-check-lg"></i> Confirmar y Facturar
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-sm btn-primary" @click="guardarClienteRapido" :disabled="guardandoCliente">
+                        <span x-show="!guardandoCliente"><i class="bi bi-check"></i> Guardar</span>
+                        <span x-show="guardandoCliente"><span class="spinner-border spinner-border-sm"></span></span>
                     </button>
                 </div>
             </div>

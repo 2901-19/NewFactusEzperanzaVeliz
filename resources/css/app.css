@@ -117,3 +117,79 @@
 }
 
 /* Paginación Bootstrap 5 ya default */
+
+/* ===== Estilo ticket térmico ===== */
+.ticket {
+    font-family: 'Courier New', Courier, monospace;
+    background: #fff;
+    border: 2px solid #333;
+    padding: 1rem;
+    max-width: 400px;
+    margin: 0 auto;
+}
+.ticket .ticket-header {
+    text-align: center;
+    font-weight: bold;
+    line-height: 1.4;
+    margin-bottom: 0.5rem;
+}
+.ticket .sep {
+    border: none;
+    border-top: 1px dashed #333;
+    margin: 0.4rem 0;
+}
+.ticket .sep-double {
+    border: none;
+    border-top: 3px double #333;
+    margin: 0.5rem 0;
+}
+.ticket .row-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+.ticket .row-item .desc {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.ticket .row-item .monto {
+    text-align: right;
+    white-space: nowrap;
+    margin-left: 0.5rem;
+}
+.ticket .totales {
+    text-align: right;
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+.ticket .totales .total-final {
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+
+/* Print: ocultar sidebar, navbar y footer */
+@media print {
+    body {
+        background: #fff !important;
+    }
+    .sidebar,
+    .navbar,
+    .sidebar-overlay,
+    .no-print {
+        display: none !important;
+    }
+    .main-content {
+        margin-left: 0 !important;
+        padding: 0 !important;
+    }
+    .ticket {
+        border: none !important;
+        max-width: 100% !important;
+    }
+    .layout-wrapper {
+        min-height: auto !important;
+    }
+}
