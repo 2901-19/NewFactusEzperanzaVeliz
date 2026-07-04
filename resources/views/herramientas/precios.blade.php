@@ -11,7 +11,7 @@
     <table id="preciosTable" class="table table-bordered table-striped">
         <thead class="table-dark">
             <tr>
-                <th>Producto</th>
+                <th class="text-start">Producto</th>
                 <th>Precio Unitario USD</th>
                 <th>Precio Mayor USD</th>
                 <th>Cant. Mín. Mayor</th>
@@ -21,7 +21,7 @@
         <tbody>
             @foreach ($productos as $p)
             <tr>
-                <td>{{ $p->nombre }}</td>
+                <td class="text-start">{{ $p->nombre }}</td>
                 <td>${{ number_format($p->precio_unitario_usd, 2) }}</td>
                 <td>${{ number_format($p->precio_mayor_usd, 2) }}</td>
                 <td>{{ $p->cantidad_minima_mayor }}</td>

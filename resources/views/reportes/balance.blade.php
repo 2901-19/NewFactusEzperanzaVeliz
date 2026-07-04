@@ -23,7 +23,7 @@
     <table id="balanceTable" class="table table-bordered table-striped">
         <thead class="table-dark">
             <tr>
-                <th>Mes</th>
+                <th class="text-start">Mes</th>
                 <th>Facturas</th>
                 <th>Total Bs</th>
                 <th>Total USD</th>
@@ -33,7 +33,7 @@
             @foreach ($meses as $num => $nombre)
                 @php $m = $mensual->get($num); @endphp
                 <tr>
-                    <td>{{ $nombre }}</td>
+                    <td class="text-start">{{ $nombre }}</td>
                     <td>{{ $m->cantidad ?? 0 }}</td>
                     <td>{{ number_format($m->total_bs ?? 0, 2) }}</td>
                     <td>${{ number_format($m->total_usd ?? 0, 2) }}</td>

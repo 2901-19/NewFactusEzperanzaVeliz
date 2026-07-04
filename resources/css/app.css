@@ -88,6 +88,17 @@
     }
 }
 
+/* Centrar contenido de tablas DataTables */
+.table th,
+.table td {
+    text-align: center;
+    vertical-align: middle;
+}
+.table td.text-start,
+.table th.text-start {
+    text-align: left;
+}
+
 /* Tablas responsivas con DataTables */
 .table-container {
     width: 100%;

@@ -8,7 +8,7 @@
     <table id="stockTable" class="table table-bordered table-striped">
         <thead class="table-dark">
             <tr>
-                <th>Producto</th>
+                <th class="text-start">Producto</th>
                 <th>Paquetes</th>
                 <th>Unidades</th>
                 <th>Stock Total</th>
@@ -17,7 +17,7 @@
         <tbody>
             @foreach ($productos as $p)
             <tr>
-                <td>{{ $p->nombre }}</td>
+                <td class="text-start">{{ $p->nombre }}</td>
                 <td>{{ $p->stock_paquetes }}</td>
                 <td>{{ $p->stock_unidades }}</td>
                 <td>

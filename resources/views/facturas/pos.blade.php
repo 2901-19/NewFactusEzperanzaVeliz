@@ -12,7 +12,7 @@
                 <table id="productosTable" class="table table-sm table-hover" style="width:100%">
                     <thead>
                         <tr>
-                            <th>Nombre</th>
+                            <th class="text-start">Nombre</th>
                             <th>Stock</th>
                             <th>Precio Unit.</th>
                             <th>Precio Mayor</th>
@@ -22,7 +22,7 @@
                     <tbody>
                         @foreach ($productos as $p)
                         <tr>
-                            <td>{{ $p->nombre }}</td>
+                            <td class="text-start">{{ $p->nombre }}</td>
                             <td>{{ $p->stock_total }} uds</td>
                             <td>${{ number_format($p->precio_unitario_usd, 2) }}</td>
                             <td>${{ number_format($p->precio_mayor_usd, 2) }} <small class="text-muted">({{ $p->cantidad_minima_mayor }}+)</small></td>

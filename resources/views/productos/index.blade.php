@@ -11,7 +11,7 @@
     <table id="dt-productos" class="table table-bordered table-striped">
         <thead class="table-dark">
             <tr>
-                <th>Nombre</th>
+                <th class="text-start">Nombre</th>
                 <th>Categoría</th>
                 <th>Stock Total</th>
                 <th>Precio Unitario</th>
@@ -23,7 +23,7 @@
         <tbody>
             @foreach ($productos as $p)
             <tr class="{{ $p->trashed() ? 'table-secondary text-muted' : '' }}">
-                <td>{{ $p->nombre }}</td>
+                <td class="text-start">{{ $p->nombre }}</td>
                 <td>{{ $p->categoria->nombre ?? '-' }}</td>
                 <td>{{ $p->stock_total }} uds</td>
                 <td>${{ number_format($p->precio_unitario_usd, 2) }}</td>

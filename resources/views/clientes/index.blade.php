@@ -12,7 +12,7 @@
         <thead class="table-dark">
             <tr>
                 <th>Cédula</th>
-                <th>Nombre</th>
+                <th class="text-start">Nombre</th>
                 <th>Teléfono</th>
                 <th>Acciones</th>
             </tr>
@@ -21,7 +21,7 @@
             @foreach ($clientes as $c)
             <tr>
                 <td>{{ $c->ci }}</td>
-                <td>{{ $c->nombre }}</td>
+                <td class="text-start">{{ $c->nombre }}</td>
                 <td>{{ $c->telefono ?? '-' }}</td>
                 <td>
                     <a href="{{ route('clientes.edit', $c->id) }}" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>

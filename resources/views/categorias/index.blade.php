@@ -9,8 +9,8 @@
     <table id="dt-categorias" class="table table-bordered table-striped">
         <thead class="table-dark">
             <tr>
-                <th>Nombre</th>
-                <th>Descripción</th>
+                <th class="text-start">Nombre</th>
+                <th class="text-start">Descripción</th>
                 <th>Productos</th>
                 <th>Acciones</th>
             </tr>
@@ -18,8 +18,8 @@
         <tbody>
             @foreach ($categorias as $c)
             <tr>
-                <td>{{ $c->nombre }}</td>
-                <td>{{ $c->descripcion ?? '-' }}</td>
+                <td class="text-start">{{ $c->nombre }}</td>
+                <td class="text-start">{{ $c->descripcion ?? '-' }}</td>
                 <td><span class="badge bg-info">{{ $c->productos_count }}</span></td>
                 <td>
                     <a href="{{ route('categorias.edit', $c->id) }}" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>

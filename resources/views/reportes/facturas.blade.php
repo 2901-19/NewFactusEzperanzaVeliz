@@ -24,7 +24,7 @@
         <thead class="table-dark">
             <tr>
                 <th>Correlativo</th>
-                <th>Cliente</th>
+                <th class="text-start">Cliente</th>
                 <th>Total Bs</th>
                 <th>Total USD</th>
                 <th>Fecha</th>
@@ -35,7 +35,7 @@
             @foreach ($facturas as $f)
             <tr>
                 <td><a href="{{ route('facturas.show', $f->id) }}">{{ $f->correlativo }}</a></td>
-                <td>{{ $f->cliente->nombre ?? 'Contado' }}</td>
+                <td class="text-start">{{ $f->cliente->nombre ?? 'Contado' }}</td>
                 <td>{{ number_format($f->total_bs, 2) }}</td>
                 <td>${{ number_format($f->total_usd, 2) }}</td>
                 <td>{{ $f->fecha_venta }}</td>

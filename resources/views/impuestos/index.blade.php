@@ -9,7 +9,7 @@
     <table id="dt-impuestos" class="table table-bordered table-striped">
         <thead class="table-dark">
             <tr>
-                <th>Nombre</th>
+                <th class="text-start">Nombre</th>
                 <th>Porcentaje</th>
                 <th>Fecha</th>
                 <th>Acciones</th>
@@ -18,7 +18,7 @@
         <tbody>
             @foreach ($impuestos as $i)
             <tr>
-                <td>{{ $i->nombre }}</td>
+                <td class="text-start">{{ $i->nombre }}</td>
                 <td>{{ $i->porcentaje }}%</td>
                 <td>{{ $i->fecha }}</td>
                 <td>
