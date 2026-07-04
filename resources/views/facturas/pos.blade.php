@@ -28,7 +28,7 @@
                         <tr>
                             <td class="text-start">{{ $p->nombre }}</td>
                             <td>Bs {{ number_format($puBsPos, 2) }} <small class="text-muted">(${{ number_format($p->precio_unitario_usd, 2) }})</small></td>
-                            <td>Bs {{ number_format($pmBsPos, 2) }} <small class="text-muted">(${{ number_format($p->precio_mayor_usd, 2) }})</small> <small class="text-muted">({{ $p->cantidad_minima_mayor }}+)</small></td>
+                            <td>Bs {{ number_format($pmBsPos, 2) }} <small class="text-muted">(${{ number_format($p->precio_mayor_usd, 2) }})</small></td>
                             <td class="text-center">
                                 <button class="btn btn-sm btn-outline-primary agregar-producto" data-id="{{ $p->id }}" title="Agregar al carrito">
                                     <i class="bi bi-cart-plus"></i>
