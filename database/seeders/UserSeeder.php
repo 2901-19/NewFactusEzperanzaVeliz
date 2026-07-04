@@ -9,18 +9,22 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        User::create([
-            'name' => 'Administrador',
-            'usuario' => 'admin',
-            'password' => bcrypt('admin123'),
-            'rol' => 'admin',
-        ]);
+        User::firstOrCreate(
+            ['usuario' => 'admin'],
+            [
+                'name' => 'Administrador',
+                'password' => bcrypt('admin123'),
+                'rol' => 'admin',
+            ]
+        );
 
-        User::create([
-            'name' => 'Cajero',
-            'usuario' => 'cajero',
-            'password' => bcrypt('cajero123'),
-            'rol' => 'cajero',
-        ]);
+        User::firstOrCreate(
+            ['usuario' => 'cajero'],
+            [
+                'name' => 'Cajero',
+                'password' => bcrypt('cajero123'),
+                'rol' => 'cajero',
+            ]
+        );
     }
 }

@@ -26,8 +26,8 @@ Route::middleware('auth')->group(function () {
     Route::resource('productos', ProductoController::class)->except('show');
     Route::post('productos/{id}/restore', [ProductoController::class, 'restore'])->name('productos.restore');
     Route::resource('clientes', ClienteController::class)->except('show');
-    Route::resource('impuestos', ImpuestoController::class)->except('show');
-    Route::resource('tasas-cambio', TasaCambioController::class)->except('show');
+    Route::resource('impuestos', ImpuestoController::class)->except('show')->middleware('rol:admin');
+    Route::resource('tasas-cambio', TasaCambioController::class)->except('show')->middleware('rol:admin');
 
     Route::get('/pos', [FacturaController::class, 'pos'])->name('facturas.pos');
     Route::post('/facturas', [FacturaController::class, 'store'])->name('facturas.store');
@@ -35,21 +35,23 @@ Route::middleware('auth')->group(function () {
     Route::get('/facturas/{factura}', [FacturaController::class, 'show'])->name('facturas.show');
     Route::post('/facturas/{factura}/pagar-credito', [FacturaController::class, 'pagarCredito'])->name('facturas.pagar-credito');
 
-    Route::get('/reportes/facturas', [ReporteController::class, 'facturas'])->name('reportes.facturas');
-    Route::get('/reportes/balance', [ReporteController::class, 'balance'])->name('reportes.balance');
-    Route::get('/reportes/stock', [ReporteController::class, 'stock'])->name('reportes.stock');
+    Route::middleware('rol:admin')->group(function () {
+        Route::get('/reportes/facturas', [ReporteController::class, 'facturas'])->name('reportes.facturas');
+        Route::get('/reportes/balance', [ReporteController::class, 'balance'])->name('reportes.balance');
+        Route::get('/reportes/stock', [ReporteController::class, 'stock'])->name('reportes.stock');
 
-    Route::get('/herramientas/datos', [HerramientasController::class, 'datos'])->name('herramientas.datos');
-    Route::get('/herramientas/exportar', [HerramientasController::class, 'exportar'])->name('herramientas.exportar');
-    Route::post('/herramientas/importar', [HerramientasController::class, 'importar'])->name('herramientas.importar');
+        Route::get('/herramientas/datos', [HerramientasController::class, 'datos'])->name('herramientas.datos');
+        Route::get('/herramientas/exportar', [HerramientasController::class, 'exportar'])->name('herramientas.exportar');
+        Route::post('/herramientas/importar', [HerramientasController::class, 'importar'])->name('herramientas.importar');
 
-    Route::get('/herramientas/impresora', [HerramientasController::class, 'imprimirConfig'])->name('herramientas.impresora');
-    Route::post('/herramientas/impresora', [HerramientasController::class, 'imprimirGuardar'])->name('herramientas.impresora.guardar');
-    Route::post('/herramientas/impresora/test', [HerramientasController::class, 'imprimirTest'])->name('herramientas.impresora.test');
-    Route::get('/herramientas/imprimir-factura/{factura}', [HerramientasController::class, 'imprimirFactura'])->name('herramientas.imprimir-factura');
+        Route::get('/herramientas/impresora', [HerramientasController::class, 'imprimirConfig'])->name('herramientas.impresora');
+        Route::post('/herramientas/impresora', [HerramientasController::class, 'imprimirGuardar'])->name('herramientas.impresora.guardar');
+        Route::post('/herramientas/impresora/test', [HerramientasController::class, 'imprimirTest'])->name('herramientas.impresora.test');
+        Route::get('/herramientas/imprimir-factura/{factura}', [HerramientasController::class, 'imprimirFactura'])->name('herramientas.imprimir-factura');
 
-    Route::get('/herramientas/precios', [HerramientasController::class, 'precios'])->name('herramientas.precios');
-    Route::get('/herramientas/precios/pdf', [HerramientasController::class, 'preciosPdf'])->name('herramientas.precios.pdf');
+        Route::get('/herramientas/precios', [HerramientasController::class, 'precios'])->name('herramientas.precios');
+        Route::get('/herramientas/precios/pdf', [HerramientasController::class, 'preciosPdf'])->name('herramientas.precios.pdf');
+    });
 });
 
 require __DIR__.'/auth.php';

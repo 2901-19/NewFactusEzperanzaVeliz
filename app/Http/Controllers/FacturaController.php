@@ -6,6 +6,7 @@ use App\Models\Producto;
 use App\Models\Factura;
 use App\Models\ItemFactura;
 use App\Models\Cliente;
+use App\Models\Impuesto;
 use App\Models\TasaCambio;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,7 +23,10 @@ class FacturaController extends Controller
             ->get()
             ->keyBy('tipo');
 
-        return view('facturas.pos', compact('productos', 'clientes', 'tasas'));
+        $iva = Impuesto::latest('fecha')->first();
+        $ivaPorcentaje = $iva ? (float) $iva->porcentaje : 16;
+
+        return view('facturas.pos', compact('productos', 'clientes', 'tasas', 'ivaPorcentaje'));
     }
 
     public function store(Request $request)
@@ -44,6 +48,9 @@ class FacturaController extends Controller
 
         $productos = Producto::whereIn('id', collect($request->items)->pluck('producto_id'))->get()->keyBy('id');
 
+        $iva = Impuesto::latest('fecha')->first();
+        $ivaPorcentaje = $iva ? (float) $iva->porcentaje : 16;
+
         $itemsData = [];
         $subtotalBs = 0;
         $ivaBs = 0;
@@ -54,6 +61,10 @@ class FacturaController extends Controller
             foreach ($request->items as $item) {
                 $producto = $productos[$item['producto_id']];
                 $cantidad = (int) $item['cantidad'];
+
+                if ($cantidad > $producto->stock_total) {
+                    throw new \Exception("Stock insuficiente para {$producto->nombre}. Disponible: {$producto->stock_total} uds.");
+                }
 
                 $precioUsd = $cantidad >= $producto->cantidad_minima_mayor
                     ? $producto->precio_mayor_usd
@@ -80,17 +91,20 @@ class FacturaController extends Controller
                 $totalUsd += $precioUsd * $cantidad;
 
                 if ($producto->tiene_iva) {
-                    $ivaBs += $subtotalItemBs * 0.16;
+                    $ivaBs += $subtotalItemBs * ($ivaPorcentaje / 100);
                 }
             }
 
             $totalBs = $subtotalBs + $ivaBs;
 
+            $tasaEfectiva = $totalUsd > 0 ? $totalBs / $totalUsd : 1;
+
             $factura = Factura::create([
                 'correlativo' => $correlativo,
                 'cliente_id' => $request->cliente_id,
+                'user_id' => auth()->id(),
                 'productos' => $itemsData,
-                'tasa_cambio' => $tasa,
+                'tasa_cambio' => round($tasaEfectiva, 2),
                 'metodo_pago' => $request->metodo_pago,
                 'subtotal_bs' => $subtotalBs,
                 'iva_bs' => $ivaBs,
@@ -124,7 +138,7 @@ class FacturaController extends Controller
         $facturas = Factura::where('estado', 'credito')
             ->with('cliente')
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->paginate(20);
 
         return view('facturas.creditos', compact('facturas'));
     }

@@ -56,8 +56,8 @@ class PrinterService
 
             if ($factura->cliente) {
                 $this->printer->text("Cliente: {$factura->cliente->nombre}\n");
-                if ($factura->cliente->cedula) {
-                    $this->printer->text("Cédula: {$factura->cliente->cedula}\n");
+                if ($factura->cliente->ci) {
+                    $this->printer->text("Cédula: {$factura->cliente->ci}\n");
                 }
                 $this->printer->feed();
             }

@@ -13,6 +13,11 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             UserSeeder::class,
+            ImpuestoSegmentSeeder::class,
+            ClienteSeeder::class,
+            ProductoSeeder::class,
+            TasaCambioSeeder::class,
+            FacturaSeeder::class,
         ]);
     }
 }

@@ -9,6 +9,7 @@ class Factura extends Model
     protected $fillable = [
         'correlativo',
         'cliente_id',
+        'user_id',
         'productos',
         'tasa_cambio',
         'metodo_pago',
@@ -37,5 +38,10 @@ class Factura extends Model
     public function items()
     {
         return $this->hasMany(ItemFactura::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 }

@@ -40,6 +40,10 @@ class HerramientasController extends Controller
 
     public function importar(Request $request)
     {
+        if (auth()->user()->rol !== 'admin') {
+            return back()->withErrors(['archivo' => 'Solo el administrador puede importar datos.']);
+        }
+
         $request->validate([
             'archivo' => 'required|file|mimes:json,txt|max:10240',
         ]);
@@ -51,33 +55,44 @@ class HerramientasController extends Controller
             return back()->withErrors(['archivo' => 'El archivo JSON no tiene el formato correcto.']);
         }
 
-        $contadores = ['productos' => 0, 'clientes' => 0, 'impuestos' => 0, 'tasas_cambio' => 0];
+        $validKeys = ['productos', 'clientes', 'impuestos', 'tasas_cambio'];
 
-        foreach ($data['productos'] as $item) {
-            Producto::updateOrCreate(['id' => $item['id']], $item);
-            $contadores['productos']++;
+        DB::beginTransaction();
+        try {
+            $contadores = ['productos' => 0, 'clientes' => 0, 'impuestos' => 0, 'tasas_cambio' => 0];
+
+            foreach ($validKeys as $key) {
+                if (!isset($data[$key]) || !is_array($data[$key])) continue;
+
+                $modelo = match ($key) {
+                    'productos' => Producto::class,
+                    'clientes' => Cliente::class,
+                    'impuestos' => Impuesto::class,
+                    'tasas_cambio' => TasaCambio::class,
+                };
+
+                $fillable = (new $modelo)->getFillable();
+
+                foreach ($data[$key] as $item) {
+                    $item = array_intersect_key($item, array_flip($fillable));
+                    unset($item['id']);
+
+                    $modelo::create($item);
+                    $contadores[$key]++;
+                }
+            }
+
+            DB::commit();
+
+            return back()->with('success', 'Importación completada: ' .
+                $contadores['productos'] . ' productos, ' .
+                $contadores['clientes'] . ' clientes, ' .
+                $contadores['impuestos'] . ' impuestos, ' .
+                $contadores['tasas_cambio'] . ' tasas.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['archivo' => 'Error durante la importación: ' . $e->getMessage()]);
         }
-
-        foreach ($data['clientes'] as $item) {
-            Cliente::updateOrCreate(['id' => $item['id']], $item);
-            $contadores['clientes']++;
-        }
-
-        foreach ($data['impuestos'] as $item) {
-            Impuesto::updateOrCreate(['id' => $item['id']], $item);
-            $contadores['impuestos']++;
-        }
-
-        foreach ($data['tasas_cambio'] as $item) {
-            TasaCambio::updateOrCreate(['id' => $item['id']], $item);
-            $contadores['tasas_cambio']++;
-        }
-
-        return back()->with('success', 'Importación completada: ' .
-            $contadores['productos'] . ' productos, ' .
-            $contadores['clientes'] . ' clientes, ' .
-            $contadores['impuestos'] . ' impuestos, ' .
-            $contadores['tasas_cambio'] . ' tasas.');
     }
 
     // ========== IMPRESIÓN ==========
@@ -158,7 +173,7 @@ class HerramientasController extends Controller
         $items = $factura->items->map(function ($item) {
             return [
                 'nombre' => $item->producto->nombre ?? 'Producto',
-                'precio_unitario' => $item->precio_unitario,
+                'precio_unitario' => $item->precio_unitario_usd,
                 'cantidad' => $item->cantidad,
                 'total' => $item->subtotal,
             ];

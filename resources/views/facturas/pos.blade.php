@@ -4,8 +4,9 @@
 <div x-data="pos()" class="row">
     <div class="col-md-7">
         <div class="card mb-3">
-            <div class="card-body">
-                <input type="text" class="form-control form-control-lg" placeholder="Buscar producto..." x-model="busqueda" @input="filtrarProductos">
+            <div class="card-body d-flex gap-2">
+                <input type="text" class="form-control form-control-lg" placeholder="Buscar producto (código o nombre)..." x-model="busqueda" @input="filtrarProductos" x-ref="buscador" id="buscador">
+                <button class="btn btn-outline-secondary" @click="busqueda = ''; filtrarProductos()" x-show="busqueda.length > 0">&times;</button>
             </div>
         </div>
         <div class="row g-2" style="max-height: 60vh; overflow-y: auto;">
@@ -90,7 +91,7 @@
                     <span x-text="subtotalBs.toFixed(2)"></span>
                 </div>
                 <div class="d-flex justify-content-between small">
-                    <span>IVA (16%):</span>
+                    <span>IVA ({{ $ivaPorcentaje }}%):</span>
                     <span x-text="ivaBs.toFixed(2)"></span>
                 </div>
                 <div class="d-flex justify-content-between fw-bold">
@@ -101,9 +102,53 @@
                     <span>Total USD:</span>
                     <span x-text="'$' + totalUsd.toFixed(2)"></span>
                 </div>
-                <button class="btn btn-success w-100 mt-3" @click="guardarFactura" :disabled="carrito.length === 0 || (tipoFactura === 'credito' && !clienteId)">
-                    <i class="bi bi-check-lg"></i> Generar Factura
+                <button class="btn btn-success w-100 mt-3" @click="confirmarFactura" :disabled="carrito.length === 0 || (tipoFactura === 'credito' && !clienteId) || cargando">
+                    <span x-show="!cargando"><i class="bi bi-check-lg"></i> Generar Factura</span>
+                    <span x-show="cargando"><span class="spinner-border spinner-border-sm"></span> Procesando...</span>
                 </button>
+            </div>
+        </div>
+    </div>
+
+    {{-- Modal de confirmación --}}
+    <div class="modal fade" id="confirmModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar Factura</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p><strong>Items:</strong> <span x-text="carrito.length"></span></p>
+                    <p><strong>Subtotal Bs:</strong> <span x-text="subtotalBs.toFixed(2)"></span></p>
+                    <p><strong>IVA ({{ $ivaPorcentaje }}%):</strong> <span x-text="ivaBs.toFixed(2)"></span></p>
+                    <p class="fw-bold"><strong>Total Bs:</strong> <span x-text="totalBs.toFixed(2)"></span></p>
+                    <p><strong>Total USD:</strong> $<span x-text="totalUsd.toFixed(2)"></span></p>
+                    <p><strong>Método de Pago:</strong> <span x-text="metodoPago.charAt(0).toUpperCase() + metodoPago.slice(1)"></span></p>
+                    <p><strong>Tipo:</strong> <span x-text="tipoFactura.charAt(0).toUpperCase() + tipoFactura.slice(1)"></span></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-success" @click="guardarFactura">
+                        <i class="bi bi-check-lg"></i> Confirmar y Facturar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Toast de éxito --}}
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="successToast" class="toast align-items-center text-bg-success border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body" id="toastMessage"></div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+        <div id="errorToast" class="toast align-items-center text-bg-danger border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body" id="errorToastMessage"></div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
             </div>
         </div>
     </div>
@@ -117,19 +162,37 @@ function pos() {
         productos: @json($productos),
         clientes: @json($clientes),
         tasas: @json($tasas),
+        ivaPorcentaje: {{ $ivaPorcentaje }},
         carrito: [],
         metodoPago: 'efectivo',
         tipoFactura: 'contado',
         clienteId: '',
+        cargando: false,
+
+        init() {
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'F2') {
+                    e.preventDefault();
+                    this.$refs.buscador.focus();
+                }
+                if (e.key === 'F8' && this.carrito.length > 0) {
+                    e.preventDefault();
+                    this.confirmarFactura();
+                }
+            });
+        },
 
         get productosFiltrados() {
             if (!this.busqueda) return this.productos;
             const b = this.busqueda.toLowerCase();
             return this.productos.filter(p =>
+                String(p.id).includes(b) ||
                 p.nombre.toLowerCase().includes(b) ||
                 (p.descripcion && p.descripcion.toLowerCase().includes(b))
             );
         },
+
+        filtrarProductos() {},
 
         agregar(p) {
             const existente = this.carrito.find(i => i.id === p.id);
@@ -152,6 +215,7 @@ function pos() {
                     }
                 });
             }
+            this.busqueda = '';
         },
 
         get subtotalBs() {
@@ -169,7 +233,7 @@ function pos() {
                 const tasa = this.tasas[i.fuente_tasa]
                     ? parseFloat(this.tasas[i.fuente_tasa].monto)
                     : 1;
-                return sum + (i.precioUnitario * i.cantidad * tasa * 0.16);
+                return sum + (i.precioUnitario * i.cantidad * tasa * (this.ivaPorcentaje / 100));
             }, 0);
         },
 
@@ -183,12 +247,20 @@ function pos() {
             }, 0);
         },
 
-        async guardarFactura() {
+        confirmarFactura() {
             if (this.carrito.length === 0) return;
             if (this.tipoFactura === 'credito' && !this.clienteId) {
-                alert('Debe seleccionar un cliente para facturas a crédito.');
+                this.mostrarError('Debe seleccionar un cliente para facturas a crédito.');
                 return;
             }
+            const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+            modal.show();
+        },
+
+        async guardarFactura() {
+            this.cargando = true;
+            const modal = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
+            if (modal) modal.hide();
 
             const items = this.carrito.map(i => ({
                 producto_id: i.id,
@@ -213,18 +285,31 @@ function pos() {
                 const data = await res.json();
 
                 if (data.success) {
-                    alert('Factura #' + data.correlativo + ' generada correctamente.');
+                    this.mostrarExito('Factura #' + data.correlativo + ' generada correctamente.');
                     this.carrito = [];
                     this.metodoPago = 'efectivo';
                     this.tipoFactura = 'contado';
                     this.clienteId = '';
-                    location.reload();
                 } else {
-                    alert('Error: ' + data.message);
+                    this.mostrarError('Error: ' + data.message);
                 }
             } catch (e) {
-                alert('Error al guardar la factura.');
+                this.mostrarError('Error al conectar con el servidor.');
+            } finally {
+                this.cargando = false;
             }
+        },
+
+        mostrarExito(msg) {
+            document.getElementById('toastMessage').textContent = msg;
+            const toast = new bootstrap.Toast(document.getElementById('successToast'));
+            toast.show();
+        },
+
+        mostrarError(msg) {
+            document.getElementById('errorToastMessage').textContent = msg;
+            const toast = new bootstrap.Toast(document.getElementById('errorToast'));
+            toast.show();
         },
     };
 }
