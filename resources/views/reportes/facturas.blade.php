@@ -20,7 +20,7 @@
 </div>
 
 <div class="table-responsive">
-    <table class="table table-bordered table-striped">
+    <table id="reporteFacturasTable" class="table table-bordered table-striped">
         <thead class="table-dark">
             <tr>
                 <th>Correlativo</th>
@@ -62,3 +62,14 @@
     </table>
 </div>
 @endsection
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    $('#reporteFacturasTable').DataTable({
+        language: window.DataTableSpanish,
+        order: [[4, 'desc']],
+        pageLength: 25,
+    });
+});
+</script>
+@endpush

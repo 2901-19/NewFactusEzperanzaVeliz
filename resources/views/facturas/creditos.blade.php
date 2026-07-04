@@ -5,7 +5,7 @@
     <h2>Facturas a Crédito</h2>
 </div>
 <div class="table-responsive">
-    <table class="table table-bordered table-striped">
+    <table id="creditosTable" class="table table-bordered table-striped">
         <thead class="table-dark">
             <tr>
                 <th>Correlativo</th>
@@ -56,6 +56,11 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    $('#creditosTable').DataTable({
+        language: window.DataTableSpanish,
+        order: [[4, 'desc']],
+        pageLength: 25,
+    });
     $(document).on('click', '.btn-pagar', function () {
         const btn = $(this);
         Swal.fire({
