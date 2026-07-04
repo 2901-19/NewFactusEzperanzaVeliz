@@ -1,0 +1,63 @@
+@extends('layouts.app')
+@section('titulo', 'Configuración de Impresora')
+@section('contenido')
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">Configuración</div>
+            <div class="card-body">
+                <form method="POST" action="{{ route('herramientas.impresora.guardar') }}">
+                    @csrf
+                    <div class="mb-3">
+                        <label class="form-label">Tipo de Conexión</label>
+                        <select name="tipo" class="form-select" id="tipoConexion">
+                            <option value="network" {{ $config['tipo'] == 'network' ? 'selected' : '' }}>Red (TCP/IP)</option>
+                            <option value="windows" {{ $config['tipo'] == 'windows' ? 'selected' : '' }}>Windows (USB/COM)</option>
+                        </select>
+                    </div>
+                    <div id="networkConfig">
+                        <div class="mb-3">
+                            <label class="form-label">Dirección IP</label>
+                            <input type="text" name="host" class="form-control" value="{{ $config['host'] }}" placeholder="192.168.1.100">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Puerto</label>
+                            <input type="number" name="port" class="form-control" value="{{ $config['port'] }}" placeholder="9100">
+                        </div>
+                    </div>
+                    <div id="windowsConfig" style="display:none">
+                        <div class="mb-3">
+                            <label class="form-label">Nombre de la Impresora</label>
+                            <input type="text" name="nombre" class="form-control" value="{{ $config['nombre'] }}" placeholder="EPSON TM-T20">
+                            <small class="text-muted">Ej: EPSON TM-T20, POS-80, o \\localhost\POS</small>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">Prueba de Impresión</div>
+            <div class="card-body">
+                <p class="text-muted">Verifica que la impresora esté configurada correctamente.</p>
+                <form method="POST" action="{{ route('herramientas.impresora.test') }}">
+                    @csrf
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-printer"></i> Imprimir Prueba
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection
+@push('scripts')
+<script>
+    document.getElementById('tipoConexion').addEventListener('change', function() {
+        document.getElementById('networkConfig').style.display = this.value === 'network' ? 'block' : 'none';
+        document.getElementById('windowsConfig').style.display = this.value === 'windows' ? 'block' : 'none';
+    });
+</script>
+@endpush

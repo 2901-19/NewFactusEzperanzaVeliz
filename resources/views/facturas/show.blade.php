@@ -69,8 +69,11 @@
             </tfoot>
         </table>
 
-        <a href="{{ route('facturas.creditos') }}" class="btn btn-secondary">
-            <i class="bi bi-arrow-left"></i> Volver a Créditos
+        <a href="{{ url()->previous() }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+        <a href="{{ route('herramientas.imprimir-factura', $factura->id) }}" class="btn btn-outline-primary ms-2" onclick="return confirm('¿Enviar a la impresora térmica?')">
+            <i class="bi bi-printer"></i> Imprimir Ticket
         </a>
     </div>
 </div>

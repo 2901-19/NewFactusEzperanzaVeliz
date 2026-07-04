@@ -58,6 +58,22 @@
         </li>
         <hr class="text-secondary">
         <li class="nav-item">
+            <a href="{{ route('herramientas.datos') }}" class="nav-link text-white {{ request()->routeIs('herramientas.datos') ? 'active' : '' }}">
+                <i class="bi bi-database"></i> Exportar / Importar
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ route('herramientas.impresora') }}" class="nav-link text-white {{ request()->routeIs('herramientas.impresora*') ? 'active' : '' }}">
+                <i class="bi bi-printer"></i> Impresora
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ route('herramientas.precios') }}" class="nav-link text-white {{ request()->routeIs('herramientas.precios*') ? 'active' : '' }}">
+                <i class="bi bi-tags"></i> Lista de Precios
+            </a>
+        </li>
+        <hr class="text-secondary">
+        <li class="nav-item">
             <a href="{{ route('profile.edit') }}" class="nav-link text-white">
                 <i class="bi bi-person-circle"></i> Mi Perfil
             </a>
