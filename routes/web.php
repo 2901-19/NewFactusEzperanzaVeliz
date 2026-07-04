@@ -28,7 +28,8 @@ Route::middleware('auth')->group(function () {
     Route::post('productos/{id}/restore', [ProductoController::class, 'restore'])->name('productos.restore');
     Route::resource('clientes', ClienteController::class)->except('show');
     Route::resource('impuestos', ImpuestoController::class)->except('show')->middleware('rol:admin');
-    Route::resource('tasas-cambio', TasaCambioController::class)->except('show')->middleware('rol:admin');
+    Route::get('/tasas-cambio', [TasaCambioController::class, 'index'])->name('tasas-cambio.index')->middleware('rol:admin');
+    Route::post('/tasas-cambio/actualizar', [TasaCambioController::class, 'actualizar'])->name('tasas-cambio.actualizar')->middleware('rol:admin');
     Route::resource('categorias', CategoriaController::class)->except('show')->middleware('rol:admin');
 
     Route::get('/pos', [FacturaController::class, 'pos'])->name('facturas.pos');

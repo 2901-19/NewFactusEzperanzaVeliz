@@ -9,29 +9,23 @@ class TasaCambioSeeder extends Seeder
 {
     public function run(): void
     {
-        // Histórico de tasas de los últimos 60 días
-        $fecha = now()->subDays(60);
-        $hoy = now();
+        $tasas = [
+            ['tipo' => 'promedio', 'moneda' => 'USD', 'monto' => 59.25],
+            ['tipo' => 'dolar',    'moneda' => 'USD', 'monto' => 60.00],
+            ['tipo' => 'bcv',      'moneda' => 'USD', 'monto' => 58.50],
+        ];
 
-        $dolar = 60.00;
-        $bcv = 58.50;
-        $promedio = 59.25;
-
-        while ($fecha <= $hoy) {
-            $dolar += round((rand(-100, 150) / 100), 2);
-            $bcv += round((rand(-80, 120) / 100), 2);
-            $promedio = round(($dolar + $bcv) / 2, 2);
-
-            foreach (['dolar' => $dolar, 'bcv' => $bcv, 'promedio' => $promedio] as $tipo => $monto) {
-                TasaCambio::firstOrCreate(
-                    ['tipo' => $tipo, 'fecha' => $fecha->toDateString()],
-                    ['moneda' => 'USD', 'monto' => max($monto, 1)]
-                );
-            }
-
-            $fecha->addDay();
+        foreach ($tasas as $tasa) {
+            TasaCambio::updateOrCreate(
+                ['tipo' => $tasa['tipo']],
+                [
+                    'moneda' => $tasa['moneda'],
+                    'monto' => $tasa['monto'],
+                    'fecha' => now()->toDateString(),
+                ]
+            );
         }
 
-        $this->command->info('✓ 3 tasas/día por 60 días creadas (~180 registros)');
+        $this->command->info('✓ 3 tasas de cambio creadas (promedio, dolar, bcv)');
     }
 }

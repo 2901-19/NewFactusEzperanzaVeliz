@@ -1,9 +1,9 @@
 @extends('layouts.app')
 @section('titulo', 'Tasas de Cambio')
 @section('contenido')
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="mb-3">
     <h2>Tasas de Cambio</h2>
-    <a href="{{ route('tasas-cambio.create') }}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Nueva Tasa</a>
+    <p class="text-muted small">Actualiza el monto de cada tasa cuando cambie. La fecha se actualizará automáticamente.</p>
 </div>
 <div class="table-responsive">
     <table id="dt-tasas" class="table table-bordered table-striped">
@@ -12,22 +12,40 @@
                 <th>Tipo</th>
                 <th>Moneda</th>
                 <th>Monto</th>
-                <th>Fecha</th>
-                <th>Acciones</th>
+                <th>Última Actualización</th>
+                <th>Acción</th>
             </tr>
         </thead>
         <tbody>
-            @foreach ($tasas as $t)
-            <tr>
-                <td><span class="badge bg-info">{{ ucfirst($t->tipo) }}</span></td>
-                <td>{{ $t->moneda }}</td>
-                <td>{{ number_format($t->monto, 2) }}</td>
-                <td>{{ $t->fecha }}</td>
-                <td>
-                    <a href="{{ route('tasas-cambio.edit', $t->id) }}" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>
-                    <button class="btn btn-sm btn-danger btn-delete" data-url="{{ route('tasas-cambio.destroy', $t->id) }}"><i class="bi bi-trash"></i></button>
-                </td>
-            </tr>
+            @php
+                $tipos = [
+                    'promedio' => ['label' => 'Promedio', 'class' => 'bg-info'],
+                    'dolar' => ['label' => 'Dólar Paralelo', 'class' => 'bg-primary'],
+                    'bcv' => ['label' => 'BCV', 'class' => 'bg-secondary'],
+                ];
+            @endphp
+            @foreach ($tipos as $tipo => $info)
+                @php $t = $tasas->get($tipo); @endphp
+                <tr>
+                    <td><span class="badge {{ $info['class'] }}">{{ $info['label'] }}</span></td>
+                    <td>USD</td>
+                    <td>
+                        <form method="POST" action="{{ route('tasas-cambio.actualizar') }}" class="row g-1 align-items-center">
+                            @csrf
+                            <input type="hidden" name="tipo" value="{{ $tipo }}">
+                            <div class="col-6 col-md-4">
+                                <input type="number" step="0.01" name="monto" class="form-control form-control-sm" value="{{ $t ? number_format($t->monto, 2, '.', '') : '' }}" min="0" required>
+                            </div>
+                            <div class="col-auto">
+                                <button type="submit" class="btn btn-sm btn-success">
+                                    <i class="bi bi-arrow-clockwise"></i> Actualizar
+                                </button>
+                            </div>
+                        </form>
+                    </td>
+                    <td>{{ $t ? $t->fecha : '—' }}</td>
+                    <td>{{ $t ? $t->updated_at->diffForHumans() : '—' }}</td>
+                </tr>
             @endforeach
         </tbody>
     </table>
@@ -36,17 +54,12 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    if ($.fn.DataTable) { $('#dt-tasas').DataTable({ columnDefs: [{ orderable: false, targets: -1 }] }); }
-    $(document).on('click', '.btn-delete', function () {
-        const btn = $(this);
-        Swal.fire({
-            title: '¿Eliminar esta tasa?',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc3545',
-            confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar',
-        }).then((r) => { if (r.isConfirmed) $.post(btn.data('url'), { _token: csrf, _method: 'DELETE' }).then(() => location.reload()); });
+    $('#dt-tasas').DataTable({
+        language: window.DataTableSpanish,
+        paging: false,
+        info: false,
+        searching: false,
+        ordering: false,
     });
 });
 </script>
