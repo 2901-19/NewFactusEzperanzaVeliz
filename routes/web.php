@@ -10,6 +10,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\HerramientasController;
 use App\Http\Controllers\CategoriaController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -59,6 +60,8 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/herramientas/configuracion', [HerramientasController::class, 'configuracion'])->name('herramientas.configuracion');
         Route::post('/herramientas/configuracion', [HerramientasController::class, 'configuracionGuardar'])->name('herramientas.configuracion.guardar');
+
+        Route::resource('usuarios', UserController::class)->except('show');
     });
 });
 

@@ -70,6 +70,11 @@
             </li>
             <hr class="text-secondary">
             <li class="nav-item">
+                <a href="{{ route('usuarios.index') }}" class="nav-link {{ request()->routeIs('usuarios.*') ? 'active' : '' }}">
+                    <i class="bi bi-people-fill"></i> Usuarios
+                </a>
+            </li>
+            <li class="nav-item">
                 <a href="{{ route('herramientas.datos') }}" class="nav-link {{ request()->routeIs('herramientas.datos') ? 'active' : '' }}">
                     <i class="bi bi-database"></i> Exportar / Importar
                 </a>
