@@ -28,7 +28,7 @@ class Factura extends Model
     {
         return [
             'productos' => 'array',
-            'fecha_venta' => 'date',
+            'fecha_venta' => 'datetime',
         ];
     }
 
