@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('factura_id')->constrained('facturas')->cascadeOnDelete();
             $table->foreignId('producto_id')->constrained('productos')->cascadeOnDelete();
             $table->integer('cantidad');
+            $table->string('tipo_venta')->default('unitario');
             $table->decimal('precio_unitario_usd', 12, 2);
             $table->decimal('precio_unitario_bs', 14, 2);
             $table->decimal('subtotal', 14, 2);

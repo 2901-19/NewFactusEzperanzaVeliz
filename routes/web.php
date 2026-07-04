@@ -1,10 +1,14 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProductoController;
+use App\Http\Controllers\ClienteController;
+use App\Http\Controllers\ImpuestoController;
+use App\Http\Controllers\TasaCambioController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->route('login');
 });
 
 Route::get('/dashboard', function () {
@@ -15,6 +19,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::resource('productos', ProductoController::class)->except('show');
+    Route::post('productos/{id}/restore', [ProductoController::class, 'restore'])->name('productos.restore');
+    Route::resource('clientes', ClienteController::class)->except('show');
+    Route::resource('impuestos', ImpuestoController::class)->except('show');
+    Route::resource('tasas-cambio', TasaCambioController::class)->except('show');
 });
 
 require __DIR__.'/auth.php';

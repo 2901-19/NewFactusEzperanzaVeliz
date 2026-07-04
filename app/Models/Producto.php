@@ -13,16 +13,21 @@ class Producto extends Model
         'nombre',
         'descripcion',
         'imagen',
-        'stock',
-        'paquetes',
-        'unidades_paquete',
-        'precio_costo_usd',
-        'porcentaje_ganancia',
-        'precio_venta_usd',
+        'unidades_por_paquete',
+        'stock_paquetes',
+        'stock_unidades',
+        'precio_unitario_usd',
+        'precio_mayor_usd',
+        'cantidad_minima_mayor',
         'tiene_iva',
-        'estado',
         'fuente_tasa',
+        'estado',
     ];
+
+    public function getStockTotalAttribute(): int
+    {
+        return ($this->stock_paquetes * $this->unidades_por_paquete) + $this->stock_unidades;
+    }
 
     protected function casts(): array
     {

@@ -12,6 +12,7 @@ class ItemFactura extends Model
         'factura_id',
         'producto_id',
         'cantidad',
+        'tipo_venta',
         'precio_unitario_usd',
         'precio_unitario_bs',
         'subtotal',
