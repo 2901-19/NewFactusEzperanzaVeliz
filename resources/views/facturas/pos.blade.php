@@ -182,9 +182,6 @@ document.addEventListener('alpine:init', () => {
         init() {
             if ($.fn.DataTable) {
                 this.dataTable = $('#productosTable').DataTable({
-                    language: {
-                        url: '//cdn.datatables.net/plug-ins/2.2.2/i18n/es-ES.json',
-                    },
                     pageLength: 15,
                     lengthMenu: [10, 15, 25, 50],
                     order: [[0, 'asc']],

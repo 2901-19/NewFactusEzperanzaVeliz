@@ -41,7 +41,26 @@ document.addEventListener('DOMContentLoaded', function () {
 // DataTables default config
 $.extend($.fn.dataTable.defaults, {
     language: {
-        url: '//cdn.datatables.net/plug-ins/2.2.2/i18n/es-ES.json',
+        processing: 'Procesando...',
+        lengthMenu: 'Mostrar _MENU_ registros',
+        zeroRecords: 'No se encontraron resultados',
+        emptyTable: 'Ningún dato disponible en esta tabla',
+        info: 'Mostrando _START_ a _END_ de _TOTAL_ registros',
+        infoEmpty: 'Mostrando 0 a 0 de 0 registros',
+        infoFiltered: '(filtrado de _MAX_ registros totales)',
+        infoThousands: '.',
+        loadingRecords: 'Cargando...',
+        search: 'Buscar:',
+        paginate: {
+            first: 'Primero',
+            last: 'Último',
+            next: 'Siguiente',
+            previous: 'Anterior',
+        },
+        aria: {
+            sortAscending: 'Activar para ordenar ascendente',
+            sortDescending: 'Activar para ordenar descendente',
+        },
     },
     pageLength: 25,
     lengthMenu: [10, 25, 50, 100],
