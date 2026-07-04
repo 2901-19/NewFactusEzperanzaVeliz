@@ -11,6 +11,7 @@ class Producto extends Model
 
     protected $fillable = [
         'nombre',
+        'categoria_id',
         'descripcion',
         'imagen',
         'unidades_por_paquete',
@@ -39,5 +40,10 @@ class Producto extends Model
     public function items()
     {
         return $this->hasMany(ItemFactura::class);
+    }
+
+    public function categoria()
+    {
+        return $this->belongsTo(Categoria::class);
     }
 }

@@ -13,6 +13,7 @@
             <tr>
                 <th>ID</th>
                 <th>Nombre</th>
+                <th>Categoría</th>
                 <th>Stock Total</th>
                 <th>Precio Unitario</th>
                 <th>Precio Mayor</th>
@@ -25,6 +26,7 @@
             <tr class="{{ $p->trashed() ? 'table-secondary text-muted' : '' }}">
                 <td>{{ $p->id }}</td>
                 <td>{{ $p->nombre }}</td>
+                <td>{{ $p->categoria->nombre ?? '-' }}</td>
                 <td>{{ $p->stock_total }} uds</td>
                 <td>${{ number_format($p->precio_unitario_usd, 2) }}</td>
                 <td>${{ number_format($p->precio_mayor_usd, 2) }}</td>

@@ -23,6 +23,7 @@ class ProductoController extends Controller
     {
         $data = $request->validate([
             'nombre' => 'required|string|max:255',
+            'categoria_id' => 'nullable|exists:categorias,id',
             'descripcion' => 'nullable|string',
             'imagen' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'unidades_por_paquete' => 'required|integer|min:1',
@@ -54,6 +55,7 @@ class ProductoController extends Controller
     {
         $data = $request->validate([
             'nombre' => 'required|string|max:255',
+            'categoria_id' => 'nullable|exists:categorias,id',
             'descripcion' => 'nullable|string',
             'imagen' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'unidades_por_paquete' => 'required|integer|min:1',

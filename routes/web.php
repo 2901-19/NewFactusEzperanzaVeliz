@@ -9,6 +9,7 @@ use App\Http\Controllers\FacturaController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\HerramientasController;
+use App\Http\Controllers\CategoriaController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -28,12 +29,15 @@ Route::middleware('auth')->group(function () {
     Route::resource('clientes', ClienteController::class)->except('show');
     Route::resource('impuestos', ImpuestoController::class)->except('show')->middleware('rol:admin');
     Route::resource('tasas-cambio', TasaCambioController::class)->except('show')->middleware('rol:admin');
+    Route::resource('categorias', CategoriaController::class)->except('show')->middleware('rol:admin');
 
     Route::get('/pos', [FacturaController::class, 'pos'])->name('facturas.pos');
     Route::post('/facturas', [FacturaController::class, 'store'])->name('facturas.store');
+    Route::get('/facturas', [FacturaController::class, 'index'])->name('facturas.index');
     Route::get('/creditos', [FacturaController::class, 'creditos'])->name('facturas.creditos');
     Route::get('/facturas/{factura}', [FacturaController::class, 'show'])->name('facturas.show');
     Route::post('/facturas/{factura}/pagar-credito', [FacturaController::class, 'pagarCredito'])->name('facturas.pagar-credito');
+    Route::post('/facturas/{factura}/anular', [FacturaController::class, 'anular'])->name('facturas.anular');
 
     Route::middleware('rol:admin')->group(function () {
         Route::get('/reportes/facturas', [ReporteController::class, 'facturas'])->name('reportes.facturas');
@@ -51,6 +55,9 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/herramientas/precios', [HerramientasController::class, 'precios'])->name('herramientas.precios');
         Route::get('/herramientas/precios/pdf', [HerramientasController::class, 'preciosPdf'])->name('herramientas.precios.pdf');
+
+        Route::get('/herramientas/configuracion', [HerramientasController::class, 'configuracion'])->name('herramientas.configuracion');
+        Route::post('/herramientas/configuracion', [HerramientasController::class, 'configuracionGuardar'])->name('herramientas.configuracion.guardar');
     });
 });
 

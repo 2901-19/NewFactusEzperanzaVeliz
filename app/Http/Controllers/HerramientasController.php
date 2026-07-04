@@ -6,6 +6,7 @@ use App\Models\Producto;
 use App\Models\Cliente;
 use App\Models\Impuesto;
 use App\Models\TasaCambio;
+use App\Models\Configuracion;
 use App\Services\PrinterService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -221,5 +222,32 @@ class HerramientasController extends Controller
         $pdf->setPaper('letter', 'portrait');
 
         return $pdf->download('lista_precios_' . now()->format('Y_m_d') . '.pdf');
+    }
+
+    // ========== CONFIGURACIÓN DEL NEGOCIO ==========
+
+    public function configuracion()
+    {
+        $configs = Configuracion::pluck('valor', 'clave')->toArray();
+        return view('herramientas.configuracion', compact('configs'));
+    }
+
+    public function configuracionGuardar(Request $request)
+    {
+        $request->validate([
+            'nombre_negocio' => 'required|string|max:255',
+            'rif' => 'required|string|max:20',
+            'direccion' => 'required|string|max:255',
+            'telefono' => 'required|string|max:20',
+        ]);
+
+        foreach (['nombre_negocio', 'rif', 'direccion', 'telefono'] as $clave) {
+            Configuracion::updateOrCreate(
+                ['clave' => $clave],
+                ['valor' => $request->$clave]
+            );
+        }
+
+        return back()->with('success', 'Configuración guardada correctamente.');
     }
 }

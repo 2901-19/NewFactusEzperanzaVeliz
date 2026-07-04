@@ -12,7 +12,17 @@
                     <input type="text" name="nombre" class="form-control @error('nombre') is-invalid @enderror" value="{{ old('nombre', $producto->nombre) }}" required>
                     @error('nombre') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Categoría</label>
+                    <select name="categoria_id" class="form-select @error('categoria_id') is-invalid @enderror">
+                        <option value="">Sin categoría</option>
+                        @foreach (\App\Models\Categoria::orderBy('nombre')->get() as $cat)
+                            <option value="{{ $cat->id }}" {{ old('categoria_id', $producto->categoria_id) == $cat->id ? 'selected' : '' }}>{{ $cat->nombre }}</option>
+                        @endforeach
+                    </select>
+                    @error('categoria_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                </div>
+                <div class="col-md-4 mb-3">
                     <label class="form-label">Imagen</label>
                     <input type="file" name="imagen" class="form-control @error('imagen') is-invalid @enderror" accept="image/*">
                     @if ($producto->imagen) <small class="text-muted d-block">Imagen actual: {{ $producto->imagen }}</small> @endif

@@ -40,7 +40,17 @@
                 <i class="bi bi-currency-exchange"></i> Tasas de Cambio
             </a>
         </li>
+        <li class="nav-item">
+            <a href="{{ route('categorias.index') }}" class="nav-link text-white {{ request()->routeIs('categorias.*') ? 'active' : '' }}">
+                <i class="bi bi-tags"></i> Categorías
+            </a>
+        </li>
         <hr class="text-secondary">
+        <li class="nav-item">
+            <a href="{{ route('facturas.index') }}" class="nav-link text-white {{ request()->routeIs('facturas.index') ? 'active' : '' }}">
+                <i class="bi bi-list-ul"></i> Facturas
+            </a>
+        </li>
         <li class="nav-item">
             <a href="{{ route('reportes.facturas') }}" class="nav-link text-white {{ request()->routeIs('reportes.facturas') ? 'active' : '' }}">
                 <i class="bi bi-file-text"></i> Reporte Facturas
@@ -70,6 +80,11 @@
         <li class="nav-item">
             <a href="{{ route('herramientas.precios') }}" class="nav-link text-white {{ request()->routeIs('herramientas.precios*') ? 'active' : '' }}">
                 <i class="bi bi-tags"></i> Lista de Precios
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ route('herramientas.configuracion') }}" class="nav-link text-white {{ request()->routeIs('herramientas.configuracion') ? 'active' : '' }}">
+                <i class="bi bi-gear"></i> Configuración
             </a>
         </li>
         <hr class="text-secondary">

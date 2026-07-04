@@ -13,6 +13,37 @@ use Illuminate\Support\Facades\DB;
 
 class FacturaController extends Controller
 {
+    public function index()
+    {
+        $facturas = Factura::with('cliente', 'user')
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
+
+        return view('facturas.index', compact('facturas'));
+    }
+
+    public function anular(Factura $factura)
+    {
+        if ($factura->estado === 'anulada') {
+            return back()->withErrors(['error' => 'La factura ya está anulada.']);
+        }
+
+        $factura->update(['estado' => 'anulada', 'estado_credito' => null]);
+
+        // Restaurar stock de cada item
+        foreach ($factura->items as $item) {
+            $producto = $item->producto;
+            if ($producto) {
+                $cantidad = $item->cantidad;
+                $paquetesPorUnidad = 1 / ($producto->unidades_por_paquete ?: 1);
+                $sobrantes = $cantidad;
+                $producto->increment('stock_unidades', $sobrantes);
+            }
+        }
+
+        return redirect()->route('facturas.index')->with('success', 'Factura #' . $factura->correlativo . ' anulada. Stock restaurado.');
+    }
+
     public function pos()
     {
         $productos = Producto::where('estado', 'disponible')->whereNull('deleted_at')->get();
