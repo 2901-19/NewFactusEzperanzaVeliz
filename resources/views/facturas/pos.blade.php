@@ -9,7 +9,7 @@
                 <span class="small text-muted" x-text="'Agregados: ' + carrito.length"></span>
             </div>
             <div class="card-body">
-                <table id="productosTable" class="table table-sm table-hover" style="width:100%">
+                <table id="productosTable" class="table table-sm table-hover thumbs-table" style="width:100%">
                     <thead>
                         <tr>
                             <th class="text-start">Nombre</th>

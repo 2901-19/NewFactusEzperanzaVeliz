@@ -20,7 +20,7 @@
     </div>
 </div>
 <div class="table-responsive">
-    <table id="dt-productos" class="table table-bordered table-striped">
+    <table id="dt-productos" class="table table-bordered table-striped thumbs-table">
         <thead class="table-dark">
             <tr>
                 <th class="text-start">Nombre</th>
