@@ -24,6 +24,63 @@
             <button type="submit" class="btn btn-primary">{{ isset($categoria) ? 'Actualizar' : 'Guardar' }}</button>
             <a href="{{ route('categorias.index') }}" class="btn btn-secondary">Cancelar</a>
         </form>
+
+        @isset($categoria)
+        <hr class="my-4">
+        <h5>Productos de esta categoría</h5>
+        <p class="text-muted small">Marque los productos que deben pertenecer a esta categoría. Los que desmarque quedarán sin categoría.</p>
+        <form method="POST" action="{{ route('categorias.asignar-productos', $categoria) }}">
+            @csrf
+            <div class="table-responsive">
+                <table id="dt-categoria-productos" class="table table-bordered table-striped thumbs-table">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="width:40px"><input type="checkbox" id="check-all"></th>
+                            <th>Ref.</th>
+                            <th class="text-start">Producto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($productos as $p)
+                        <tr>
+                            <td>
+                                <input type="checkbox" name="producto_ids[]" value="{{ $p->id }}"
+                                    {{ $p->categoria_id == $categoria->id ? 'checked' : '' }}>
+                            </td>
+                            <td>
+                                @if ($p->imagen_url)
+                                    <img src="{{ $p->imagen_url }}" alt="{{ $p->nombre }}" class="thumb">
+                                @else
+                                    <span class="text-muted sin-ref">Sin ref</span>
+                                @endif
+                            </td>
+                            <td class="text-start">{{ $p->nombre }}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            <button type="submit" class="btn btn-primary mt-2">
+                <i class="bi bi-check-lg"></i> Guardar asignación
+            </button>
+        </form>
+        @endisset
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if ($.fn.DataTable && document.getElementById('dt-categoria-productos')) {
+        $('#dt-categoria-productos').DataTable({
+            columnDefs: [{ orderable: false, targets: 0 }],
+            language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json' },
+        });
+    }
+    document.getElementById('check-all')?.addEventListener('change', function () {
+        document.querySelectorAll('input[name="producto_ids[]"]').forEach(cb => cb.checked = this.checked);
+    });
+});
+</script>
+@endpush

@@ -48,6 +48,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/tasas-cambio', [TasaCambioController::class, 'index'])->name('tasas-cambio.index')->middleware('permiso:gestionar-tasas');
     Route::post('/tasas-cambio/actualizar', [TasaCambioController::class, 'actualizar'])->name('tasas-cambio.actualizar')->middleware('permiso:gestionar-tasas');
     Route::resource('categorias', CategoriaController::class)->except('show')->middleware('permiso:gestionar-categorias');
+    Route::post('/categorias/{categoria}/asignar-productos', [CategoriaController::class, 'asignarProductos'])->name('categorias.asignar-productos')->middleware('permiso:gestionar-categorias');
 
     Route::get('/pos', [FacturaController::class, 'pos'])->name('facturas.pos')->middleware('permiso:usar-pos');
     Route::post('/facturas', [FacturaController::class, 'store'])->name('facturas.store')->middleware('permiso:crear-facturas');

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Categoria;
+use App\Models\Producto;
 use Illuminate\Http\Request;
 
 class CategoriaController extends Controller
@@ -32,7 +33,28 @@ class CategoriaController extends Controller
 
     public function edit(Categoria $categoria)
     {
-        return view('categorias.form', compact('categoria'));
+        $productos = Producto::whereNull('deleted_at')
+            ->where(function ($q) use ($categoria) {
+                $q->whereNull('categoria_id')
+                  ->orWhere('categoria_id', $categoria->id);
+            })
+            ->orderBy('nombre')
+            ->get();
+        return view('categorias.form', compact('categoria', 'productos'));
+    }
+
+    public function asignarProductos(Request $request, Categoria $categoria)
+    {
+        $productoIds = $request->validate(['producto_ids' => 'nullable|array'])['producto_ids'] ?? [];
+
+        Producto::where('categoria_id', $categoria->id)
+            ->whereNotIn('id', $productoIds)
+            ->update(['categoria_id' => null]);
+
+        Producto::whereIn('id', $productoIds)->update(['categoria_id' => $categoria->id]);
+
+        return redirect()->route('categorias.edit', $categoria)
+            ->with('success', 'Productos asignados correctamente.');
     }
 
     public function update(Request $request, Categoria $categoria)
