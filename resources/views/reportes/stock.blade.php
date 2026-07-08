@@ -3,6 +3,11 @@
 @section('contenido')
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2>Productos con Stock Bajo (&le;10 uds)</h2>
+    @if (Auth::user()->hasPermiso('actualizar-inventarios'))
+    <a href="{{ route('productos.ajustar-inventario') }}" class="btn btn-info text-white">
+        <i class="bi bi-box"></i> Actualizar Inventario
+    </a>
+    @endif
 </div>
 <div class="table-responsive">
     <table id="stockTable" class="table table-bordered table-striped">
