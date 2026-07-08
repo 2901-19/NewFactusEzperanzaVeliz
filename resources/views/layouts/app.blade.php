@@ -32,6 +32,9 @@
 
     <script>
     const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    window.DataTableSpanish = {
+        url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
+    };
     function toggleSidebar() {
         if (window.innerWidth < 992) {
             document.getElementById('sidebar').classList.toggle('open');

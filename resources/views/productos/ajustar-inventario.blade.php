@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if ($.fn.DataTable) {
         $('#tabla-inventario').DataTable({
             columnDefs: [{ orderable: false, targets: -1 }],
-            language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json' },
+            language: window.DataTableSpanish,
         });
     }
 });

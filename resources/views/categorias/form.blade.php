@@ -75,7 +75,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if ($.fn.DataTable && document.getElementById('dt-categoria-productos')) {
         $('#dt-categoria-productos').DataTable({
             columnDefs: [{ orderable: false, targets: 0 }],
-            language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json' },
+            language: window.DataTableSpanish,
         });
     }
     document.getElementById('check-all')?.addEventListener('change', function () {
