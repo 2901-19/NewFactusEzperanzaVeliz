@@ -7,9 +7,11 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Collection;
 
 class User extends Authenticatable
 {
+    private ?Collection $permisosCache = null;
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
@@ -64,15 +66,20 @@ class User extends Authenticatable
         return $this->belongsToMany(Permiso::class);
     }
 
-    public function permisos(): \Illuminate\Support\Collection
+    public function permisos(): Collection
     {
+        if ($this->permisosCache !== null) {
+            return $this->permisosCache;
+        }
+
         $permisosRol = Permiso::whereIn('id', function ($q) {
             $q->select('permiso_id')->from('permiso_rol')->where('rol', $this->rol);
         })->pluck('slug');
 
         $permisosUser = $this->permisosDirectos->pluck('slug');
 
-        return $permisosRol->merge($permisosUser)->unique();
+        $this->permisosCache = $permisosRol->merge($permisosUser)->unique();
+        return $this->permisosCache;
     }
 
     public function hasPermiso(string $slug): bool

@@ -8,4 +8,14 @@ export default defineConfig({
             refresh: true,
         }),
     ],
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    vendor: ['jquery', 'bootstrap', 'alpinejs', 'sweetalert2'],
+                    datatables: ['datatables.net-bs5'],
+                },
+            },
+        },
+    },
 });

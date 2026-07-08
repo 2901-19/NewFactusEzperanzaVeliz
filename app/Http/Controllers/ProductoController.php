@@ -10,7 +10,7 @@ class ProductoController extends Controller
 {
     public function index()
     {
-        $productos = Producto::withTrashed()->get();
+        $productos = Producto::withTrashed()->with('categoria')->get();
         $tasas = \App\Models\TasaCambio::pluck('monto', 'tipo');
         return view('productos.index', compact('productos', 'tasas'));
     }

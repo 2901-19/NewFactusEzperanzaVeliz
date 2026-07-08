@@ -14,21 +14,29 @@ class DashboardController extends Controller
         $hoy = now()->toDateString();
         $inicioMes = now()->startOfMonth()->toDateString();
 
-        $ventasHoy = Factura::whereDate('fecha_venta', $hoy)->count();
-        $totalHoyBs = Factura::whereDate('fecha_venta', $hoy)->sum('total_bs');
-        $totalHoyUsd = Factura::whereDate('fecha_venta', $hoy)->sum('total_usd');
+        $hoyStats = Factura::whereDate('fecha_venta', $hoy)
+            ->selectRaw('COUNT(*) as ventas, COALESCE(SUM(total_bs), 0) as total_bs, COALESCE(SUM(total_usd), 0) as total_usd')
+            ->first();
 
-        $ventasMes = Factura::whereDate('fecha_venta', '>=', $inicioMes)->count();
-        $totalMesBs = Factura::whereDate('fecha_venta', '>=', $inicioMes)->sum('total_bs');
-        $totalMesUsd = Factura::whereDate('fecha_venta', '>=', $inicioMes)->sum('total_usd');
+        $mesStats = Factura::whereDate('fecha_venta', '>=', $inicioMes)
+            ->selectRaw('COUNT(*) as ventas, COALESCE(SUM(total_bs), 0) as total_bs, COALESCE(SUM(total_usd), 0) as total_usd')
+            ->first();
 
-        $creditosPendientes = Factura::where('estado', 'credito')
+        $creditosStats = Factura::where('estado', 'credito')
             ->where('estado_credito', 'pendiente')
-            ->count();
+            ->selectRaw('COUNT(*) as total, COALESCE(SUM(total_bs), 0) as total_bs')
+            ->first();
 
-        $totalCreditosPendientesBs = Factura::where('estado', 'credito')
-            ->where('estado_credito', 'pendiente')
-            ->sum('total_bs');
+        $ventasHoy = $hoyStats->ventas;
+        $totalHoyBs = $hoyStats->total_bs;
+        $totalHoyUsd = $hoyStats->total_usd;
+
+        $ventasMes = $mesStats->ventas;
+        $totalMesBs = $mesStats->total_bs;
+        $totalMesUsd = $mesStats->total_usd;
+
+        $creditosPendientes = $creditosStats->total;
+        $totalCreditosPendientesBs = $creditosStats->total_bs;
 
         $productosStockBajo = Producto::whereNull('deleted_at')
             ->where('estado', 'disponible')
