@@ -172,6 +172,19 @@
     font-weight: bold;
 }
 
+/* Miniaturas de productos */
+.thumb {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+}
+.sin-ref {
+    font-size: 0.75rem;
+    font-style: italic;
+}
+
 /* Print: ocultar sidebar, navbar y footer */
 @media print {
     body {

@@ -13,6 +13,7 @@
                     <thead>
                         <tr>
                             <th class="text-start">Nombre</th>
+                            <th>Ref.</th>
                             <th>Precio Unit.</th>
                             <th>Precio Mayor</th>
                             <th style="width:60px"></th>
@@ -27,6 +28,13 @@
                         @endphp
                         <tr>
                             <td class="text-start">{{ $p->nombre }}</td>
+                            <td>
+                                @if ($p->imagen_url)
+                                    <img src="{{ $p->imagen_url }}" alt="{{ $p->nombre }}" class="thumb">
+                                @else
+                                    <span class="text-muted sin-ref">Sin referencia</span>
+                                @endif
+                            </td>
                             <td>Bs {{ number_format($puBsPos, 2) }} <small class="text-muted">(${{ number_format($p->precio_unitario_usd, 2) }})</small></td>
                             <td>Bs {{ number_format($pmBsPos, 2) }} <small class="text-muted">(${{ number_format($p->precio_mayor_usd, 2) }})</small></td>
                             <td class="text-center">
@@ -258,7 +266,7 @@ document.addEventListener('alpine:init', () => {
                     lengthMenu: [10, 15, 25, 50],
                     order: [[0, 'asc']],
                     columnDefs: [
-                        { targets: 3, orderable: false },
+                        { targets: 4, orderable: false },
                     ],
                 });
 

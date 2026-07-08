@@ -24,6 +24,7 @@
         <thead class="table-dark">
             <tr>
                 <th class="text-start">Nombre</th>
+                <th>Ref.</th>
                 <th>Categoría</th>
                 <th>Stock Total</th>
                 <th>Precio Unitario</th>
@@ -41,6 +42,13 @@
             @endphp
             <tr class="{{ $p->trashed() ? 'table-secondary text-muted' : '' }}">
                 <td class="text-start">{{ $p->nombre }}</td>
+                <td>
+                    @if ($p->imagen_url)
+                        <img src="{{ $p->imagen_url }}" alt="{{ $p->nombre }}" class="thumb">
+                    @else
+                        <span class="text-muted sin-ref">Sin referencia</span>
+                    @endif
+                </td>
                 <td>{{ $p->categoria->nombre ?? '-' }}</td>
                 <td>{{ $p->stock_total }} uds</td>
                 <td>Bs {{ number_format($puBs, 2) }} <small class="text-muted">(${{ number_format($p->precio_unitario_usd, 2) }})</small></td>

@@ -31,6 +31,11 @@ class Producto extends Model
         return ($this->stock_paquetes * $this->unidades_por_paquete) + $this->stock_unidades;
     }
 
+    public function getImagenUrlAttribute(): ?string
+    {
+        return $this->imagen ? asset('storage/' . $this->imagen) : null;
+    }
+
     protected function casts(): array
     {
         return [
