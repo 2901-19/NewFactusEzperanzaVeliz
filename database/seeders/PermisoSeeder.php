@@ -31,6 +31,8 @@ class PermisoSeeder extends Seeder
             ['nombre' => 'Configurar Impresora', 'slug' => 'configurar-impresora'],
             ['nombre' => 'Ver Lista de Precios', 'slug' => 'ver-lista-precios'],
             ['nombre' => 'Configuración del Sistema', 'slug' => 'configuracion'],
+            ['nombre' => 'Actualizar Precios', 'slug' => 'actualizar-precios'],
+            ['nombre' => 'Actualizar Inventarios', 'slug' => 'actualizar-inventarios'],
         ];
 
         $inserted = [];
@@ -51,6 +53,7 @@ class PermisoSeeder extends Seeder
             'crear-facturas',
             'anular-facturas',
             'gestionar-creditos',
+            'actualizar-inventarios',
         ]));
 
         $now = now();

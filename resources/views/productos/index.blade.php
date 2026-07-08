@@ -3,9 +3,21 @@
 @section('contenido')
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2>Productos</h2>
-    <a href="{{ route('productos.create') }}" class="btn btn-primary">
-        <i class="bi bi-plus-lg"></i> Nuevo Producto
-    </a>
+    <div>
+        @if (Auth::user()->hasPermiso('actualizar-precios'))
+        <a href="{{ route('productos.ajustar-precios') }}" class="btn btn-warning me-1">
+            <i class="bi bi-currency-dollar"></i> Actualizar Precios
+        </a>
+        @endif
+        @if (Auth::user()->hasPermiso('actualizar-inventarios'))
+        <a href="{{ route('productos.ajustar-inventario') }}" class="btn btn-info me-1 text-white">
+            <i class="bi bi-box"></i> Actualizar Inventario
+        </a>
+        @endif
+        <a href="{{ route('productos.create') }}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Nuevo Producto
+        </a>
+    </div>
 </div>
 <div class="table-responsive">
     <table id="dt-productos" class="table table-bordered table-striped">

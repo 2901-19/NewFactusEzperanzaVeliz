@@ -11,6 +11,7 @@ use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\HerramientasController;
 use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\AjusteController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -27,6 +28,20 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('productos', ProductoController::class)->except('show')->middleware('permiso:gestionar-productos');
     Route::post('productos/{id}/restore', [ProductoController::class, 'restore'])->name('productos.restore')->middleware('permiso:gestionar-productos');
+
+    Route::get('/productos/ajustar-precios', [AjusteController::class, 'editarPrecios'])
+        ->name('productos.ajustar-precios')
+        ->middleware('permiso:actualizar-precios');
+    Route::post('/productos/{producto}/ajustar-precio', [AjusteController::class, 'guardarPrecio'])
+        ->name('productos.ajustar-precio')
+        ->middleware('permiso:actualizar-precios');
+
+    Route::get('/productos/ajustar-inventario', [AjusteController::class, 'editarInventario'])
+        ->name('productos.ajustar-inventario')
+        ->middleware('permiso:actualizar-inventarios');
+    Route::post('/productos/{producto}/ajustar-inventario', [AjusteController::class, 'ajustarInventario'])
+        ->name('productos.ajustar-inventario.actualizar')
+        ->middleware('permiso:actualizar-inventarios');
     Route::resource('clientes', ClienteController::class)->except('show')->middleware('permiso:gestionar-clientes');
     Route::post('clientes/rapido', [ClienteController::class, 'storeRapido'])->name('clientes.rapido')->middleware('permiso:gestionar-clientes');
     Route::resource('impuestos', ImpuestoController::class)->except('show')->middleware('permiso:gestionar-impuestos');
