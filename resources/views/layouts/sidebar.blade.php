@@ -117,7 +117,7 @@
             @endif
             @if ($user->hasPermiso('ver-lista-precios'))
             <li class="nav-item">
-                <a href="{{ route('herramientas.precios') }}" class="nav-link {{ request()->routeIs('herramientas.precios*') ? 'active' : '' }}">
+                <a href="{{ route('herramientas.precios') }}" target="_blank" class="nav-link {{ request()->routeIs('herramientas.precios*') ? 'active' : '' }}">
                     <i class="bi bi-tags"></i> Lista de Precios
                 </a>
             </li>

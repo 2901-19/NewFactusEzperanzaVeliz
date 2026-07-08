@@ -6,6 +6,7 @@ use App\Models\Producto;
 use App\Models\Cliente;
 use App\Models\Impuesto;
 use App\Models\TasaCambio;
+use App\Models\Categoria;
 use App\Models\Configuracion;
 use App\Services\PrinterService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -18,18 +19,55 @@ class HerramientasController extends Controller
 
     public function datos()
     {
-        return view('herramientas.datos');
+        $tiposDisponibles = [
+            'precios' => 'Precios de productos',
+            'inventario' => 'Inventario de productos',
+            'clientes' => 'Clientes',
+            'tasas_cambio' => 'Tasas de cambio',
+            'categorias' => 'Categorías',
+        ];
+
+        return view('herramientas.datos', compact('tiposDisponibles'));
     }
 
-    public function exportar()
+    public function exportar(Request $request)
     {
-        $data = [
-            'productos' => Producto::all(),
-            'clientes' => Cliente::all(),
-            'impuestos' => Impuesto::all(),
-            'tasas_cambio' => TasaCambio::all(),
-            'exportado_en' => now()->toDateTimeString(),
-        ];
+        $tipos = $request->input('tipos', []);
+        $data = ['exportado_en' => now()->toDateTimeString()];
+
+        if (in_array('precios', $tipos)) {
+            $data['precios'] = Producto::all()->map(fn ($p) => [
+                'nombre' => $p->nombre,
+                'precio_unitario_usd' => $p->precio_unitario_usd,
+                'precio_mayor_usd' => $p->precio_mayor_usd,
+                'cantidad_minima_mayor' => $p->cantidad_minima_mayor,
+                'tiene_iva' => $p->tiene_iva,
+                'fuente_tasa' => $p->fuente_tasa,
+            ]);
+        }
+
+        if (in_array('inventario', $tipos)) {
+            $data['inventario'] = Producto::all()->map(fn ($p) => [
+                'nombre' => $p->nombre,
+                'categoria_id' => $p->categoria_id,
+                'descripcion' => $p->descripcion,
+                'imagen' => $p->imagen,
+                'unidades_por_paquete' => $p->unidades_por_paquete,
+                'estado' => $p->estado,
+            ]);
+        }
+
+        if (in_array('clientes', $tipos)) {
+            $data['clientes'] = Cliente::all();
+        }
+
+        if (in_array('tasas_cambio', $tipos)) {
+            $data['tasas_cambio'] = TasaCambio::all();
+        }
+
+        if (in_array('categorias', $tipos)) {
+            $data['categorias'] = Categoria::all();
+        }
 
         $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         $filename = 'backup_' . now()->format('Y_m_d_His') . '.json';
@@ -53,44 +91,156 @@ class HerramientasController extends Controller
         $contenido = file_get_contents($request->file('archivo')->getRealPath());
         $data = json_decode($contenido, true);
 
-        if (!$data || !isset($data['productos'])) {
+        if (!$data) {
             return back()->withErrors(['archivo' => 'El archivo JSON no tiene el formato correcto.']);
         }
 
-        $validKeys = ['productos', 'clientes', 'impuestos', 'tasas_cambio'];
+        // Detectar formato antiguo (con 'productos' en lugar de 'precios'/'inventario')
+        $formatoAntiguo = isset($data['productos']) && !isset($data['precios']) && !isset($data['inventario']);
+
+        $tipos = $request->input('tipos', []);
+
+        // Si no se seleccionó ningún tipo, procesar todo lo disponible
+        if (empty($tipos)) {
+            if ($formatoAntiguo) {
+                $tipos = ['productos', 'clientes', 'impuestos', 'tasas_cambio'];
+            } else {
+                $tipos = array_keys(array_intersect_key($data, array_flip(['precios', 'inventario', 'clientes', 'tasas_cambio', 'categorias'])));
+            }
+        }
 
         DB::beginTransaction();
         try {
-            $contadores = ['productos' => 0, 'clientes' => 0, 'impuestos' => 0, 'tasas_cambio' => 0];
+            $contadores = ['precios' => 0, 'inventario' => 0, 'clientes' => 0, 'tasas_cambio' => 0, 'categorias' => 0];
 
-            foreach ($validKeys as $key) {
+            foreach ($tipos as $key) {
                 if (!isset($data[$key]) || !is_array($data[$key])) continue;
 
-                $modelo = match ($key) {
-                    'productos' => Producto::class,
-                    'clientes' => Cliente::class,
-                    'impuestos' => Impuesto::class,
-                    'tasas_cambio' => TasaCambio::class,
-                };
+                switch ($key) {
+                    case 'precios':
+                        foreach ($data['precios'] as $item) {
+                            $producto = Producto::where('nombre', $item['nombre'])->first();
+                            if ($producto) {
+                                $producto->update([
+                                    'precio_unitario_usd' => $item['precio_unitario_usd'] ?? $producto->precio_unitario_usd,
+                                    'precio_mayor_usd' => $item['precio_mayor_usd'] ?? $producto->precio_mayor_usd,
+                                    'cantidad_minima_mayor' => $item['cantidad_minima_mayor'] ?? $producto->cantidad_minima_mayor,
+                                    'tiene_iva' => $item['tiene_iva'] ?? $producto->tiene_iva,
+                                    'fuente_tasa' => $item['fuente_tasa'] ?? $producto->fuente_tasa,
+                                ]);
+                            } else {
+                                Producto::create([
+                                    'nombre' => $item['nombre'],
+                                    'precio_unitario_usd' => $item['precio_unitario_usd'] ?? 0,
+                                    'precio_mayor_usd' => $item['precio_mayor_usd'] ?? 0,
+                                    'cantidad_minima_mayor' => $item['cantidad_minima_mayor'] ?? 1,
+                                    'tiene_iva' => $item['tiene_iva'] ?? true,
+                                    'fuente_tasa' => $item['fuente_tasa'] ?? 'paralelo',
+                                    'stock_paquetes' => 0,
+                                    'stock_unidades' => 0,
+                                    'unidades_por_paquete' => 1,
+                                    'estado' => 'disponible',
+                                ]);
+                            }
+                            $contadores['precios']++;
+                        }
+                        break;
 
-                $fillable = (new $modelo)->getFillable();
+                    case 'inventario':
+                        foreach ($data['inventario'] as $item) {
+                            $existe = Producto::where('nombre', $item['nombre'])->exists();
+                            if (!$existe) {
+                                Producto::create([
+                                    'nombre' => $item['nombre'],
+                                    'categoria_id' => $item['categoria_id'] ?? null,
+                                    'descripcion' => $item['descripcion'] ?? '',
+                                    'imagen' => $item['imagen'] ?? null,
+                                    'unidades_por_paquete' => $item['unidades_por_paquete'] ?? 1,
+                                    'estado' => $item['estado'] ?? 'disponible',
+                                    'stock_paquetes' => 0,
+                                    'stock_unidades' => 0,
+                                    'precio_unitario_usd' => 0,
+                                    'precio_mayor_usd' => 0,
+                                    'cantidad_minima_mayor' => 1,
+                                    'tiene_iva' => true,
+                                    'fuente_tasa' => 'paralelo',
+                                ]);
+                                $contadores['inventario']++;
+                            }
+                        }
+                        break;
 
-                foreach ($data[$key] as $item) {
-                    $item = array_intersect_key($item, array_flip($fillable));
-                    unset($item['id']);
+                    case 'clientes':
+                        foreach ($data['clientes'] as $item) {
+                            $fillable = (new Cliente)->getFillable();
+                            $item = array_intersect_key($item, array_flip($fillable));
+                            unset($item['id']);
 
-                    $modelo::create($item);
-                    $contadores[$key]++;
+                            $existe = Cliente::where('ci', $item['ci'] ?? '')->exists();
+                            if (!$existe) {
+                                Cliente::create($item);
+                                $contadores['clientes']++;
+                            }
+                        }
+                        break;
+
+                    case 'tasas_cambio':
+                        foreach ($data['tasas_cambio'] as $item) {
+                            $fillable = (new TasaCambio)->getFillable();
+                            $item = array_intersect_key($item, array_flip($fillable));
+                            unset($item['id']);
+                            TasaCambio::create($item);
+                            $contadores['tasas_cambio']++;
+                        }
+                        break;
+
+                    case 'categorias':
+                        foreach ($data['categorias'] as $item) {
+                            $existe = Categoria::where('nombre', $item['nombre'])->exists();
+                            if (!$existe) {
+                                Categoria::create([
+                                    'nombre' => $item['nombre'],
+                                    'descripcion' => $item['descripcion'] ?? '',
+                                ]);
+                                $contadores['categorias']++;
+                            }
+                        }
+                        break;
+
+                    // Compatibilidad con formato antiguo
+                    case 'productos':
+                        foreach ($data['productos'] as $item) {
+                            $fillable = (new Producto)->getFillable();
+                            $item = array_intersect_key($item, array_flip($fillable));
+                            unset($item['id']);
+                            Producto::create($item);
+                            $contadores['precios']++;
+                        }
+                        break;
+
+                    case 'impuestos':
+                        foreach ($data['impuestos'] as $item) {
+                            $fillable = (new Impuesto)->getFillable();
+                            $item = array_intersect_key($item, array_flip($fillable));
+                            unset($item['id']);
+                            Impuesto::create($item);
+                        }
+                        break;
                 }
             }
 
             DB::commit();
 
-            return back()->with('success', 'Importación completada: ' .
-                $contadores['productos'] . ' productos, ' .
-                $contadores['clientes'] . ' clientes, ' .
-                $contadores['impuestos'] . ' impuestos, ' .
-                $contadores['tasas_cambio'] . ' tasas.');
+            $partes = [];
+            if ($contadores['precios']) $partes[] = $contadores['precios'] . ' precios';
+            if ($contadores['inventario']) $partes[] = $contadores['inventario'] . ' inventarios';
+            if ($contadores['clientes']) $partes[] = $contadores['clientes'] . ' clientes';
+            if ($contadores['tasas_cambio']) $partes[] = $contadores['tasas_cambio'] . ' tasas';
+            if ($contadores['categorias']) $partes[] = $contadores['categorias'] . ' categorías';
+
+            $mensaje = 'Importación completada: ' . ($partes ? implode(', ', $partes) : 'no se procesaron datos');
+
+            return back()->with('success', $mensaje);
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors(['archivo' => 'Error durante la importación: ' . $e->getMessage()]);
@@ -200,7 +350,7 @@ class HerramientasController extends Controller
 
     // ========== PDF LISTA DE PRECIOS ==========
 
-    public function precios()
+    public function precios(Request $request)
     {
         $productos = Producto::whereNull('deleted_at')
             ->where('estado', 'disponible')
@@ -208,6 +358,21 @@ class HerramientasController extends Controller
             ->get();
 
         $tasas = \App\Models\TasaCambio::pluck('monto', 'tipo');
+
+        if ($request->query('export') === 'json') {
+            $data = $productos->map(fn ($p) => [
+                'nombre' => $p->nombre,
+                'precio_unitario_usd' => $p->precio_unitario_usd,
+                'precio_mayor_usd' => $p->precio_mayor_usd,
+                'cantidad_minima_mayor' => $p->cantidad_minima_mayor,
+                'tiene_iva' => $p->tiene_iva,
+                'fuente_tasa' => $p->fuente_tasa,
+                'precio_unitario_bs' => round($p->precio_unitario_usd * ($tasas[$p->fuente_tasa] ?? 1), 2),
+                'precio_mayor_bs' => round($p->precio_mayor_usd * ($tasas[$p->fuente_tasa] ?? 1), 2),
+            ]);
+
+            return response()->json($data);
+        }
 
         return view('herramientas.precios', compact('productos', 'tasas'));
     }

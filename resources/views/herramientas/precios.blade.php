@@ -3,9 +3,14 @@
 @section('contenido')
 <div class="d-flex justify-content-between align-items-center mb-3">
     <p class="text-muted mb-0">{{ $productos->count() }} productos disponibles.</p>
-    <a href="{{ route('herramientas.precios.pdf') }}" class="btn btn-danger">
-        <i class="bi bi-filetype-pdf"></i> Descargar PDF
-    </a>
+    <div class="d-flex gap-2">
+        <a href="{{ route('herramientas.precios.pdf') }}" class="btn btn-danger">
+            <i class="bi bi-filetype-pdf"></i> Descargar PDF
+        </a>
+        <a href="{{ route('herramientas.precios', ['export' => 'json']) }}" class="btn btn-success">
+            <i class="bi bi-filetype-json"></i> Descargar JSON
+        </a>
+    </div>
 </div>
 <div class="table-responsive">
     <table id="preciosTable" class="table table-bordered table-striped">
