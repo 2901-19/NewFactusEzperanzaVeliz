@@ -15,7 +15,7 @@
                             <option value="windows" {{ $config['tipo'] == 'windows' ? 'selected' : '' }}>Windows (USB/COM)</option>
                         </select>
                     </div>
-                    <div id="networkConfig">
+                    <div id="networkConfig" style="{{ $config['tipo'] == 'network' ? '' : 'display:none' }}">
                         <div class="mb-3">
                             <label class="form-label">Dirección IP</label>
                             <input type="text" name="host" class="form-control" value="{{ $config['host'] }}" placeholder="192.168.1.100">
@@ -25,11 +25,11 @@
                             <input type="number" name="port" class="form-control" value="{{ $config['port'] }}" placeholder="9100">
                         </div>
                     </div>
-                    <div id="windowsConfig" style="display:none">
+                    <div id="windowsConfig" style="{{ $config['tipo'] == 'windows' ? '' : 'display:none' }}">
                         <div class="mb-3">
-                            <label class="form-label">Nombre de la Impresora</label>
-                            <input type="text" name="nombre" class="form-control" value="{{ $config['nombre'] }}" placeholder="EPSON TM-T20">
-                            <small class="text-muted">Ej: EPSON TM-T20, POS-80, o \\localhost\POS</small>
+                            <label class="form-label">Nombre de la Impresora (Compartida)</label>
+                            <input type="text" name="nombre" class="form-control" value="{{ $config['nombre'] }}" placeholder="XP-E300M">
+                            <small class="text-muted">Nombre exacto con que está compartida en Windows.</small>
                         </div>
                     </div>
                     <button type="submit" class="btn btn-primary">Guardar</button>
