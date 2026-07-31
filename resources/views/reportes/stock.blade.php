@@ -14,7 +14,7 @@
         <thead class="table-dark">
             <tr>
                 <th class="text-start">Producto</th>
-                <th>Paquetes</th>
+                <th>Lotes</th>
                 <th>Unidades</th>
                 <th>Stock Total</th>
             </tr>

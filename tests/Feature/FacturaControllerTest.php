@@ -26,6 +26,7 @@ class FacturaControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->seed(\Database\Seeders\PermisoSeeder::class);
         $this->cajero = User::factory()->create(['rol' => 'cajero']);
         $this->cliente = Cliente::factory()->create();
         $categoria = Categoria::factory()->create();
@@ -37,7 +38,9 @@ class FacturaControllerTest extends TestCase
             'stock_unidades' => 5,
             'precio_unitario_usd' => 10.00,
             'precio_mayor_usd' => 8.00,
-            'cantidad_minima_mayor' => 12,
+            'costo_usd' => 10.00,
+            'margen_detal' => 0,
+            'margen_mayor' => 0,
             'tiene_iva' => true,
             'fuente_tasa' => 'promedio',
             'estado' => 'disponible',
@@ -86,6 +89,7 @@ class FacturaControllerTest extends TestCase
                 [
                     'producto_id' => $this->producto->id,
                     'cantidad' => 3,
+                    'tipo_venta' => 'unitario',
                 ],
             ],
         ]);
@@ -108,6 +112,31 @@ class FacturaControllerTest extends TestCase
         ]);
     }
 
+    public function test_store_aplica_precio_mayor_segun_tipo_venta()
+    {
+        $this->actingAs($this->cajero);
+
+        $response = $this->postJson('/facturas', [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'efectivo',
+            'estado' => 'contado',
+            'items' => [
+                [
+                    'producto_id' => $this->producto->id,
+                    'cantidad' => 1,
+                    'tipo_venta' => 'mayor',
+                ],
+            ],
+        ]);
+
+        $response->assertJson(['success' => true]);
+
+        $factura = Factura::first();
+        $item = $factura->items->first();
+        $this->assertEquals('mayor', $item->tipo_venta);
+        $this->assertEquals(8.00, (float) $item->precio_unitario_usd);
+    }
+
     public function test_store_descuenta_stock_paquetes()
     {
         $this->actingAs($this->cajero);
@@ -120,6 +149,7 @@ class FacturaControllerTest extends TestCase
                 [
                     'producto_id' => $this->producto->id,
                     'cantidad' => 14,
+                    'tipo_venta' => 'unitario',
                 ],
             ],
         ]);
@@ -141,6 +171,7 @@ class FacturaControllerTest extends TestCase
                 [
                     'producto_id' => $this->producto->id,
                     'cantidad' => 2,
+                    'tipo_venta' => 'unitario',
                 ],
             ],
         ]);
@@ -166,6 +197,7 @@ class FacturaControllerTest extends TestCase
                 [
                     'producto_id' => $this->producto->id,
                     'cantidad' => 12,
+                    'tipo_venta' => 'mayor',
                 ],
             ],
         ]);
@@ -198,6 +230,7 @@ class FacturaControllerTest extends TestCase
                 [
                     'producto_id' => $this->producto->id,
                     'cantidad' => 5,
+                    'tipo_venta' => 'unitario',
                 ],
             ],
         ]);
@@ -242,6 +275,7 @@ class FacturaControllerTest extends TestCase
                 [
                     'producto_id' => $this->producto->id,
                     'cantidad' => 9999,
+                    'tipo_venta' => 'unitario',
                 ],
             ],
         ]);
@@ -260,6 +294,7 @@ class FacturaControllerTest extends TestCase
                 [
                     'producto_id' => $this->producto->id,
                     'cantidad' => 2,
+                    'tipo_venta' => 'unitario',
                 ],
             ],
         ]);

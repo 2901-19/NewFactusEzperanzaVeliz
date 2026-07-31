@@ -18,9 +18,11 @@ class Producto extends Model
         'unidades_por_paquete',
         'stock_paquetes',
         'stock_unidades',
+        'costo_usd',
+        'margen_detal',
+        'margen_mayor',
         'precio_unitario_usd',
         'precio_mayor_usd',
-        'cantidad_minima_mayor',
         'tiene_iva',
         'fuente_tasa',
         'estado',
@@ -29,6 +31,17 @@ class Producto extends Model
     public function getStockTotalAttribute(): int
     {
         return ($this->stock_paquetes * $this->unidades_por_paquete) + $this->stock_unidades;
+    }
+
+    public function getCostoBsAttribute(): float
+    {
+        return $this->costo_usd * $this->obtenerTasa();
+    }
+
+    private function obtenerTasa(): float
+    {
+        $tasa = \App\Models\TasaCambio::where('tipo', $this->fuente_tasa)->latest()->first();
+        return $tasa ? (float) $tasa->monto : 1;
     }
 
     public function getImagenUrlAttribute(): ?string

@@ -14,7 +14,7 @@
                         <tr>
                             <th class="text-start">Nombre</th>
                             <th>Ref.</th>
-                            <th>Precio Unit.</th>
+                            <th>Precio Detal</th>
                             <th>Precio Mayor</th>
                             <th style="width:60px"></th>
                         </tr>
@@ -67,9 +67,12 @@
                             <button class="btn btn-sm btn-outline-secondary" @click="item.cantidad > 1 && item.cantidad--">-</button>
                             <input type="number" x-model="item.cantidad" @blur="item.cantidad = Math.max(1, parseInt(item.cantidad) || 1)" class="form-control form-control-sm text-center" style="width: 60px;" min="1">
                             <button class="btn btn-sm btn-outline-secondary" @click="item.cantidad++">+</button>
+                            <button class="btn btn-sm" :class="item.tipoVenta === 'mayor' ? 'btn-primary' : 'btn-outline-primary'" @click="item.tipoVenta = item.tipoVenta === 'mayor' ? 'unitario' : 'mayor'" title="Alternar precio Detal/Mayor">
+                                <span x-text="item.tipoVenta === 'mayor' ? 'Mayor' : 'Detal'"></span>
+                            </button>
                             <span class="ms-auto small" x-text="'Bs ' + getBsPriceTotal(index).toFixed(2)"></span>
                         </div>
-                        <div class="text-muted small" x-text="'Precio: Bs ' + getBsPrice(index).toFixed(2) + (item.cantidad >= item.cantidad_minima_mayor ? ' (Mayor)' : ' (Unitario)')"></div>
+                        <div class="text-muted small" x-text="'Precio: Bs ' + getBsPrice(index).toFixed(2) + (item.tipoVenta === 'mayor' ? ' (Mayor)' : ' (Detal)')"></div>
                     </div>
                 </template>
                 <div class="text-center text-muted small py-3" x-show="carrito.length === 0">
@@ -299,13 +302,13 @@ document.addEventListener('alpine:init', () => {
                     id: p.id,
                     nombre: p.nombre,
                     cantidad: 1,
+                    tipoVenta: 'unitario',
                     precio_unitario_usd: parseFloat(p.precio_unitario_usd),
                     precio_mayor_usd: parseFloat(p.precio_mayor_usd),
-                    cantidad_minima_mayor: p.cantidad_minima_mayor,
                     tiene_iva: p.tiene_iva,
                     fuente_tasa: p.fuente_tasa,
                     get precioUnitario() {
-                        return this.cantidad >= this.cantidad_minima_mayor
+                        return this.tipoVenta === 'mayor'
                             ? this.precio_mayor_usd
                             : this.precio_unitario_usd;
                     }
@@ -417,6 +420,7 @@ document.addEventListener('alpine:init', () => {
             const items = this.carrito.map(i => ({
                 producto_id: i.id,
                 cantidad: i.cantidad,
+                tipo_venta: i.tipoVenta,
             }));
 
             try {

@@ -10,23 +10,26 @@ class ProductoSeeder extends Seeder
     public function run(): void
     {
         $productos = [
-            ['nombre' => 'Arroz Blanquito 1kg', 'unidades_por_paquete' => 12, 'precio_unitario_usd' => 1.20, 'precio_mayor_usd' => 1.05, 'cantidad_minima_mayor' => 12],
-            ['nombre' => 'Harina PAN 1kg', 'unidades_por_paquete' => 12, 'precio_unitario_usd' => 2.10, 'precio_mayor_usd' => 1.85, 'cantidad_minima_mayor' => 12],
-            ['nombre' => 'Café La Fina 250g', 'unidades_por_paquete' => 24, 'precio_unitario_usd' => 2.80, 'precio_mayor_usd' => 2.50, 'cantidad_minima_mayor' => 12],
-            ['nombre' => 'Coca-Cola 2L', 'unidades_por_paquete' => 6, 'precio_unitario_usd' => 2.00, 'precio_mayor_usd' => 1.75, 'cantidad_minima_mayor' => 6],
-            ['nombre' => 'Leche Completa 1L', 'unidades_por_paquete' => 6, 'precio_unitario_usd' => 2.50, 'precio_mayor_usd' => 2.25, 'cantidad_minima_mayor' => 6],
-            ['nombre' => 'Huevos Blancos Cartón 30', 'unidades_por_paquete' => 1, 'precio_unitario_usd' => 4.00, 'precio_mayor_usd' => 3.70, 'cantidad_minima_mayor' => 5],
-            ['nombre' => 'Jabón Dove 90g', 'unidades_por_paquete' => 24, 'precio_unitario_usd' => 0.80, 'precio_mayor_usd' => 0.65, 'cantidad_minima_mayor' => 12],
-            ['nombre' => 'Pasta Dental Colgate 75ml', 'unidades_por_paquete' => 12, 'precio_unitario_usd' => 2.00, 'precio_mayor_usd' => 1.75, 'cantidad_minima_mayor' => 12],
-            ['nombre' => 'Detergente Fab 1kg', 'unidades_por_paquete' => 6, 'precio_unitario_usd' => 3.00, 'precio_mayor_usd' => 2.70, 'cantidad_minima_mayor' => 6],
-            ['nombre' => 'Cloro 1L', 'unidades_por_paquete' => 6, 'precio_unitario_usd' => 1.50, 'precio_mayor_usd' => 1.30, 'cantidad_minima_mayor' => 6],
-            ['nombre' => 'Queso Dambo 500g', 'unidades_por_paquete' => 1, 'precio_unitario_usd' => 4.50, 'precio_mayor_usd' => 4.00, 'cantidad_minima_mayor' => 5],
-            ['nombre' => 'Papas Lays 100g', 'unidades_por_paquete' => 24, 'precio_unitario_usd' => 1.30, 'precio_mayor_usd' => 1.05, 'cantidad_minima_mayor' => 12],
+            ['nombre' => 'Arroz Blanquito 1kg', 'unidades_por_paquete' => 12, 'costo_usd' => 0.96, 'margen_detal' => 25, 'margen_mayor' => 15],
+            ['nombre' => 'Harina PAN 1kg', 'unidades_por_paquete' => 12, 'costo_usd' => 1.68, 'margen_detal' => 25, 'margen_mayor' => 15],
+            ['nombre' => 'Café La Fina 250g', 'unidades_por_paquete' => 24, 'costo_usd' => 2.24, 'margen_detal' => 25, 'margen_mayor' => 15],
+            ['nombre' => 'Coca-Cola 2L', 'unidades_por_paquete' => 6, 'costo_usd' => 1.60, 'margen_detal' => 25, 'margen_mayor' => 15],
+            ['nombre' => 'Leche Completa 1L', 'unidades_por_paquete' => 6, 'costo_usd' => 2.00, 'margen_detal' => 25, 'margen_mayor' => 15],
+            ['nombre' => 'Huevos Blancos Cartón 30', 'unidades_por_paquete' => 1, 'costo_usd' => 3.20, 'margen_detal' => 25, 'margen_mayor' => 15],
+            ['nombre' => 'Jabón Dove 90g', 'unidades_por_paquete' => 24, 'costo_usd' => 0.64, 'margen_detal' => 25, 'margen_mayor' => 15],
+            ['nombre' => 'Pasta Dental Colgate 75ml', 'unidades_por_paquete' => 12, 'costo_usd' => 1.60, 'margen_detal' => 25, 'margen_mayor' => 15],
+            ['nombre' => 'Detergente Fab 1kg', 'unidades_por_paquete' => 6, 'costo_usd' => 2.40, 'margen_detal' => 25, 'margen_mayor' => 15],
+            ['nombre' => 'Cloro 1L', 'unidades_por_paquete' => 6, 'costo_usd' => 1.20, 'margen_detal' => 25, 'margen_mayor' => 15],
+            ['nombre' => 'Queso Dambo 500g', 'unidades_por_paquete' => 1, 'costo_usd' => 3.60, 'margen_detal' => 25, 'margen_mayor' => 15],
+            ['nombre' => 'Papas Lays 100g', 'unidades_por_paquete' => 24, 'costo_usd' => 1.04, 'margen_detal' => 25, 'margen_mayor' => 15],
         ];
 
         $fuentes = ['promedio', 'dolar', 'bcv'];
 
-        foreach ($productos as $i => $p) {
+        foreach ($productos as $p) {
+            $precioUnitario = round($p['costo_usd'] * (1 + $p['margen_detal'] / 100), 2);
+            $precioMayor = round($p['costo_usd'] * (1 + $p['margen_mayor'] / 100), 2);
+
             Producto::firstOrCreate(
                 ['nombre' => $p['nombre']],
                 [
@@ -34,10 +37,12 @@ class ProductoSeeder extends Seeder
                     'unidades_por_paquete' => $p['unidades_por_paquete'],
                     'stock_paquetes' => rand(5, 30),
                     'stock_unidades' => rand(0, $p['unidades_por_paquete']),
-                    'precio_unitario_usd' => $p['precio_unitario_usd'],
-                    'precio_mayor_usd' => $p['precio_mayor_usd'],
-                    'cantidad_minima_mayor' => $p['cantidad_minima_mayor'],
-                    'tiene_iva' => true,
+                    'costo_usd' => $p['costo_usd'],
+                    'margen_detal' => $p['margen_detal'],
+                    'margen_mayor' => $p['margen_mayor'],
+                    'precio_unitario_usd' => $precioUnitario,
+                    'precio_mayor_usd' => $precioMayor,
+                    'tiene_iva' => false,
                     'fuente_tasa' => $fuentes[array_rand($fuentes)],
                     'estado' => 'disponible',
                 ]

@@ -172,6 +172,30 @@
     font-weight: bold;
 }
 
+/* Paneles informativos (datos calculados no editables) */
+.info-box {
+    height: 100%;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 0.625rem 0.875rem;
+}
+.info-box .info-label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6c757d;
+    margin-bottom: 0.15rem;
+}
+.info-box .info-value {
+    display: block;
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
 /* Miniaturas de productos */
 .thumb {
     width: 60px;

@@ -11,23 +11,32 @@ class AjusteController extends Controller
     public function editarPrecios()
     {
         $productos = Producto::whereNull('deleted_at')->with('categoria')->get();
-        return view('productos.ajustar-precios', compact('productos'));
+        $tasas = \App\Models\TasaCambio::pluck('monto', 'tipo');
+        return view('productos.ajustar-precios', compact('productos', 'tasas'));
     }
 
     public function guardarPrecio(Request $request, Producto $producto)
     {
         try {
             $validated = $request->validate([
-                'precio_unitario_usd' => 'required|numeric|min:0',
-                'precio_mayor_usd' => 'required|numeric|min:0',
-                'cantidad_minima_mayor' => 'required|integer|min:0',
+                'costo_usd' => 'required|numeric|min:0',
+                'margen_detal' => 'required|numeric|min:0',
+                'margen_mayor' => 'required|numeric|min:0',
             ]);
 
-            $producto->update($validated);
+            $precioUnitario = round($validated['costo_usd'] * (1 + $validated['margen_detal'] / 100), 2);
+            $precioMayor = round($validated['costo_usd'] * (1 + $validated['margen_mayor'] / 100), 2);
+
+            $producto->update($validated + [
+                'precio_unitario_usd' => $precioUnitario,
+                'precio_mayor_usd' => $precioMayor,
+            ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Precio actualizado correctamente',
+                'precio_unitario_usd' => $precioUnitario,
+                'precio_mayor_usd' => $precioMayor,
             ]);
         } catch (ValidationException $e) {
             return response()->json([

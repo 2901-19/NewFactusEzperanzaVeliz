@@ -24,7 +24,6 @@
                 <th>Producto</th>
                 <th>Precio Unitario</th>
                 <th>Precio Mayor</th>
-                <th>Cant. Mín. Mayor</th>
                 <th>IVA</th>
             </tr>
         </thead>
@@ -39,7 +38,6 @@
                 <td>{{ $p->nombre }}</td>
                 <td class="moneda">Bs {{ number_format($puBsPdf, 2) }}<br><small>(${{ number_format($p->precio_unitario_usd, 2) }})</small></td>
                 <td class="moneda">Bs {{ number_format($pmBsPdf, 2) }}<br><small>(${{ number_format($p->precio_mayor_usd, 2) }})</small></td>
-                <td class="moneda">{{ $p->cantidad_minima_mayor }}</td>
                 <td class="iva">{{ $p->tiene_iva ? 'Sí' : 'No' }}</td>
             </tr>
             @endforeach

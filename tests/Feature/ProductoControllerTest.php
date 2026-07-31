@@ -17,6 +17,7 @@ class ProductoControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->seed(\Database\Seeders\PermisoSeeder::class);
         $this->user = User::factory()->create(['rol' => 'admin']);
     }
 
@@ -51,9 +52,9 @@ class ProductoControllerTest extends TestCase
             'unidades_por_paquete' => 12,
             'stock_paquetes' => 5,
             'stock_unidades' => 3,
-            'precio_unitario_usd' => 10.50,
-            'precio_mayor_usd' => 8.00,
-            'cantidad_minima_mayor' => 12,
+            'costo_usd' => 10.00,
+            'margen_detal' => 25,
+            'margen_mayor' => 15,
             'tiene_iva' => true,
             'fuente_tasa' => 'promedio',
             'estado' => 'disponible',
@@ -70,7 +71,7 @@ class ProductoControllerTest extends TestCase
 
         $response = $this->post('/productos', []);
 
-        $response->assertSessionHasErrors(['nombre', 'unidades_por_paquete', 'stock_paquetes', 'stock_unidades', 'precio_unitario_usd', 'precio_mayor_usd', 'cantidad_minima_mayor', 'fuente_tasa', 'estado']);
+        $response->assertSessionHasErrors(['nombre', 'unidades_por_paquete', 'stock_paquetes', 'stock_unidades', 'costo_usd', 'margen_detal', 'margen_mayor', 'fuente_tasa', 'estado']);
     }
 
     public function test_edit_muestra_formulario()
@@ -95,9 +96,9 @@ class ProductoControllerTest extends TestCase
             'unidades_por_paquete' => $producto->unidades_por_paquete,
             'stock_paquetes' => $producto->stock_paquetes,
             'stock_unidades' => $producto->stock_unidades,
-            'precio_unitario_usd' => $producto->precio_unitario_usd,
-            'precio_mayor_usd' => $producto->precio_mayor_usd,
-            'cantidad_minima_mayor' => $producto->cantidad_minima_mayor,
+            'costo_usd' => $producto->costo_usd,
+            'margen_detal' => $producto->margen_detal,
+            'margen_mayor' => $producto->margen_mayor,
             'tiene_iva' => $producto->tiene_iva,
             'fuente_tasa' => $producto->fuente_tasa,
             'estado' => $producto->estado,

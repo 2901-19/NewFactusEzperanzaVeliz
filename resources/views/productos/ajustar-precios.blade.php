@@ -15,25 +15,36 @@
                     <tr>
                         <th class="text-start">Producto</th>
                         <th>Categoría</th>
-                        <th>Precio Unit. USD</th>
-                        <th>Precio May. USD</th>
-                        <th>Cant. Mín. Mayor</th>
+                        <th>Costo USD</th>
+                        <th>Margen Detal %</th>
+                        <th>Margen Mayor %</th>
+                        <th>Precio Detal</th>
+                        <th>Precio Mayor</th>
                         <th>Acción</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach ($productos as $p)
-                    <tr x-data="precioRow({{ $p->id }}, {{ $p->precio_unitario_usd }}, {{ $p->precio_mayor_usd }}, {{ $p->cantidad_minima_mayor }})">
+                    @php $tasaAjuste = $tasas[$p->fuente_tasa] ?? 1; @endphp
+                    <tr x-data="precioRow({{ $p->id }}, {{ $p->costo_usd }}, {{ $p->margen_detal }}, {{ $p->margen_mayor }}, {{ $tasaAjuste }})">
                         <td class="text-start">{{ $p->nombre }}</td>
                         <td>{{ $p->categoria->nombre ?? '-' }}</td>
                         <td>
-                            <input type="number" step="0.01" min="0" class="form-control form-control-sm" x-model="precio_unitario_usd">
+                            <input type="number" step="0.01" min="0" class="form-control form-control-sm" x-model="costo_usd">
                         </td>
                         <td>
-                            <input type="number" step="0.01" min="0" class="form-control form-control-sm" x-model="precio_mayor_usd">
+                            <input type="number" step="0.01" min="0" class="form-control form-control-sm" x-model="margen_detal">
                         </td>
                         <td>
-                            <input type="number" min="0" class="form-control form-control-sm" x-model="cantidad_minima_mayor">
+                            <input type="number" step="0.01" min="0" class="form-control form-control-sm" x-model="margen_mayor">
+                        </td>
+                        <td>
+                            <span class="small fw-bold" x-text="'Bs ' + precioDetalBs.toFixed(2)"></span>
+                            <small class="text-muted d-block" x-text="'($' + precioDetalUsd.toFixed(2) + ')'"></small>
+                        </td>
+                        <td>
+                            <span class="small fw-bold" x-text="'Bs ' + precioMayorBs.toFixed(2)"></span>
+                            <small class="text-muted d-block" x-text="'($' + precioMayorUsd.toFixed(2) + ')'"></small>
                         </td>
                         <td>
                             <button class="btn btn-sm btn-primary" @click="guardar" :disabled="cargando">
@@ -51,21 +62,26 @@
 @endsection
 @push('scripts')
 <script>
-function precioRow(id, pu, pm, cmm) {
+function precioRow(id, costoUsd, margenDetal, margenMayor, tasa) {
     return {
-        precio_unitario_usd: pu,
-        precio_mayor_usd: pm,
-        cantidad_minima_mayor: cmm,
+        costo_usd: costoUsd,
+        margen_detal: margenDetal,
+        margen_mayor: margenMayor,
+        tasa: parseFloat(tasa) || 0,
         cargando: false,
+        get precioDetalUsd() { return this.costo_usd * (1 + this.margen_detal / 100); },
+        get precioMayorUsd() { return this.costo_usd * (1 + this.margen_mayor / 100); },
+        get precioDetalBs() { return this.precioDetalUsd * this.tasa; },
+        get precioMayorBs() { return this.precioMayorUsd * this.tasa; },
         guardar() {
             this.cargando = true;
             fetch('/productos/' + id + '/ajustar-precio', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf },
                 body: JSON.stringify({
-                    precio_unitario_usd: this.precio_unitario_usd,
-                    precio_mayor_usd: this.precio_mayor_usd,
-                    cantidad_minima_mayor: this.cantidad_minima_mayor
+                    costo_usd: this.costo_usd,
+                    margen_detal: this.margen_detal,
+                    margen_mayor: this.margen_mayor
                 })
             })
             .then(r => r.json())

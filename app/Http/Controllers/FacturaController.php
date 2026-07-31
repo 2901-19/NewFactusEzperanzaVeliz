@@ -66,6 +66,7 @@ class FacturaController extends Controller
             'items' => 'required|array|min:1',
             'items.*.producto_id' => 'required|exists:productos,id',
             'items.*.cantidad' => 'required|integer|min:1',
+            'items.*.tipo_venta' => 'required|in:unitario,mayor',
             'metodo_pago' => 'required|string',
             'cliente_id' => 'nullable|exists:clientes,id',
             'estado' => 'required|in:contado,credito',
@@ -97,11 +98,9 @@ class FacturaController extends Controller
                     throw new \Exception("Stock insuficiente para {$producto->nombre}. Disponible: {$producto->stock_total} uds.");
                 }
 
-                $precioUsd = $cantidad >= $producto->cantidad_minima_mayor
-                    ? $producto->precio_mayor_usd
-                    : $producto->precio_unitario_usd;
-
-                $tipoVenta = $cantidad >= $producto->cantidad_minima_mayor ? 'mayor' : 'unitario';
+                $esMayor = ($item['tipo_venta'] ?? 'unitario') === 'mayor';
+                $precioUsd = $esMayor ? $producto->precio_mayor_usd : $producto->precio_unitario_usd;
+                $tipoVenta = $esMayor ? 'mayor' : 'unitario';
 
                 $this->descontarStock($producto, $cantidad);
 

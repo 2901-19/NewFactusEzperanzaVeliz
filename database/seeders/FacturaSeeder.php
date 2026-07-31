@@ -43,11 +43,10 @@ class FacturaSeeder extends Seeder
 
                 for ($i = 0; $i < $cantItems; $i++) {
                     $producto = $productos->random();
-                    $cantidad = rand(1, max(1, $producto->cantidad_minima_mayor + rand(0, 5)));
-                    $precioUsd = $cantidad >= $producto->cantidad_minima_mayor
-                        ? $producto->precio_mayor_usd
-                        : $producto->precio_unitario_usd;
-                    $tipoVenta = $cantidad >= $producto->cantidad_minima_mayor ? 'mayor' : 'unitario';
+                    $cantidad = rand(1, 10);
+                    $esMayor = rand(1, 100) <= 30;
+                    $tipoVenta = $esMayor ? 'mayor' : 'unitario';
+                    $precioUsd = $esMayor ? $producto->precio_mayor_usd : $producto->precio_unitario_usd;
 
                     $tasa = TasaCambio::where('tipo', $producto->fuente_tasa)
                         ->whereDate('fecha', '<=', $fecha)
@@ -77,6 +76,7 @@ class FacturaSeeder extends Seeder
                         'producto_id' => $producto->id,
                         'nombre' => $producto->nombre,
                         'cantidad' => $cantidad,
+                        'tipo_venta' => $tipoVenta,
                         'precio_unitario_usd' => $precioUsd,
                     ];
                 }
@@ -128,7 +128,7 @@ class FacturaSeeder extends Seeder
                     ['factura_id' => $factura->id, 'producto_id' => $item['producto_id']],
                     [
                         'cantidad' => $item['cantidad'],
-                        'tipo_venta' => $item['cantidad'] >= ($producto?->cantidad_minima_mayor ?? 1) ? 'mayor' : 'unitario',
+                        'tipo_venta' => $item['tipo_venta'] ?? 'unitario',
                         'precio_unitario_usd' => $item['precio_unitario_usd'],
                         'precio_unitario_bs' => $item['precio_unitario_usd'] * $tasa,
                         'subtotal' => $item['precio_unitario_usd'] * $item['cantidad'] * $tasa,

@@ -25,7 +25,7 @@
                     <tr x-data="inventarioRow({{ $p->id }}, {{ $p->stock_paquetes }}, {{ $p->stock_unidades }}, {{ $p->unidades_por_paquete }})">
                         <td class="text-start">{{ $p->nombre }}</td>
                         <td>{{ $p->categoria->nombre ?? '-' }}</td>
-                        <td><span x-text="stockPaq + ' paq / ' + stockUnd + ' und'"></span></td>
+                        <td><span x-text="stockPaq + ' lot / ' + stockUnd + ' und'"></span></td>
                         <td>
                             <input type="number" min="1" class="form-control form-control-sm" x-model="cantidad" placeholder="0">
                         </td>

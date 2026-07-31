@@ -17,7 +17,8 @@ class ProductoController extends Controller
 
     public function create()
     {
-        return view('productos.create');
+        $tasas = \App\Models\TasaCambio::pluck('monto', 'tipo');
+        return view('productos.create', compact('tasas'));
     }
 
     public function store(Request $request)
@@ -30,9 +31,9 @@ class ProductoController extends Controller
             'unidades_por_paquete' => 'required|integer|min:1',
             'stock_paquetes' => 'required|integer|min:0',
             'stock_unidades' => 'required|integer|min:0',
-            'precio_unitario_usd' => 'required|numeric|min:0',
-            'precio_mayor_usd' => 'required|numeric|min:0',
-            'cantidad_minima_mayor' => 'required|integer|min:0',
+            'costo_usd' => 'required|numeric|min:0',
+            'margen_detal' => 'required|numeric|min:0',
+            'margen_mayor' => 'required|numeric|min:0',
             'tiene_iva' => 'boolean',
             'fuente_tasa' => 'required|in:promedio,dolar,bcv',
             'estado' => 'required|in:disponible,no_disponible',
@@ -42,6 +43,9 @@ class ProductoController extends Controller
             $data['imagen'] = $request->file('imagen')->store('productos', 'public');
         }
 
+        $data['precio_unitario_usd'] = round($data['costo_usd'] * (1 + $data['margen_detal'] / 100), 2);
+        $data['precio_mayor_usd'] = round($data['costo_usd'] * (1 + $data['margen_mayor'] / 100), 2);
+
         Producto::create($data);
 
         return redirect()->route('productos.index')->with('success', 'Producto creado correctamente.');
@@ -49,7 +53,8 @@ class ProductoController extends Controller
 
     public function edit(Producto $producto)
     {
-        return view('productos.edit', compact('producto'));
+        $tasas = \App\Models\TasaCambio::pluck('monto', 'tipo');
+        return view('productos.edit', compact('producto', 'tasas'));
     }
 
     public function update(Request $request, Producto $producto)
@@ -62,9 +67,9 @@ class ProductoController extends Controller
             'unidades_por_paquete' => 'required|integer|min:1',
             'stock_paquetes' => 'required|integer|min:0',
             'stock_unidades' => 'required|integer|min:0',
-            'precio_unitario_usd' => 'required|numeric|min:0',
-            'precio_mayor_usd' => 'required|numeric|min:0',
-            'cantidad_minima_mayor' => 'required|integer|min:0',
+            'costo_usd' => 'required|numeric|min:0',
+            'margen_detal' => 'required|numeric|min:0',
+            'margen_mayor' => 'required|numeric|min:0',
             'tiene_iva' => 'boolean',
             'fuente_tasa' => 'required|in:promedio,dolar,bcv',
             'estado' => 'required|in:disponible,no_disponible',
@@ -76,6 +81,9 @@ class ProductoController extends Controller
             }
             $data['imagen'] = $request->file('imagen')->store('productos', 'public');
         }
+
+        $data['precio_unitario_usd'] = round($data['costo_usd'] * (1 + $data['margen_detal'] / 100), 2);
+        $data['precio_mayor_usd'] = round($data['costo_usd'] * (1 + $data['margen_mayor'] / 100), 2);
 
         $producto->update($data);
 

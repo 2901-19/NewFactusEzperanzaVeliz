@@ -38,9 +38,11 @@ class HerramientasController extends Controller
         if (in_array('precios', $tipos)) {
             $data['precios'] = Producto::all()->map(fn ($p) => [
                 'nombre' => $p->nombre,
+                'costo_usd' => $p->costo_usd,
+                'margen_detal' => $p->margen_detal,
+                'margen_mayor' => $p->margen_mayor,
                 'precio_unitario_usd' => $p->precio_unitario_usd,
                 'precio_mayor_usd' => $p->precio_mayor_usd,
-                'cantidad_minima_mayor' => $p->cantidad_minima_mayor,
                 'tiene_iva' => $p->tiene_iva,
                 'fuente_tasa' => $p->fuente_tasa,
             ]);
@@ -120,20 +122,34 @@ class HerramientasController extends Controller
                     case 'precios':
                         foreach ($data['precios'] as $item) {
                             $producto = Producto::where('nombre', $item['nombre'])->first();
+                            $margenDetal = $item['margen_detal'] ?? $producto->margen_detal ?? 0;
+                            $margenMayor = $item['margen_mayor'] ?? $producto->margen_mayor ?? 0;
+                            $costoUsd = $item['costo_usd'] ?? null;
+                            if ($costoUsd === null) {
+                                $pu = $item['precio_unitario_usd'] ?? $producto->precio_unitario_usd ?? 0;
+                                $costoUsd = $margenDetal > 0 ? round($pu / (1 + $margenDetal / 100), 2) : $pu;
+                            }
+                            $precioUnitario = round($costoUsd * (1 + $margenDetal / 100), 2);
+                            $precioMayor = round($costoUsd * (1 + $margenMayor / 100), 2);
+
                             if ($producto) {
                                 $producto->update([
-                                    'precio_unitario_usd' => $item['precio_unitario_usd'] ?? $producto->precio_unitario_usd,
-                                    'precio_mayor_usd' => $item['precio_mayor_usd'] ?? $producto->precio_mayor_usd,
-                                    'cantidad_minima_mayor' => $item['cantidad_minima_mayor'] ?? $producto->cantidad_minima_mayor,
+                                    'costo_usd' => $costoUsd,
+                                    'margen_detal' => $margenDetal,
+                                    'margen_mayor' => $margenMayor,
+                                    'precio_unitario_usd' => $precioUnitario,
+                                    'precio_mayor_usd' => $precioMayor,
                                     'tiene_iva' => $item['tiene_iva'] ?? $producto->tiene_iva,
                                     'fuente_tasa' => $item['fuente_tasa'] ?? $producto->fuente_tasa,
                                 ]);
                             } else {
                                 Producto::create([
                                     'nombre' => $item['nombre'],
-                                    'precio_unitario_usd' => $item['precio_unitario_usd'] ?? 0,
-                                    'precio_mayor_usd' => $item['precio_mayor_usd'] ?? 0,
-                                    'cantidad_minima_mayor' => $item['cantidad_minima_mayor'] ?? 1,
+                                    'costo_usd' => $costoUsd,
+                                    'margen_detal' => $margenDetal,
+                                    'margen_mayor' => $margenMayor,
+                                    'precio_unitario_usd' => $precioUnitario,
+                                    'precio_mayor_usd' => $precioMayor,
                                     'tiene_iva' => $item['tiene_iva'] ?? true,
                                     'fuente_tasa' => $item['fuente_tasa'] ?? 'paralelo',
                                     'stock_paquetes' => 0,
@@ -159,9 +175,11 @@ class HerramientasController extends Controller
                                     'estado' => $item['estado'] ?? 'disponible',
                                     'stock_paquetes' => 0,
                                     'stock_unidades' => 0,
+                                    'costo_usd' => 0,
+                                    'margen_detal' => 0,
+                                    'margen_mayor' => 0,
                                     'precio_unitario_usd' => 0,
                                     'precio_mayor_usd' => 0,
-                                    'cantidad_minima_mayor' => 1,
                                     'tiene_iva' => true,
                                     'fuente_tasa' => 'paralelo',
                                 ]);
@@ -362,9 +380,11 @@ class HerramientasController extends Controller
         if ($request->query('export') === 'json') {
             $data = $productos->map(fn ($p) => [
                 'nombre' => $p->nombre,
+                'costo_usd' => $p->costo_usd,
+                'margen_detal' => $p->margen_detal,
+                'margen_mayor' => $p->margen_mayor,
                 'precio_unitario_usd' => $p->precio_unitario_usd,
                 'precio_mayor_usd' => $p->precio_mayor_usd,
-                'cantidad_minima_mayor' => $p->cantidad_minima_mayor,
                 'tiene_iva' => $p->tiene_iva,
                 'fuente_tasa' => $p->fuente_tasa,
                 'precio_unitario_bs' => round($p->precio_unitario_usd * ($tasas[$p->fuente_tasa] ?? 1), 2),
