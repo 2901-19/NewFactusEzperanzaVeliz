@@ -4,17 +4,18 @@
 
 <div class="card mb-3">
     <div class="card-body">
-        <form method="GET" class="row g-2 align-items-end">
-            <div class="col-auto">
-                <label class="form-label small">Desde</label>
+        <form method="GET" class="row g-3 align-items-end">
+            @include('reportes.partials.selector-rango')
+            <div class="col-6 col-md-4 col-xl">
+                <label class="form-label small text-muted fw-semibold">Desde</label>
                 <input type="date" name="desde" class="form-control form-control-sm" value="{{ $desde }}">
             </div>
-            <div class="col-auto">
-                <label class="form-label small">Hasta</label>
+            <div class="col-6 col-md-4 col-xl">
+                <label class="form-label small text-muted fw-semibold">Hasta</label>
                 <input type="date" name="hasta" class="form-control form-control-sm" value="{{ $hasta }}">
             </div>
-            <div class="col-auto">
-                <label class="form-label small">Método de pago</label>
+            <div class="col-6 col-md-4 col-xl">
+                <label class="form-label small text-muted fw-semibold">Método de pago</label>
                 <select name="metodo_pago" class="form-select form-select-sm">
                     <option value="">Todos</option>
                     @foreach ($nombresMetodo as $valor => $nombre)
@@ -22,25 +23,16 @@
                     @endforeach
                 </select>
             </div>
-            <div class="col-auto">
-                <label class="form-label small">Estado</label>
+            <div class="col-6 col-md-4 col-xl">
+                <label class="form-label small text-muted fw-semibold">Estado</label>
                 <select name="estado" class="form-select form-select-sm">
                     <option value="">Todos</option>
                     <option value="contado" {{ request('estado') == 'contado' ? 'selected' : '' }}>Contado</option>
                     <option value="credito" {{ request('estado') == 'credito' ? 'selected' : '' }}>Crédito</option>
                 </select>
             </div>
-            <div class="col-auto">
-                <label class="form-label small">Vendedor</label>
-                <select name="user_id" class="form-select form-select-sm">
-                    <option value="">Todos</option>
-                    @foreach ($vendedores as $v)
-                        <option value="{{ $v->id }}" {{ request('user_id') == $v->id ? 'selected' : '' }}>{{ $v->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="col-auto">
-                <label class="form-label small">Cliente</label>
+            <div class="col-6 col-md-4 col-xl">
+                <label class="form-label small text-muted fw-semibold">Cliente</label>
                 <select name="cliente_id" class="form-select form-select-sm">
                     <option value="">Todos</option>
                     @foreach ($clientes as $c)
@@ -48,15 +40,15 @@
                     @endforeach
                 </select>
             </div>
-            <div class="col-auto">
-                <button class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> Filtrar</button>
-            </div>
-            <div class="col-auto">
-                <a href="{{ route('reportes.facturas') }}" class="btn btn-sm btn-outline-secondary">Limpiar</a>
-            </div>
-            <div class="col-auto ms-auto">
-                <a href="{{ route('reportes.facturas', array_merge(request()->query(), ['export' => 'pdf'])) }}" target="_blank" class="btn btn-sm btn-outline-danger"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
-                <a href="{{ route('reportes.facturas', array_merge(request()->query(), ['export' => 'csv'])) }}" class="btn btn-sm btn-outline-success"><i class="bi bi-file-earmark-excel"></i> CSV</a>
+            <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2 border-top pt-3 mt-2">
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> Filtrar</button>
+                    <a href="{{ route('reportes.facturas') }}" class="btn btn-sm btn-outline-secondary">Limpiar</a>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{{ route('reportes.facturas', array_merge(request()->query(), ['export' => 'pdf'])) }}" target="_blank" class="btn btn-sm btn-outline-danger"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+                    <a href="{{ route('reportes.facturas', array_merge(request()->query(), ['export' => 'csv'])) }}" class="btn btn-sm btn-outline-success"><i class="bi bi-file-earmark-excel"></i> CSV</a>
+                </div>
             </div>
         </form>
     </div>
@@ -64,11 +56,11 @@
 
 @php
     $kpiCards = [
-        ['label' => 'Ingresos Bs', 'valor' => $kpis['total_bs']['valor'], 'variacion' => $kpis['total_bs']['variacion'], 'formato' => 'moneda'],
-        ['label' => 'Ingresos USD', 'valor' => $kpis['total_usd']['valor'], 'variacion' => $kpis['total_usd']['variacion'], 'formato' => 'usd'],
-        ['label' => 'IVA cobrado', 'valor' => $kpis['iva_bs']['valor'], 'variacion' => $kpis['iva_bs']['variacion'], 'formato' => 'moneda'],
-        ['label' => 'Facturas', 'valor' => $kpis['cantidad']['valor'], 'variacion' => $kpis['cantidad']['variacion'], 'formato' => 'entero'],
-        ['label' => 'Ticket promedio', 'valor' => $kpis['ticket_promedio']['valor'], 'variacion' => $kpis['ticket_promedio']['variacion'], 'formato' => 'moneda'],
+        ['label' => 'Ingresos Bs', 'valor' => $kpis['total_bs'], 'formato' => 'moneda'],
+        ['label' => 'Ingresos USD', 'valor' => $kpis['total_usd'], 'formato' => 'usd'],
+        ['label' => 'IVA cobrado', 'valor' => $kpis['iva_bs'], 'formato' => 'moneda'],
+        ['label' => 'Facturas', 'valor' => $kpis['cantidad'], 'formato' => 'entero'],
+        ['label' => 'Ticket promedio', 'valor' => $kpis['ticket_promedio'], 'formato' => 'moneda'],
     ];
 @endphp
 <div class="row g-2 mb-3">
@@ -144,23 +136,26 @@
         <tfoot>
             <tr class="fw-bold">
                 <td colspan="4" class="text-end">Totales:</td>
-                <td>Bs {{ number_format($kpis['total_bs']['valor'], 2) }}</td>
-                <td>Bs {{ number_format($kpis['iva_bs']['valor'], 2) }}</td>
-                <td>${{ number_format($kpis['total_usd']['valor'], 2) }}</td>
-                <td colspan="2">{{ number_format($kpis['cantidad']['valor']) }} facturas</td>
+                <td>Bs {{ number_format($kpis['total_bs'], 2) }}</td>
+                <td>Bs {{ number_format($kpis['iva_bs'], 2) }}</td>
+                <td>${{ number_format($kpis['total_usd'], 2) }}</td>
+                <td colspan="2">{{ number_format($kpis['cantidad']) }} facturas</td>
             </tr>
         </tfoot>
     </table>
 </div>
 @endsection
 @push('scripts')
+@include('reportes.partials.filtro-fechas')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    @if ($facturas->count() > 0)
     $('#reporteFacturasTable').DataTable({
         language: window.DataTableSpanish,
         order: [[7, 'desc']],
         pageLength: 25,
     });
+    @endif
 });
 </script>
 @endpush

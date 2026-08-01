@@ -15,7 +15,7 @@
                     <tr>
                         <th class="text-start">Producto</th>
                         <th>Categoría</th>
-                        <th>Stock Actual</th>
+                        <th>Existencia Actual</th>
                         <th>Cant. Ajustar</th>
                         <th>Acción</th>
                     </tr>

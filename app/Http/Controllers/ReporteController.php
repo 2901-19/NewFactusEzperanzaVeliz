@@ -6,8 +6,6 @@ use App\Models\Cliente;
 use App\Models\Factura;
 use App\Models\ItemFactura;
 use App\Models\Producto;
-use App\Models\TasaCambio;
-use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -30,16 +28,13 @@ class ReporteController extends Controller
 
     public function facturas(Request $request)
     {
-        [$desde, $hasta, $desdePrev, $hastaPrev] = $this->rangoPeriodo($request);
+        [$desde, $hasta] = $this->rangoPeriodo($request);
 
         $facturas = $this->queryFacturas($request, $desde, $hasta)
             ->orderBy('fecha_venta', 'desc')
             ->get();
 
-        $kpis = $this->conVariacion(
-            $this->kpis($request, $desde, $hasta),
-            $this->kpis($request, $desdePrev, $hastaPrev)
-        );
+        $kpis = $this->kpis($request, $desde, $hasta);
 
         $desglose = $this->desgloseMetodo(
             $this->queryFacturas($request, $desde, $hasta, false)->get()
@@ -55,23 +50,19 @@ class ReporteController extends Controller
             return $this->facturasCsv($facturas);
         }
 
-        $vendedores = User::orderBy('name')->get();
         $clientes = Cliente::orderBy('nombre')->get();
         $nombresMetodo = self::METODOS;
 
-        return view('reportes.facturas', compact('facturas', 'kpis', 'desglose', 'desde', 'hasta', 'vendedores', 'clientes', 'nombresMetodo'));
+        return view('reportes.facturas', compact('facturas', 'kpis', 'desglose', 'desde', 'hasta', 'clientes', 'nombresMetodo'));
     }
 
     // ===== ESTADÍSTICAS =====
 
     public function estadisticas(Request $request)
     {
-        [$desde, $hasta, $desdePrev, $hastaPrev] = $this->rangoPeriodo($request);
+        [$desde, $hasta] = $this->rangoPeriodo($request);
 
-        $kpis = $this->conVariacion(
-            $this->kpis($request, $desde, $hasta),
-            $this->kpis($request, $desdePrev, $hastaPrev)
-        );
+        $kpis = $this->kpis($request, $desde, $hasta);
 
         $facturas = Factura::with('cliente')
             ->where('estado', '!=', 'anulada')
@@ -82,9 +73,8 @@ class ReporteController extends Controller
         $porDia = $this->ventasPorDia($facturas, $desde, $hasta);
         $porMetodo = $this->desgloseMetodo($facturas);
 
-        [$semanaLabels, $detalSeries, $mayorSeries, $detalResumen, $mayorResumen] = $this->detalVsMayor($desde, $hasta);
+        [$semanaLabels, $detalSeries, $mayorSeries, $detalResumen, $mayorResumen, $detalUnidades, $mayorUnidades, $agrupadoPor] = $this->detalVsMayor($desde, $hasta);
         $topProductos = $this->topProductos($desde, $hasta);
-        $porVendedor = $this->ventasPorVendedor($desde, $hasta);
         $topClientes = $this->topClientes($facturas);
 
         $creditos = Factura::where('estado', 'credito')
@@ -97,81 +87,9 @@ class ReporteController extends Controller
         return view('reportes.estadisticas', compact(
             'kpis', 'desde', 'hasta', 'porDia', 'porMetodo',
             'semanaLabels', 'detalSeries', 'mayorSeries', 'detalResumen', 'mayorResumen',
-            'topProductos', 'porVendedor', 'topClientes', 'creditos', 'nombresMetodo'
+            'detalUnidades', 'mayorUnidades', 'agrupadoPor',
+            'topProductos', 'topClientes', 'creditos', 'nombresMetodo'
         ));
-    }
-
-    // ===== RENTABILIDAD =====
-
-    public function rentabilidad(Request $request)
-    {
-        $desde = $request->get('desde', now()->subDays(29)->toDateString());
-        $hasta = $request->get('hasta', now()->toDateString());
-        $tipoVenta = $request->get('tipo_venta');
-
-        $query = ItemFactura::whereHas('factura', fn ($q) => $q
-            ->where('estado', '!=', 'anulada')
-            ->whereDate('fecha_venta', '>=', $desde)
-            ->whereDate('fecha_venta', '<=', $hasta))
-            ->when($tipoVenta, fn ($q) => $q->where('items_factura.tipo_venta', $tipoVenta))
-            ->join('productos', 'items_factura.producto_id', '=', 'productos.id')
-            ->select(
-                'productos.id as producto_id',
-                'productos.nombre',
-                'productos.costo_usd',
-                'productos.fuente_tasa',
-                DB::raw('SUM(items_factura.cantidad) as unidades'),
-                DB::raw('SUM(items_factura.subtotal) as ingreso_bs'),
-                DB::raw('SUM(items_factura.precio_unitario_usd * items_factura.cantidad) as ingreso_usd')
-            )
-            ->groupBy('productos.id', 'productos.nombre', 'productos.costo_usd', 'productos.fuente_tasa')
-            ->get();
-
-        $tasas = TasaCambio::query()->latest('fecha')->get()->keyBy('tipo');
-
-        $filas = $query->map(function ($r) use ($tasas) {
-            $tasa = isset($tasas[$r->fuente_tasa]) ? (float) $tasas[$r->fuente_tasa]->monto : 1;
-            $unidades = (float) $r->unidades;
-            $ingresoBs = (float) $r->ingreso_bs;
-            $costoBs = round((float) $r->costo_usd * $unidades * $tasa, 2);
-            $gananciaBs = round($ingresoBs - $costoBs, 2);
-            $margen = $ingresoBs > 0 ? round(($gananciaBs / $ingresoBs) * 100, 1) : 0;
-
-            return (object) [
-                'producto_id' => $r->producto_id,
-                'nombre' => $r->nombre,
-                'unidades' => $unidades,
-                'ingreso_bs' => round($ingresoBs, 2),
-                'ingreso_usd' => round((float) $r->ingreso_usd, 2),
-                'costo_bs' => $costoBs,
-                'ganancia_bs' => $gananciaBs,
-                'margen' => $margen,
-            ];
-        })->sortByDesc('ganancia_bs')->values();
-
-        $topGanancia = $filas->take(10);
-
-        if ($request->get('export') === 'csv') {
-            $csv = "\xEF\xBB\xBF";
-            $csv .= "Producto;Unidades;Ingreso Bs;Ingreso USD;Costo est. Bs;Ganancia est. Bs;Margen %\n";
-            foreach ($filas as $f) {
-                $csv .= implode(';', [
-                    $f->nombre,
-                    $f->unidades,
-                    number_format($f->ingreso_bs, 2, ',', ''),
-                    number_format($f->ingreso_usd, 2, ',', ''),
-                    number_format($f->costo_bs, 2, ',', ''),
-                    number_format($f->ganancia_bs, 2, ',', ''),
-                    number_format($f->margen, 1, ',', ''),
-                ]) . "\n";
-            }
-
-            return response()->streamDownload(function () use ($csv) {
-                echo $csv;
-            }, 'rentabilidad_' . date('Ymd') . '.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
-        }
-
-        return view('reportes.rentabilidad', compact('filas', 'topGanancia', 'desde', 'hasta', 'tipoVenta'));
     }
 
     // ===== BALANCE MENSUAL =====
@@ -235,18 +153,14 @@ class ReporteController extends Controller
 
     private function rangoPeriodo(Request $request): array
     {
-        $desde = $request->get('desde', now()->subDays(29)->toDateString());
+        $desde = $request->get('desde', now()->toDateString());
         $hasta = $request->get('hasta', now()->toDateString());
 
         if (strtotime($desde) > strtotime($hasta)) {
             [$desde, $hasta] = [$hasta, $desde];
         }
 
-        $dias = Carbon::parse($desde)->diffInDays(Carbon::parse($hasta)) + 1;
-        $desdePrev = Carbon::parse($desde)->subDays($dias)->toDateString();
-        $hastaPrev = Carbon::parse($desde)->subDay()->toDateString();
-
-        return [$desde, $hasta, $desdePrev, $hastaPrev];
+        return [$desde, $hasta];
     }
 
     private function queryFacturas(Request $request, string $desde, string $hasta, bool $conMetodo = true)
@@ -257,7 +171,6 @@ class ReporteController extends Controller
             ->whereDate('fecha_venta', '<=', $hasta)
             ->when($conMetodo && $request->filled('metodo_pago'), fn ($q) => $q->where('metodo_pago', $request->metodo_pago))
             ->when($request->filled('estado'), fn ($q) => $q->where('estado', $request->estado))
-            ->when($request->filled('user_id'), fn ($q) => $q->where('user_id', $request->user_id))
             ->when($request->filled('cliente_id'), fn ($q) => $q->where('cliente_id', $request->cliente_id));
     }
 
@@ -277,18 +190,6 @@ class ReporteController extends Controller
             'iva_bs' => round((float) $row->iva_bs, 2),
             'ticket_promedio' => $cantidad > 0 ? round($totalBs / $cantidad, 2) : 0,
         ];
-    }
-
-    private function conVariacion(array $actual, array $anterior): array
-    {
-        $resultado = [];
-        foreach ($actual as $clave => $valor) {
-            $previo = $anterior[$clave] ?? 0;
-            $variacion = $previo > 0 ? (($valor - $previo) / $previo) * 100 : 0;
-            $resultado[$clave] = ['valor' => $valor, 'variacion' => round($variacion, 1)];
-        }
-
-        return $resultado;
     }
 
     private function desgloseMetodo(Collection $facturas): array
@@ -347,38 +248,68 @@ class ReporteController extends Controller
                 ->whereDate('fecha_venta', '<=', $hasta))
             ->get(['factura_id', 'cantidad', 'tipo_venta', 'subtotal']);
 
+        $porDia = Carbon::parse($desde)->diffInDays(Carbon::parse($hasta)) <= 6;
+
         $detal = [];
         $mayor = [];
-        $unidadesDetal = 0;
-        $unidadesMayor = 0;
+        $detalUnidades = [];
+        $mayorUnidades = [];
 
         foreach ($items as $item) {
-            $inicioSemana = $item->factura?->fecha_venta?->startOfWeek()->format('Y-m-d') ?? '';
+            $fecha = $item->factura?->fecha_venta;
+            if (!$fecha) {
+                continue;
+            }
+            $clave = $porDia ? $fecha->format('Y-m-d') : $fecha->startOfWeek()->format('Y-m-d');
+
             if ($item->tipo_venta === 'mayor') {
-                $mayor[$inicioSemana] = ($mayor[$inicioSemana] ?? 0) + (float) $item->subtotal;
-                $unidadesMayor += (int) $item->cantidad;
+                $mayor[$clave] = ($mayor[$clave] ?? 0) + (float) $item->subtotal;
+                $mayorUnidades[$clave] = ($mayorUnidades[$clave] ?? 0) + (int) $item->cantidad;
             } else {
-                $detal[$inicioSemana] = ($detal[$inicioSemana] ?? 0) + (float) $item->subtotal;
-                $unidadesDetal += (int) $item->cantidad;
+                $detal[$clave] = ($detal[$clave] ?? 0) + (float) $item->subtotal;
+                $detalUnidades[$clave] = ($detalUnidades[$clave] ?? 0) + (int) $item->cantidad;
             }
         }
 
-        ksort($detal);
-        ksort($mayor);
+        $claves = [];
+        if ($porDia) {
+            $cursor = Carbon::parse($desde);
+            $fin = Carbon::parse($hasta);
+            while ($cursor->lte($fin)) {
+                $claves[] = $cursor->format('Y-m-d');
+                $cursor->addDay();
+            }
+        } else {
+            $cursor = Carbon::parse($desde)->startOfWeek();
+            $fin = Carbon::parse($hasta);
+            while ($cursor->lte($fin)) {
+                $claves[] = $cursor->format('Y-m-d');
+                $cursor->addWeek();
+            }
+        }
 
-        $semanas = array_unique(array_merge(array_keys($detal), array_keys($mayor)));
-        sort($semanas);
+        $totalBs = round(array_sum($detal) + array_sum($mayor), 2);
+        $pct = fn (float $valor) => $totalBs > 0 ? round(($valor / $totalBs) * 100, 1) : 0;
 
-        $semanaLabels = array_map(fn ($s) => 'Sem ' . Carbon::parse($s)->format('d/m'), $semanas);
-        $detalSeries = array_map(fn ($s) => round($detal[$s] ?? 0, 2), $semanas);
-        $mayorSeries = array_map(fn ($s) => round($mayor[$s] ?? 0, 2), $semanas);
+        $semanaLabels = array_map(
+            fn ($clave) => $porDia ? Carbon::parse($clave)->format('d/m') : 'Sem ' . Carbon::parse($clave)->format('d/m'),
+            $claves
+        );
+
+        $detalSeries = array_map(fn ($clave) => round($detal[$clave] ?? 0, 2), $claves);
+        $mayorSeries = array_map(fn ($clave) => round($mayor[$clave] ?? 0, 2), $claves);
+        $detalUnidadesSeries = array_map(fn ($clave) => $detalUnidades[$clave] ?? 0, $claves);
+        $mayorUnidadesSeries = array_map(fn ($clave) => $mayorUnidades[$clave] ?? 0, $claves);
 
         return [
             $semanaLabels,
             $detalSeries,
             $mayorSeries,
-            ['bs' => round(array_sum($detal), 2), 'unidades' => $unidadesDetal],
-            ['bs' => round(array_sum($mayor), 2), 'unidades' => $unidadesMayor],
+            ['bs' => round(array_sum($detal), 2), 'unidades' => array_sum($detalUnidades), 'pct' => $pct(array_sum($detal))],
+            ['bs' => round(array_sum($mayor), 2), 'unidades' => array_sum($mayorUnidades), 'pct' => $pct(array_sum($mayor))],
+            $detalUnidadesSeries,
+            $mayorUnidadesSeries,
+            $porDia ? 'día' : 'semana',
         ];
     }
 
@@ -398,23 +329,6 @@ class ReporteController extends Controller
             ->orderByDesc('ingreso_bs')
             ->take(10)
             ->get();
-    }
-
-    private function ventasPorVendedor(string $desde, string $hasta): Collection
-    {
-        return Factura::with('user')
-            ->where('estado', '!=', 'anulada')
-            ->whereDate('fecha_venta', '>=', $desde)
-            ->whereDate('fecha_venta', '<=', $hasta)
-            ->get()
-            ->groupBy('user_id')
-            ->map(fn ($grupo) => [
-                'nombre' => $grupo->first()->user?->name ?? '—',
-                'facturas' => $grupo->count(),
-                'total_bs' => round($grupo->sum('total_bs'), 2),
-            ])
-            ->sortByDesc('total_bs')
-            ->values();
     }
 
     private function topClientes(Collection $facturas): Collection

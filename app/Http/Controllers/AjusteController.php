@@ -63,6 +63,13 @@ class AjusteController extends Controller
             $totalActual = ($producto->stock_paquetes * $producto->unidades_por_paquete) + $producto->stock_unidades;
             $upp = $producto->unidades_por_paquete;
 
+            if ($upp <= 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El producto debe tener al menos 1 unidad por paquete para ajustar inventario',
+                ], 422);
+            }
+
             if ($validated['operacion'] === '+') {
                 $nuevoTotal = $totalActual + $validated['cantidad'];
             } else {

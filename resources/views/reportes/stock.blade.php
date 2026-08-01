@@ -1,8 +1,8 @@
 @extends('layouts.app')
-@section('titulo', 'Stock Bajo')
+@section('titulo', 'Existencia Baja')
 @section('contenido')
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>Productos con Stock Bajo (&le;10 uds)</h2>
+    <h2>Productos con Existencia Baja (10 uds o menos)</h2>
     @if (Auth::user()->hasPermiso('actualizar-inventarios'))
     <a href="{{ route('productos.ajustar-inventario') }}" class="btn btn-info text-white">
         <i class="bi bi-box"></i> Actualizar Inventario
@@ -16,7 +16,7 @@
                 <th class="text-start">Producto</th>
                 <th>Lotes</th>
                 <th>Unidades</th>
-                <th>Stock Total</th>
+                <th>Existencia Total</th>
             </tr>
         </thead>
         <tbody>

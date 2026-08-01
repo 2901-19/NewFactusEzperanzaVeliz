@@ -21,7 +21,7 @@
             @foreach ($facturas as $f)
             <tr class="{{ $f->estado_credito === 'cancelado' ? 'table-success' : '' }}">
                 <td>{{ $f->correlativo }}</td>
-                <td class="text-start">{{ $f->cliente->nombre ?? 'N/A' }}</td>
+                <td class="text-start">{{ $f->cliente->nombre ?? 'Sin dato' }}</td>
                 <td>Bs {{ number_format($f->total_bs, 2) }}</td>
                 <td>${{ number_format($f->total_usd, 2) }}</td>
                 <td>{{ $f->fecha_venta }}</td>
@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const btn = $(this);
         Swal.fire({
             title: '¿Marcar como pagado?',
-            text: 'Crédito #' + btn.data('correlativo'),
+            text: 'Crédito N° ' + btn.data('correlativo'),
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#198754',

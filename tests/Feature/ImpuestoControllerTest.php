@@ -16,6 +16,7 @@ class ImpuestoControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->seed(\Database\Seeders\PermisoSeeder::class);
         $this->admin = User::factory()->create(['rol' => 'admin']);
     }
 

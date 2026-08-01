@@ -11,16 +11,6 @@
                     {{ number_format($valor) }}
                 @endif
             </div>
-            <span class="badge {{ $variacion > 0 ? 'bg-success' : ($variacion < 0 ? 'bg-danger' : 'bg-secondary') }}">
-                @if ($variacion > 0)
-                    ▲ {{ number_format($variacion, 1) }}%
-                @elseif ($variacion < 0)
-                    ▼ {{ number_format(abs($variacion), 1) }}%
-                @else
-                    —
-                @endif
-            </span>
-            <small class="text-muted ms-1">vs período anterior</small>
         </div>
     </div>
 </div>

@@ -17,7 +17,7 @@ class TasaCambioController extends Controller
     {
         $data = $request->validate([
             'tipo' => 'required|in:promedio,dolar,bcv',
-            'monto' => 'required|numeric|min:0',
+            'monto' => 'required|numeric|gt:0',
         ]);
 
         TasaCambio::updateOrCreate(

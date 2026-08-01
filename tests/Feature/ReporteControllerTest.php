@@ -94,9 +94,9 @@ class ReporteControllerTest extends TestCase
         $response->assertViewHas(['facturas', 'kpis', 'desglose']);
 
         $kpis = $response->viewData('kpis');
-        $this->assertEquals(1160.0, $kpis['total_bs']['valor']);
-        $this->assertEquals(2, $kpis['cantidad']['valor']);
-        $this->assertEquals(580.0, $kpis['ticket_promedio']['valor']);
+        $this->assertEquals(1160.0, $kpis['total_bs']);
+        $this->assertEquals(2, $kpis['cantidad']);
+        $this->assertEquals(580.0, $kpis['ticket_promedio']);
 
         $desglose = $response->viewData('desglose');
         $this->assertEquals(980.0, $desglose['efectivo']);
@@ -118,11 +118,11 @@ class ReporteControllerTest extends TestCase
         $kpis = $response->viewData('kpis');
 
         $this->assertCount(1, $facturas);
-        $this->assertEquals(580.0, $kpis['total_bs']['valor']);
-        $this->assertEquals(1, $kpis['cantidad']['valor']);
+        $this->assertEquals(580.0, $kpis['total_bs']);
+        $this->assertEquals(1, $kpis['cantidad']);
     }
 
-    public function test_facturas_compara_con_periodo_anterior()
+    public function test_facturas_no_muestra_comparacion_con_periodo_anterior()
     {
         $this->actingAs($this->cajero);
 
@@ -132,8 +132,7 @@ class ReporteControllerTest extends TestCase
         $response = $this->get('/reportes/facturas?desde=2026-07-01&hasta=2026-07-31');
 
         $kpis = $response->viewData('kpis');
-        $this->assertEquals(580.0, $kpis['total_bs']['valor']);
-        $this->assertEquals(16.0, $kpis['total_bs']['variacion']);
+        $this->assertEquals(580.0, $kpis['total_bs']);
     }
 
     public function test_facturas_export_csv()
@@ -173,7 +172,7 @@ class ReporteControllerTest extends TestCase
         $response = $this->get('/reportes/estadisticas?desde=2026-07-01&hasta=2026-07-31');
 
         $response->assertStatus(200);
-        $response->assertViewHas(['porDia', 'porMetodo', 'semanaLabels', 'topProductos', 'porVendedor', 'topClientes', 'creditos']);
+        $response->assertViewHas(['porDia', 'porMetodo', 'semanaLabels', 'topProductos', 'topClientes', 'creditos']);
 
         $porDia = $response->viewData('porDia');
         $this->assertEquals(580.0, $porDia['2026-07-10']);
@@ -187,64 +186,30 @@ class ReporteControllerTest extends TestCase
         $this->assertEquals(4, $topProductos[0]->unidades);
         $this->assertEquals(1800.0, $topProductos[0]->ingreso_bs);
 
-        $porVendedor = $response->viewData('porVendedor');
-        $this->assertCount(1, $porVendedor);
-        $this->assertEquals(580.0, $porVendedor[0]['total_bs']);
+        $this->assertEquals('semana', $response->viewData('agrupadoPor'));
+        $detalResumen = $response->viewData('detalResumen');
+        $this->assertEquals(1000.0, $detalResumen['bs']);
+        $this->assertEquals(2, $detalResumen['unidades']);
+        $this->assertEquals(55.6, $detalResumen['pct']);
+        $this->assertEquals(1800.0, $response->viewData('detalResumen')['bs'] + $response->viewData('mayorResumen')['bs']);
 
         $creditos = $response->viewData('creditos');
         $this->assertEquals(0, $creditos->cantidad);
     }
 
-    public function test_rentabilidad_calcula_ganancia_y_margen()
+    public function test_estadisticas_agrupa_por_dia_en_rango_corto()
     {
         $this->actingAs($this->cajero);
 
-        $factura = $this->crearFactura();
+        $factura = $this->crearFactura(['fecha_venta' => '2026-07-10']);
         $this->crearItem($factura);
 
-        $response = $this->get('/reportes/rentabilidad?desde=2026-07-01&hasta=2026-07-31');
+        $response = $this->get('/reportes/estadisticas?desde=2026-07-10&hasta=2026-07-10');
 
         $response->assertStatus(200);
-        $filas = $response->viewData('filas');
-        $this->assertCount(1, $filas);
-
-        $fila = $filas->first();
-        $this->assertEquals('Producto Test', $fila->nombre);
-        $this->assertEquals(2, $fila->unidades);
-        $this->assertEquals(1000.0, $fila->ingreso_bs);
-        $this->assertEquals(500.0, $fila->costo_bs);
-        $this->assertEquals(500.0, $fila->ganancia_bs);
-        $this->assertEquals(50.0, $fila->margen);
-    }
-
-    public function test_rentabilidad_filtra_por_tipo_venta()
-    {
-        $this->actingAs($this->cajero);
-
-        $factura = $this->crearFactura();
-        $this->crearItem($factura);
-        $this->crearItem($factura, ['tipo_venta' => 'mayor', 'precio_unitario_usd' => 8.00, 'precio_unitario_bs' => 400.00, 'subtotal' => 800.00]);
-
-        $response = $this->get('/reportes/rentabilidad?desde=2026-07-01&hasta=2026-07-31&tipo_venta=mayor');
-
-        $filas = $response->viewData('filas');
-        $this->assertCount(1, $filas);
-        $this->assertEquals(2, $filas->first()->unidades);
-        $this->assertEquals(800.0, $filas->first()->ingreso_bs);
-    }
-
-    public function test_rentabilidad_export_csv()
-    {
-        $this->actingAs($this->cajero);
-
-        $factura = $this->crearFactura();
-        $this->crearItem($factura);
-
-        $response = $this->get('/reportes/rentabilidad?desde=2026-07-01&hasta=2026-07-31&export=csv');
-
-        $response->assertStatus(200);
-        $this->assertStringContainsString('Producto;Unidades;Ingreso Bs', $response->streamedContent());
-        $this->assertStringContainsString('Producto Test', $response->streamedContent());
+        $this->assertEquals('día', $response->viewData('agrupadoPor'));
+        $this->assertCount(1, $response->viewData('semanaLabels'));
+        $this->assertEquals(['detalSeries' => 1000.0], ['detalSeries' => $response->viewData('detalSeries')[0]]);
     }
 
     public function test_balance_agrupa_mensualmente()

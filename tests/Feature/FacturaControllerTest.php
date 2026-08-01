@@ -435,4 +435,142 @@ class FacturaControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertViewHas('facturas');
     }
+
+    public function test_store_rechaza_venta_sin_tasa_configurada()
+    {
+        TasaCambio::query()->delete();
+        $this->actingAs($this->cajero);
+
+        $response = $this->postJson('/facturas', [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'efectivo',
+            'estado' => 'contado',
+            'items' => [
+                [
+                    'producto_id' => $this->producto->id,
+                    'cantidad' => 1,
+                    'tipo_venta' => 'unitario',
+                ],
+            ],
+        ]);
+
+        $response->assertStatus(500);
+        $response->assertJson(['success' => false]);
+        $this->assertDatabaseCount('facturas', 0);
+
+        $this->producto->refresh();
+        $this->assertEquals(125, $this->producto->stock_total);
+    }
+
+    public function test_store_rechaza_producto_sin_precio()
+    {
+        $this->producto->update(['precio_unitario_usd' => 0, 'precio_mayor_usd' => 0]);
+        $this->actingAs($this->cajero);
+
+        $response = $this->postJson('/facturas', [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'efectivo',
+            'estado' => 'contado',
+            'items' => [
+                [
+                    'producto_id' => $this->producto->id,
+                    'cantidad' => 1,
+                    'tipo_venta' => 'unitario',
+                ],
+            ],
+        ]);
+
+        $response->assertStatus(500);
+        $response->assertJson(['success' => false]);
+        $this->assertDatabaseCount('facturas', 0);
+    }
+
+    public function test_anular_credito_cobrado_es_bloqueado()
+    {
+        $this->actingAs($this->cajero);
+
+        $this->postJson('/facturas', [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'credito',
+            'estado' => 'credito',
+            'items' => [
+                [
+                    'producto_id' => $this->producto->id,
+                    'cantidad' => 2,
+                    'tipo_venta' => 'unitario',
+                ],
+            ],
+        ]);
+
+        $factura = Factura::first();
+        $this->post("/facturas/{$factura->id}/pagar-credito");
+        $factura->refresh();
+        $this->assertEquals('cancelado', $factura->estado_credito);
+
+        $response = $this->post("/facturas/{$factura->id}/anular");
+
+        $response->assertRedirect();
+        $response->assertSessionHasErrors('error');
+
+        $this->assertDatabaseHas('facturas', [
+            'id' => $factura->id,
+            'estado' => 'credito',
+            'estado_credito' => 'cancelado',
+        ]);
+    }
+
+    public function test_anular_restaura_stock_de_producto_desactivado()
+    {
+        $this->actingAs($this->cajero);
+
+        $this->postJson('/facturas', [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'efectivo',
+            'estado' => 'contado',
+            'items' => [
+                [
+                    'producto_id' => $this->producto->id,
+                    'cantidad' => 10,
+                    'tipo_venta' => 'unitario',
+                ],
+            ],
+        ]);
+
+        $factura = Factura::first();
+        $this->producto->delete();
+
+        $response = $this->post("/facturas/{$factura->id}/anular");
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $this->producto->refresh();
+        $this->assertEquals(125, $this->producto->stock_total);
+    }
+
+    public function test_store_redondea_subtotal_iva_y_total()
+    {
+        $this->producto->update(['precio_unitario_usd' => 10.3333, 'precio_mayor_usd' => 8.0]);
+        $this->actingAs($this->cajero);
+
+        $response = $this->postJson('/facturas', [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'efectivo',
+            'estado' => 'contado',
+            'items' => [
+                [
+                    'producto_id' => $this->producto->id,
+                    'cantidad' => 3,
+                    'tipo_venta' => 'unitario',
+                ],
+            ],
+        ]);
+
+        $response->assertJson(['success' => true]);
+
+        $factura = Factura::first();
+        $this->assertEquals(1550.00, (float) $factura->subtotal_bs);
+        $this->assertEquals(248.00, (float) $factura->iva_bs);
+        $this->assertEquals(1798.00, (float) $factura->total_bs);
+    }
 }

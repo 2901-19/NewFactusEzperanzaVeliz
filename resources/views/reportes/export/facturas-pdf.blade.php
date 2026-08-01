@@ -36,11 +36,11 @@
             <td class="titulo">Ticket promedio</td>
         </tr>
         <tr>
-            <td class="valor">Bs {{ number_format($kpis['total_bs']['valor'], 2) }}</td>
-            <td class="valor">${{ number_format($kpis['total_usd']['valor'], 2) }}</td>
-            <td class="valor">Bs {{ number_format($kpis['iva_bs']['valor'], 2) }}</td>
-            <td class="valor">{{ number_format($kpis['cantidad']['valor']) }}</td>
-            <td class="valor">Bs {{ number_format($kpis['ticket_promedio']['valor'], 2) }}</td>
+            <td class="valor">Bs {{ number_format($kpis['total_bs'], 2) }}</td>
+            <td class="valor">${{ number_format($kpis['total_usd'], 2) }}</td>
+            <td class="valor">Bs {{ number_format($kpis['iva_bs'], 2) }}</td>
+            <td class="valor">{{ number_format($kpis['cantidad']) }}</td>
+            <td class="valor">Bs {{ number_format($kpis['ticket_promedio'], 2) }}</td>
         </tr>
     </table>
 
@@ -84,9 +84,9 @@
         <tfoot>
             <tr class="totales">
                 <td colspan="3" style="text-align:right">Totales:</td>
-                <td class="moneda">Bs {{ number_format($kpis['total_bs']['valor'], 2) }}</td>
-                <td class="moneda">${{ number_format($kpis['total_usd']['valor'], 2) }}</td>
-                <td colspan="2">{{ number_format($kpis['cantidad']['valor']) }} facturas</td>
+                <td class="moneda">Bs {{ number_format($kpis['total_bs'], 2) }}</td>
+                <td class="moneda">${{ number_format($kpis['total_usd'], 2) }}</td>
+                <td colspan="2">{{ number_format($kpis['cantidad']) }} facturas</td>
             </tr>
         </tfoot>
     </table>

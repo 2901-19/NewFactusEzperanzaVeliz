@@ -13,7 +13,7 @@
             <tr>
                 <th>Nombre</th>
                 <th>Usuario</th>
-                <th>Email</th>
+                <th>Correo</th>
                 <th>Rol</th>
                 <th>Acciones</th>
             </tr>

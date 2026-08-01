@@ -3,20 +3,22 @@
 @section('contenido')
 <div class="card mb-3">
     <div class="card-body">
-        <form method="GET" class="row g-2 align-items-end">
+        <form method="GET" class="row g-3 align-items-end">
             <div class="col-auto">
-                <label class="form-label small">Año</label>
+                <label class="form-label small text-muted fw-semibold">Año</label>
                 <select name="anio" class="form-select form-select-sm">
                     @for ($y = now()->year; $y >= now()->year - 5; $y--)
                         <option value="{{ $y }}" {{ $anio == $y ? 'selected' : '' }}>{{ $y }}</option>
                     @endfor
                 </select>
             </div>
-            <div class="col-auto">
-                <button class="btn btn-sm btn-primary">Ver</button>
-            </div>
-            <div class="col-auto ms-auto">
-                <a href="{{ route('reportes.balance', ['anio' => $anio, 'export' => 'pdf']) }}" target="_blank" class="btn btn-sm btn-outline-danger"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+            <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2 border-top pt-3 mt-2">
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-sm btn-primary">Ver</button>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{{ route('reportes.balance', ['anio' => $anio, 'export' => 'pdf']) }}" target="_blank" class="btn btn-sm btn-outline-danger"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+                </div>
             </div>
         </form>
     </div>

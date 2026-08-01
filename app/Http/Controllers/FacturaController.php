@@ -28,20 +28,22 @@ class FacturaController extends Controller
             return back()->withErrors(['error' => 'La factura ya está anulada.']);
         }
 
-        $factura->update(['estado' => 'anulada', 'estado_credito' => null]);
-
-        // Restaurar stock de cada item
-        foreach ($factura->items as $item) {
-            $producto = $item->producto;
-            if ($producto) {
-                $cantidad = $item->cantidad;
-                $paquetesPorUnidad = 1 / ($producto->unidades_por_paquete ?: 1);
-                $sobrantes = $cantidad;
-                $producto->increment('stock_unidades', $sobrantes);
-            }
+        if ($factura->estado_credito === 'cancelado') {
+            return back()->withErrors(['error' => 'No se puede anular un crédito ya cobrado. Reversa el pago primero.']);
         }
 
-        return redirect()->route('facturas.index')->with('success', 'Factura #' . $factura->correlativo . ' anulada. Stock restaurado.');
+        DB::transaction(function () use ($factura) {
+            $factura->update(['estado' => 'anulada', 'estado_credito' => null]);
+
+            foreach ($factura->items as $item) {
+                $producto = Producto::withTrashed()->find($item->producto_id);
+                if ($producto) {
+                    $producto->increment('stock_unidades', $item->cantidad);
+                }
+            }
+        });
+
+        return redirect()->route('facturas.index')->with('success', 'Factura N° ' . $factura->correlativo . ' anulada. Stock restaurado.');
     }
 
     public function pos()
@@ -81,8 +83,6 @@ class FacturaController extends Controller
 
         $correlativo = strtoupper(substr(uniqid(), -7));
 
-        $productos = Producto::whereIn('id', collect($request->items)->pluck('producto_id'))->get()->keyBy('id');
-
         $iva = Impuesto::latest('fecha')->first();
         $ivaPorcentaje = $iva ? (float) $iva->porcentaje : 16;
 
@@ -92,8 +92,16 @@ class FacturaController extends Controller
 
         DB::beginTransaction();
         try {
+            $productos = Producto::whereIn('id', collect($request->items)->pluck('producto_id'))
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+
             foreach ($request->items as $item) {
-                $producto = $productos[$item['producto_id']];
+                $producto = $productos[$item['producto_id']] ?? null;
+                if (!$producto) {
+                    throw new \Exception('Uno de los productos ya no está disponible.');
+                }
                 $cantidad = (int) $item['cantidad'];
 
                 if ($cantidad > $producto->stock_total) {
@@ -104,29 +112,33 @@ class FacturaController extends Controller
                 $precioUsd = $esMayor ? $producto->precio_mayor_usd : $producto->precio_unitario_usd;
                 $tipoVenta = $esMayor ? 'mayor' : 'unitario';
 
-                $this->descontarStock($producto, $cantidad);
+                if ((float) $precioUsd <= 0) {
+                    throw new \Exception("El producto {$producto->nombre} no tiene precio configurado.");
+                }
 
                 $tasa = $this->obtenerTasa($producto->fuente_tasa);
                 $precioBs = $precioUsd * $tasa;
-                $subtotalItemBs = $precioBs * $cantidad;
+                $subtotalItemBs = round($precioBs * $cantidad, 2);
+
+                $this->descontarStock($producto, $cantidad);
 
                 $itemsData[] = [
                     'producto_id' => $producto->id,
                     'cantidad' => $cantidad,
                     'tipo_venta' => $tipoVenta,
                     'precio_unitario_usd' => $precioUsd,
-                    'precio_unitario_bs' => $precioBs,
+                    'precio_unitario_bs' => round($precioBs, 2),
                     'subtotal' => $subtotalItemBs,
                 ];
 
-                $subtotalBs += $subtotalItemBs;
+                $subtotalBs = round($subtotalBs + $subtotalItemBs, 2);
 
                 if ($producto->tiene_iva) {
-                    $ivaBs += $subtotalItemBs * ($ivaPorcentaje / 100);
+                    $ivaBs = round($ivaBs + $subtotalItemBs * ($ivaPorcentaje / 100), 2);
                 }
             }
 
-            $totalBs = $subtotalBs + $ivaBs;
+            $totalBs = round($subtotalBs + $ivaBs, 2);
 
             $tasaBcv = $this->obtenerTasa('bcv');
             $totalUsd = round($totalBs / $tasaBcv, 2);
@@ -205,7 +217,7 @@ class FacturaController extends Controller
 
         $factura->update(['estado_credito' => 'cancelado']);
 
-        return redirect()->route('facturas.creditos')->with('success', 'Crédito #' . $factura->correlativo . ' cancelado correctamente.');
+        return redirect()->route('facturas.creditos')->with('success', 'Crédito N° ' . $factura->correlativo . ' cancelado correctamente.');
     }
 
     private function descontarStock(Producto $producto, int $cantidad): void
@@ -239,6 +251,11 @@ class FacturaController extends Controller
     private function obtenerTasa(string $fuente): float
     {
         $tasa = TasaCambio::where('tipo', $fuente)->latest()->first();
-        return $tasa ? (float) $tasa->monto : 1;
+
+        if (!$tasa || (float) $tasa->monto <= 0) {
+            throw new \RuntimeException("La tasa de cambio '{$fuente}' no está configurada. Actualícela antes de vender.");
+        }
+
+        return (float) $tasa->monto;
     }
 }

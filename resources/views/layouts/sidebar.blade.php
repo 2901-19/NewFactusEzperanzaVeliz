@@ -11,7 +11,7 @@
             @if ($user->hasPermiso('ver-dashboard'))
             <li class="nav-item">
                 <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
-                    <i class="bi bi-speedometer2"></i> Dashboard
+                    <i class="bi bi-speedometer2"></i> Inicio
                 </a>
             </li>
             @endif
@@ -83,11 +83,6 @@
                     <i class="bi bi-graph-up"></i> Estadísticas
                 </a>
             </li>
-            <li class="nav-item">
-                <a href="{{ route('reportes.rentabilidad') }}" class="nav-link {{ request()->routeIs('reportes.rentabilidad') ? 'active' : '' }}">
-                    <i class="bi bi-pie-chart"></i> Rentabilidad
-                </a>
-            </li>
             @endif
             @if ($user->hasPermiso('ver-balance'))
             <li class="nav-item">
@@ -99,7 +94,7 @@
             @if ($user->hasPermiso('ver-stock-bajo'))
             <li class="nav-item">
                 <a href="{{ route('reportes.stock') }}" class="nav-link {{ request()->routeIs('reportes.stock') ? 'active' : '' }}">
-                    <i class="bi bi-exclamation-triangle"></i> Stock Bajo
+                    <i class="bi bi-exclamation-triangle"></i> Existencia Baja
                 </a>
             </li>
             @endif

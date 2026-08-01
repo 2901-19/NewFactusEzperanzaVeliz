@@ -17,6 +17,7 @@ class HerramientasTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->seed(\Database\Seeders\PermisoSeeder::class);
         $this->admin = User::factory()->create(['rol' => 'admin']);
     }
 
@@ -111,5 +112,58 @@ class HerramientasTest extends TestCase
         $response = $this->get('/herramientas/precios');
 
         $response->assertStatus(200);
+    }
+
+    public function test_importar_tasas_repetidas_actualiza_sin_fallar()
+    {
+        $this->actingAs($this->admin);
+
+        $json = json_encode(['tasas_cambio' => [
+            ['tipo' => 'promedio', 'moneda' => 'USD', 'monto' => 50.00, 'fecha' => '2026-07-04'],
+            ['tipo' => 'promedio', 'moneda' => 'USD', 'monto' => 52.00, 'fecha' => '2026-07-05'],
+        ]]);
+        $archivo = UploadedFile::fake()->createWithContent('datos.json', $json);
+
+        $response = $this->from('/herramientas/datos')->post('/herramientas/importar', [
+            'archivo' => $archivo,
+        ]);
+
+        $response->assertSessionHas('success');
+        $this->assertDatabaseCount('tasa_cambios', 1);
+        $this->assertDatabaseHas('tasa_cambios', ['tipo' => 'promedio', 'monto' => 52.00]);
+    }
+
+    public function test_importar_inventario_normaliza_unidades_por_paquete()
+    {
+        $this->actingAs($this->admin);
+
+        $json = json_encode(['inventario' => [
+            ['nombre' => 'Azúcar', 'unidades_por_paquete' => 0],
+        ]]);
+        $archivo = UploadedFile::fake()->createWithContent('datos.json', $json);
+
+        $response = $this->from('/herramientas/datos')->post('/herramientas/importar', [
+            'archivo' => $archivo,
+        ]);
+
+        $response->assertSessionHas('success');
+        $this->assertDatabaseHas('productos', ['nombre' => 'Azúcar', 'unidades_por_paquete' => 1]);
+    }
+
+    public function test_importar_precios_cero_marca_producto_no_disponible()
+    {
+        $this->actingAs($this->admin);
+
+        $json = json_encode(['precios' => [
+            ['nombre' => 'Harina', 'costo_usd' => 0, 'margen_detal' => 0, 'margen_mayor' => 0, 'tiene_iva' => true, 'fuente_tasa' => 'promedio'],
+        ]]);
+        $archivo = UploadedFile::fake()->createWithContent('datos.json', $json);
+
+        $response = $this->from('/herramientas/datos')->post('/herramientas/importar', [
+            'archivo' => $archivo,
+        ]);
+
+        $response->assertSessionHas('success');
+        $this->assertDatabaseHas('productos', ['nombre' => 'Harina', 'estado' => 'no_disponible']);
     }
 }

@@ -132,6 +132,8 @@ class HerramientasController extends Controller
                             $precioUnitario = round($costoUsd * (1 + $margenDetal / 100), 2);
                             $precioMayor = round($costoUsd * (1 + $margenMayor / 100), 2);
 
+                            $estadoImportado = ($precioUnitario <= 0 && $precioMayor <= 0) ? 'no_disponible' : 'disponible';
+
                             if ($producto) {
                                 $producto->update([
                                     'costo_usd' => $costoUsd,
@@ -141,6 +143,7 @@ class HerramientasController extends Controller
                                     'precio_mayor_usd' => $precioMayor,
                                     'tiene_iva' => $item['tiene_iva'] ?? $producto->tiene_iva,
                                     'fuente_tasa' => $item['fuente_tasa'] ?? $producto->fuente_tasa,
+                                    'estado' => $estadoImportado,
                                 ]);
                             } else {
                                 Producto::create([
@@ -151,11 +154,11 @@ class HerramientasController extends Controller
                                     'precio_unitario_usd' => $precioUnitario,
                                     'precio_mayor_usd' => $precioMayor,
                                     'tiene_iva' => $item['tiene_iva'] ?? true,
-                                    'fuente_tasa' => $item['fuente_tasa'] ?? 'paralelo',
+                                    'fuente_tasa' => $item['fuente_tasa'] ?? 'promedio',
                                     'stock_paquetes' => 0,
                                     'stock_unidades' => 0,
                                     'unidades_por_paquete' => 1,
-                                    'estado' => 'disponible',
+                                    'estado' => $estadoImportado,
                                 ]);
                             }
                             $contadores['precios']++;
@@ -171,8 +174,8 @@ class HerramientasController extends Controller
                                     'categoria_id' => $item['categoria_id'] ?? null,
                                     'descripcion' => $item['descripcion'] ?? '',
                                     'imagen' => $item['imagen'] ?? null,
-                                    'unidades_por_paquete' => $item['unidades_por_paquete'] ?? 1,
-                                    'estado' => $item['estado'] ?? 'disponible',
+                                    'unidades_por_paquete' => max(1, (int) ($item['unidades_por_paquete'] ?? 1)),
+                                    'estado' => 'no_disponible',
                                     'stock_paquetes' => 0,
                                     'stock_unidades' => 0,
                                     'costo_usd' => 0,
@@ -181,7 +184,7 @@ class HerramientasController extends Controller
                                     'precio_unitario_usd' => 0,
                                     'precio_mayor_usd' => 0,
                                     'tiene_iva' => true,
-                                    'fuente_tasa' => 'paralelo',
+                                    'fuente_tasa' => 'promedio',
                                 ]);
                                 $contadores['inventario']++;
                             }
@@ -207,8 +210,13 @@ class HerramientasController extends Controller
                             $fillable = (new TasaCambio)->getFillable();
                             $item = array_intersect_key($item, array_flip($fillable));
                             unset($item['id']);
-                            TasaCambio::create($item);
-                            $contadores['tasas_cambio']++;
+                            if (isset($item['tipo']) && $item['tipo']) {
+                                TasaCambio::updateOrCreate(
+                                    ['tipo' => $item['tipo']],
+                                    $item
+                                );
+                                $contadores['tasas_cambio']++;
+                            }
                         }
                         break;
 
@@ -269,13 +277,7 @@ class HerramientasController extends Controller
 
     public function imprimirConfig()
     {
-        $config = [
-            'tipo' => config('impresora.tipo', 'network'),
-            'host' => config('impresora.host', '192.168.1.100'),
-            'port' => config('impresora.port', 9100),
-            'nombre' => config('impresora.nombre', ''),
-        ];
-
+        $config = $this->getPrinterConfig();
         return view('herramientas.impresora', compact('config'));
     }
 

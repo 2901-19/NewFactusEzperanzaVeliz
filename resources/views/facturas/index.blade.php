@@ -23,7 +23,7 @@
             <tr class="{{ $f->estado === 'anulada' ? 'table-danger text-muted' : '' }}">
                 <td>{{ $f->correlativo }}</td>
                 <td class="text-start">{{ $f->cliente->nombre ?? 'Contado' }}</td>
-                <td class="text-start">{{ $f->user->usuario ?? 'N/A' }}</td>
+                <td class="text-start">{{ $f->user->usuario ?? 'Sin dato' }}</td>
                 <td>Bs {{ number_format($f->total_bs, 2) }}</td>
                 <td>${{ number_format($f->total_usd, 2) }}</td>
                 <td>{{ $f->fecha_venta }}</td>
@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const btn = $(this);
         Swal.fire({
             title: '¿Anular factura?',
-            text: 'Se restaurará el stock de todos los productos.',
+            text: 'Se restaurará la existencia de todos los productos.',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#dc3545',

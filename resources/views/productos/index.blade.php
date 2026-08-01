@@ -26,7 +26,7 @@
                 <th class="text-start">Nombre</th>
                 <th>Ref.</th>
                 <th>Categoría</th>
-                <th>Stock Total</th>
+                <th>Existencia Total</th>
                 <th>Precio Unitario</th>
                 <th>Precio Mayor</th>
                 <th>Estado</th>

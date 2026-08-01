@@ -619,7 +619,7 @@ document.addEventListener('alpine:init', () => {
                 const data = await res.json();
 
                 if (data.success) {
-                    this.mostrarExito('Factura #' + data.correlativo + ' generada correctamente.');
+                    this.mostrarExito('Factura N° ' + data.correlativo + ' generada correctamente.');
                     this.carrito = [];
                     this.metodoPago = 'efectivo';
                     this.tipoFactura = 'contado';

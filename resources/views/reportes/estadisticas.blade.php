@@ -4,20 +4,21 @@
 
 <div class="card mb-3">
     <div class="card-body">
-        <form method="GET" class="row g-2 align-items-end">
-            <div class="col-auto">
-                <label class="form-label small">Desde</label>
+        <form method="GET" class="row g-3 align-items-end">
+            @include('reportes.partials.selector-rango')
+            <div class="col-6 col-md-4 col-xl">
+                <label class="form-label small text-muted fw-semibold">Desde</label>
                 <input type="date" name="desde" class="form-control form-control-sm" value="{{ $desde }}">
             </div>
-            <div class="col-auto">
-                <label class="form-label small">Hasta</label>
+            <div class="col-6 col-md-4 col-xl">
+                <label class="form-label small text-muted fw-semibold">Hasta</label>
                 <input type="date" name="hasta" class="form-control form-control-sm" value="{{ $hasta }}">
             </div>
-            <div class="col-auto">
-                <button class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> Filtrar</button>
-            </div>
-            <div class="col-auto">
-                <a href="{{ route('reportes.estadisticas') }}" class="btn btn-sm btn-outline-secondary">Últimos 30 días</a>
+            <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2 border-top pt-3 mt-2">
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> Filtrar</button>
+                    <a href="{{ route('reportes.estadisticas') }}" class="btn btn-sm btn-outline-secondary">Limpiar</a>
+                </div>
             </div>
         </form>
     </div>
@@ -25,10 +26,10 @@
 
 @php
     $kpiCards = [
-        ['label' => 'Ingresos Bs', 'valor' => $kpis['total_bs']['valor'], 'variacion' => $kpis['total_bs']['variacion'], 'formato' => 'moneda'],
-        ['label' => 'Ingresos USD', 'valor' => $kpis['total_usd']['valor'], 'variacion' => $kpis['total_usd']['variacion'], 'formato' => 'usd'],
-        ['label' => 'Facturas', 'valor' => $kpis['cantidad']['valor'], 'variacion' => $kpis['cantidad']['variacion'], 'formato' => 'entero'],
-        ['label' => 'Ticket promedio', 'valor' => $kpis['ticket_promedio']['valor'], 'variacion' => $kpis['ticket_promedio']['variacion'], 'formato' => 'moneda'],
+        ['label' => 'Ingresos Bs', 'valor' => $kpis['total_bs'], 'formato' => 'moneda'],
+        ['label' => 'Ingresos USD', 'valor' => $kpis['total_usd'], 'formato' => 'usd'],
+        ['label' => 'Facturas', 'valor' => $kpis['cantidad'], 'formato' => 'entero'],
+        ['label' => 'Ticket promedio', 'valor' => $kpis['ticket_promedio'], 'formato' => 'moneda'],
     ];
 @endphp
 <div class="row g-2 mb-3">
@@ -57,8 +58,18 @@
 
     <div class="col-lg-6">
         <div class="card h-100">
-            <div class="card-header"><i class="bi bi-layers"></i> Detal vs Mayor (Bs por semana)</div>
+            <div class="card-header">
+                <i class="bi bi-layers"></i> Detal vs Mayor
+                <div class="small text-muted fw-normal">
+                    Detal: venta por unidad. Mayor: venta por caja o paquete. Agrupado por {{ $agrupadoPor }} del período
+                </div>
+            </div>
             <div class="card-body">
+                @if (count($semanaLabels) > 0)
+                <div class="d-flex gap-2 mb-2">
+                    <span class="badge rounded-pill text-white" style="background-color:#198754">Detal {{ $detalResumen['pct'] }}%</span>
+                    <span class="badge rounded-pill text-white" style="background-color:#fd7e14">Mayor {{ $mayorResumen['pct'] }}%</span>
+                </div>
                 <canvas id="chartDetalMayor" height="120"></canvas>
                 <div class="row g-2 mt-2 text-center">
                     <div class="col-6">
@@ -76,6 +87,9 @@
                         </div>
                     </div>
                 </div>
+                @else
+                <div class="text-center text-muted py-4">Sin ventas en el período.</div>
+                @endif
             </div>
         </div>
     </div>
@@ -88,30 +102,7 @@
         </div>
     </div>
 
-    <div class="col-lg-4">
-        <div class="card h-100">
-            <div class="card-header"><i class="bi bi-people"></i> Ventas por vendedor</div>
-            <div class="card-body p-0">
-                <table class="table table-sm table-hover mb-0">
-                    <thead class="table-light">
-                        <tr><th class="text-start">Vendedor</th><th>Facturas</th><th>Total Bs</th></tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($porVendedor as $v)
-                        <tr>
-                            <td class="text-start">{{ $v['nombre'] }}</td>
-                            <td>{{ $v['facturas'] }}</td>
-                            <td>Bs {{ number_format($v['total_bs'], 2) }}</td>
-                        </tr>
-                        @empty
-                        <tr><td colspan="3" class="text-center text-muted">Sin datos</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-    <div class="col-lg-4">
+    <div class="col-lg-6">
         <div class="card h-100">
             <div class="card-header"><i class="bi bi-trophy"></i> Top clientes</div>
             <div class="card-body p-0">
@@ -134,7 +125,7 @@
             </div>
         </div>
     </div>
-    <div class="col-lg-4">
+    <div class="col-lg-6">
         <div class="card h-100 border-danger">
             <div class="card-header"><i class="bi bi-credit-card"></i> Créditos pendientes</div>
             <div class="card-body d-flex flex-column justify-content-center text-center">
@@ -146,6 +137,7 @@
 </div>
 @endsection
 @push('scripts')
+@include('reportes.partials.filtro-fechas')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const porDia = @json($porDia);
@@ -181,13 +173,14 @@ document.addEventListener('DOMContentLoaded', function () {
         },
     });
 
+    @if (count($semanaLabels) > 0)
     new Chart(document.getElementById('chartDetalMayor'), {
         type: 'bar',
         data: {
             labels: @json($semanaLabels),
             datasets: [
-                { label: 'Detal', data: @json($detalSeries), backgroundColor: '#198754' },
-                { label: 'Mayor', data: @json($mayorSeries), backgroundColor: '#fd7e14' },
+                { label: 'Detal', data: @json($detalSeries), backgroundColor: '#198754', stack: 'ventas' },
+                { label: 'Mayor', data: @json($mayorSeries), backgroundColor: '#fd7e14', stack: 'ventas' },
             ],
         },
         options: {
@@ -195,8 +188,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 x: { stacked: true },
                 y: { stacked: true, ticks: { callback: (v) => 'Bs ' + v.toLocaleString('es-VE') } },
             },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => {
+                            const unidades = ctx.datasetIndex === 0 ? @json($detalUnidades) : @json($mayorUnidades);
+                            return ' ' + ctx.dataset.label + ': Bs ' + ctx.parsed.y.toLocaleString('es-VE') + ' · ' + (unidades[ctx.dataIndex] ?? 0) + ' unidades';
+                        },
+                    },
+                },
+            },
         },
     });
+    @endif
 
     const topProductos = @json($topProductos);
 

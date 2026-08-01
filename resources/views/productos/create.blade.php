@@ -113,12 +113,12 @@
                     @error('unidades_por_paquete') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
                 <div class="col-md-3 mb-3">
-                    <label class="form-label">Stock en Lotes *</label>
+                    <label class="form-label">Existencia en Lotes *</label>
                     <input type="number" name="stock_paquetes" x-model.number="stockLotes" class="form-control @error('stock_paquetes') is-invalid @enderror" value="{{ old('stock_paquetes', 0) }}" min="0">
                     @error('stock_paquetes') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
                 <div class="col-md-3 mb-3">
-                    <label class="form-label">Stock en Unidades Sueltas *</label>
+                    <label class="form-label">Existencia en Unidades Sueltas *</label>
                     <input type="number" name="stock_unidades" x-model.number="stockUnidades" class="form-control @error('stock_unidades') is-invalid @enderror" value="{{ old('stock_unidades', 0) }}" min="0">
                     @error('stock_unidades') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>

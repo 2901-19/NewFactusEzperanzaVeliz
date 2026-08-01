@@ -21,6 +21,7 @@ class DashboardTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->seed(\Database\Seeders\PermisoSeeder::class);
         $this->user = User::factory()->create(['rol' => 'admin']);
         $this->tasa = TasaCambio::factory()->create([
             'tipo' => 'promedio',

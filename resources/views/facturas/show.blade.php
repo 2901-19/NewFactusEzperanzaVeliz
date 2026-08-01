@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('titulo', 'Factura #' . $factura->correlativo)
+@section('titulo', 'Factura N° ' . $factura->correlativo)
 @section('contenido')
 <div class="ticket">
     <div class="ticket-header">

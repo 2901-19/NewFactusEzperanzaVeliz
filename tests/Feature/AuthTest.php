@@ -75,7 +75,8 @@ class AuthTest extends TestCase
 
     public function test_usuario_autenticado_puede_ver_dashboard()
     {
-        $user = User::factory()->create();
+        $this->seed(\Database\Seeders\PermisoSeeder::class);
+        $user = User::factory()->create(['rol' => 'admin']);
         $this->actingAs($user);
 
         $response = $this->get('/dashboard');

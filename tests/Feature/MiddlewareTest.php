@@ -10,6 +10,12 @@ class MiddlewareTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(\Database\Seeders\PermisoSeeder::class);
+    }
+
     public function test_cajero_no_puede_acceder_a_impuestos()
     {
         $cajero = User::factory()->create(['rol' => 'cajero']);
