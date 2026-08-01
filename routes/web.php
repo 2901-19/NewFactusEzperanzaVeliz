@@ -59,6 +59,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/facturas/{factura}/anular', [FacturaController::class, 'anular'])->name('facturas.anular')->middleware('permiso:anular-facturas');
 
     Route::get('/reportes/facturas', [ReporteController::class, 'facturas'])->name('reportes.facturas')->middleware('permiso:ver-reporte-facturas');
+    Route::get('/reportes/estadisticas', [ReporteController::class, 'estadisticas'])->name('reportes.estadisticas')->middleware('permiso:ver-reporte-facturas');
+    Route::get('/reportes/rentabilidad', [ReporteController::class, 'rentabilidad'])->name('reportes.rentabilidad')->middleware('permiso:ver-reporte-facturas');
     Route::get('/reportes/balance', [ReporteController::class, 'balance'])->name('reportes.balance')->middleware('permiso:ver-balance');
     Route::get('/reportes/stock', [ReporteController::class, 'stock'])->name('reportes.stock')->middleware('permiso:ver-stock-bajo');
 

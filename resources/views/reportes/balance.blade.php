@@ -15,10 +15,25 @@
             <div class="col-auto">
                 <button class="btn btn-sm btn-primary">Ver</button>
             </div>
+            <div class="col-auto ms-auto">
+                <a href="{{ route('reportes.balance', ['anio' => $anio, 'export' => 'pdf']) }}" target="_blank" class="btn btn-sm btn-outline-danger"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+            </div>
         </form>
     </div>
 </div>
 
+<div class="card mb-3">
+    <div class="card-header"><i class="bi bi-bar-chart"></i> Ventas Bs por mes ({{ $anio }})</div>
+    <div class="card-body">
+        <canvas id="chartBalance" height="80"></canvas>
+    </div>
+</div>
+
+@php
+    $totalCantidad = collect($mensual)->sum('cantidad');
+    $totalBs = collect($mensual)->sum('total_bs');
+    $totalUsd = collect($mensual)->sum('total_usd');
+@endphp
 <div class="table-responsive">
     <table id="balanceTable" class="table table-bordered table-striped">
         <thead class="table-dark">
@@ -31,21 +46,21 @@
         </thead>
         <tbody>
             @foreach ($meses as $num => $nombre)
-                @php $m = $mensual->get($num); @endphp
+                @php $m = $mensual[$num] ?? null; @endphp
                 <tr>
                     <td class="text-start">{{ $nombre }}</td>
-                    <td>{{ $m->cantidad ?? 0 }}</td>
-                    <td>Bs {{ number_format($m->total_bs ?? 0, 2) }}</td>
-                    <td>${{ number_format($m->total_usd ?? 0, 2) }}</td>
+                    <td>{{ $m['cantidad'] ?? 0 }}</td>
+                    <td>Bs {{ number_format($m['total_bs'] ?? 0, 2) }}</td>
+                    <td>${{ number_format($m['total_usd'] ?? 0, 2) }}</td>
                 </tr>
             @endforeach
         </tbody>
         <tfoot class="fw-bold">
             <tr>
                 <td>Total</td>
-                <td>{{ $mensual->sum('cantidad') }}</td>
-                <td>Bs {{ number_format($mensual->sum('total_bs'), 2) }}</td>
-                <td>${{ number_format($mensual->sum('total_usd'), 2) }}</td>
+                <td>{{ $totalCantidad }}</td>
+                <td>Bs {{ number_format($totalBs, 2) }}</td>
+                <td>${{ number_format($totalUsd, 2) }}</td>
             </tr>
         </tfoot>
     </table>
@@ -54,6 +69,18 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    new Chart(document.getElementById('chartBalance'), {
+        type: 'bar',
+        data: {
+            labels: @json(array_values($meses)),
+            datasets: [{ label: 'Ventas Bs', data: @json($serieBs), backgroundColor: '#0d6efd' }],
+        },
+        options: {
+            plugins: { legend: { display: false } },
+            scales: { y: { ticks: { callback: (v) => 'Bs ' + v.toLocaleString('es-VE') } } },
+        },
+    });
+
     $('#balanceTable').DataTable({
         language: window.DataTableSpanish,
         order: [[0, 'asc']],

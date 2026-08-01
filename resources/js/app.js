@@ -4,12 +4,14 @@ import Alpine from 'alpinejs';
 import $ from 'jquery';
 import 'datatables.net-bs5';
 import Swal from 'sweetalert2';
+import Chart from 'chart.js/auto';
 
 window.bootstrap = bootstrap;
 window.Alpine = Alpine;
 window.$ = $;
 window.jQuery = $;
 window.Swal = Swal;
+window.Chart = Chart;
 
 // SweetAlert2 config por defecto
 const Toast = Swal.mixin({

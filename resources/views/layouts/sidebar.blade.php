@@ -75,7 +75,17 @@
             @if ($user->hasPermiso('ver-reporte-facturas'))
             <li class="nav-item">
                 <a href="{{ route('reportes.facturas') }}" class="nav-link {{ request()->routeIs('reportes.facturas') ? 'active' : '' }}">
-                    <i class="bi bi-file-text"></i> Reporte Facturas
+                    <i class="bi bi-file-text"></i> Reporte de Ventas
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ route('reportes.estadisticas') }}" class="nav-link {{ request()->routeIs('reportes.estadisticas') ? 'active' : '' }}">
+                    <i class="bi bi-graph-up"></i> Estadísticas
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ route('reportes.rentabilidad') }}" class="nav-link {{ request()->routeIs('reportes.rentabilidad') ? 'active' : '' }}">
+                    <i class="bi bi-pie-chart"></i> Rentabilidad
                 </a>
             </li>
             @endif
