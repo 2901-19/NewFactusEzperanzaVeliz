@@ -22,14 +22,45 @@
         <span>{{ $factura->cliente->nombre }}</span>
     </div>
     @endif
-    <hr class="sep">
+    @php
+        $detalItems = $factura->items->where('tipo_venta', 'unitario');
+        $mayorItems = $factura->items->where('tipo_venta', 'mayor');
+        $subtotalDetal = $detalItems->sum('subtotal');
+        $subtotalMayor = $mayorItems->sum('subtotal');
+        $hayAmbos = $subtotalDetal > 0 && $subtotalMayor > 0;
+    @endphp
 
+    @if ($hayAmbos)
+    <div class="ticket-seccion">DETAL</div>
+    @foreach ($detalItems as $item)
+    <div class="row-item">
+        <span class="desc">{{ $item->cantidad }}x {{ $item->producto->nombre ?? 'Producto' }}</span>
+        <span class="monto">Bs {{ number_format($item->subtotal, 2) }}</span>
+    </div>
+    @endforeach
+    <div class="row-item">
+        <span>Subtotal Detal:</span>
+        <span>Bs {{ number_format($subtotalDetal, 2) }}</span>
+    </div>
+    <div class="ticket-seccion">MAYOR</div>
+    @foreach ($mayorItems as $item)
+    <div class="row-item">
+        <span class="desc">{{ $item->cantidad }}x {{ $item->producto->nombre ?? 'Producto' }}</span>
+        <span class="monto">Bs {{ number_format($item->subtotal, 2) }}</span>
+    </div>
+    @endforeach
+    <div class="row-item">
+        <span>Subtotal Mayor:</span>
+        <span>Bs {{ number_format($subtotalMayor, 2) }}</span>
+    </div>
+    @else
     @foreach ($factura->items as $item)
     <div class="row-item">
         <span class="desc">{{ $item->cantidad }}x {{ $item->producto->nombre ?? 'Producto' }}</span>
         <span class="monto">Bs {{ number_format($item->subtotal, 2) }}</span>
     </div>
     @endforeach
+    @endif
 
     <hr class="sep">
     <div class="totales">
@@ -50,6 +81,35 @@
             <span>TOTAL USD:</span>
             <span>$ {{ number_format($factura->total_usd, 2) }}</span>
         </div>
+        <hr class="sep">
+        @php
+            $nombresMetodo = [
+                'efectivo' => 'Efectivo',
+                'punto' => 'Punto de Venta',
+                'biopago' => 'Biopago',
+                'divisas' => 'Divisas',
+                'pago_movil' => 'Pago Móvil',
+                'transferencia' => 'Transferencia',
+                'mixto' => 'Mixto',
+            ];
+        @endphp
+        @if ($factura->metodo_pago === 'mixto')
+        <div class="row-item">
+            <span>Pago Mixto:</span>
+            <span></span>
+        </div>
+        @foreach ($factura->detalle_pago ?? [] as $pago)
+        <div class="row-item">
+            <span>{{ $nombresMetodo[$pago['metodo']] ?? $pago['metodo'] }}:</span>
+            <span>Bs {{ number_format($pago['monto'], 2) }}</span>
+        </div>
+        @endforeach
+        @else
+        <div class="row-item">
+            <span>Pago:</span>
+            <span>{{ $nombresMetodo[$factura->metodo_pago] ?? $factura->metodo_pago }}</span>
+        </div>
+        @endif
     </div>
     <hr class="sep-double">
     <div class="text-center small" style="margin-top:0.5rem;">

@@ -145,6 +145,15 @@
     border-top: 3px double #888;
     margin: 0.5rem 0;
 }
+.ticket .ticket-seccion {
+    text-align: center;
+    font-weight: bold;
+    letter-spacing: 1.5px;
+    font-size: 0.85rem;
+    margin: 0.5rem 0 0.25rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed #aaa;
+}
 .ticket .row-item {
     display: flex;
     justify-content: space-between;

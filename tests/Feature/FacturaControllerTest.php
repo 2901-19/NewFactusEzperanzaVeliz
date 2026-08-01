@@ -50,6 +50,11 @@ class FacturaControllerTest extends TestCase
             'monto' => 50.00,
             'fecha' => '2026-07-04',
         ]);
+        TasaCambio::factory()->create([
+            'tipo' => 'bcv',
+            'monto' => 45.00,
+            'fecha' => '2026-07-04',
+        ]);
         $this->iva = Impuesto::factory()->create([
             'porcentaje' => 16.00,
             'fecha' => '2026-07-04',
@@ -135,6 +140,112 @@ class FacturaControllerTest extends TestCase
         $item = $factura->items->first();
         $this->assertEquals('mayor', $item->tipo_venta);
         $this->assertEquals(8.00, (float) $item->precio_unitario_usd);
+    }
+
+    public function test_store_calcula_total_usd_y_tasa_a_tasa_bcv()
+    {
+        $this->actingAs($this->cajero);
+
+        $response = $this->postJson('/facturas', [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'efectivo',
+            'estado' => 'contado',
+            'items' => [
+                [
+                    'producto_id' => $this->producto->id,
+                    'cantidad' => 1,
+                    'tipo_venta' => 'unitario',
+                ],
+            ],
+        ]);
+
+        $response->assertJson(['success' => true]);
+
+        $factura = Factura::first();
+        $this->assertEquals(500.0, (float) $factura->subtotal_bs);
+        $this->assertEquals(80.0, (float) $factura->iva_bs);
+        $this->assertEquals(580.0, (float) $factura->total_bs);
+        $this->assertEquals(12.89, (float) $factura->total_usd);
+        $this->assertEquals(45.0, (float) $factura->tasa_cambio);
+    }
+
+    public function test_store_pago_mixto_guarda_detalle_pago()
+    {
+        $this->actingAs($this->cajero);
+
+        $response = $this->postJson('/facturas', [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'mixto',
+            'pagos' => [
+                ['metodo' => 'efectivo', 'monto' => 400.00],
+                ['metodo' => 'punto', 'monto' => 180.00],
+            ],
+            'estado' => 'contado',
+            'items' => [
+                [
+                    'producto_id' => $this->producto->id,
+                    'cantidad' => 1,
+                    'tipo_venta' => 'unitario',
+                ],
+            ],
+        ]);
+
+        $response->assertJson(['success' => true]);
+        $response->assertStatus(200);
+
+        $factura = Factura::first();
+        $this->assertSame('mixto', $factura->metodo_pago);
+        $this->assertEquals([
+            ['metodo' => 'efectivo', 'monto' => 400.0],
+            ['metodo' => 'punto', 'monto' => 180.0],
+        ], $factura->detalle_pago);
+        $this->assertEquals(580.0, (float) $factura->total_bs);
+    }
+
+    public function test_store_pago_mixto_suma_incorrecta_es_rechazado()
+    {
+        $this->actingAs($this->cajero);
+
+        $response = $this->postJson('/facturas', [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'mixto',
+            'pagos' => [
+                ['metodo' => 'efectivo', 'monto' => 100.00],
+                ['metodo' => 'punto', 'monto' => 100.00],
+            ],
+            'estado' => 'contado',
+            'items' => [
+                [
+                    'producto_id' => $this->producto->id,
+                    'cantidad' => 1,
+                    'tipo_venta' => 'unitario',
+                ],
+            ],
+        ]);
+
+        $response->assertJson(['success' => false]);
+        $this->assertDatabaseCount('facturas', 0);
+    }
+
+    public function test_store_pago_mixto_sin_pagos_falla_validacion()
+    {
+        $this->actingAs($this->cajero);
+
+        $response = $this->postJson('/facturas', [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'mixto',
+            'estado' => 'contado',
+            'items' => [
+                [
+                    'producto_id' => $this->producto->id,
+                    'cantidad' => 1,
+                    'tipo_venta' => 'unitario',
+                ],
+            ],
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['pagos']);
     }
 
     public function test_store_descuenta_stock_paquetes()

@@ -15,6 +15,7 @@ class Factura extends Model
         'productos',
         'tasa_cambio',
         'metodo_pago',
+        'detalle_pago',
         'subtotal_bs',
         'iva_bs',
         'total_bs',
@@ -28,6 +29,7 @@ class Factura extends Model
     {
         return [
             'productos' => 'array',
+            'detalle_pago' => 'array',
             'fecha_venta' => 'datetime',
         ];
     }

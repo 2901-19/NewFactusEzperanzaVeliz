@@ -37,7 +37,6 @@ class FacturaSeeder extends Seeder
                 $itemsData = [];
                 $subtotalBs = 0;
                 $ivaBs = 0;
-                $totalUsd = 0;
                 $itemsFactura = [];
                 $cantItems = rand(1, 8);
 
@@ -57,7 +56,6 @@ class FacturaSeeder extends Seeder
                     $subtotalItemBs = $precioBs * $cantidad;
 
                     $subtotalBs += $subtotalItemBs;
-                    $totalUsd += $precioUsd * $cantidad;
 
                     if ($producto->tiene_iva) {
                         $ivaBs += $subtotalItemBs * $ivaPorcentaje;
@@ -82,8 +80,31 @@ class FacturaSeeder extends Seeder
                 }
 
                 $totalBs = $subtotalBs + $ivaBs;
-                $tasaEfectiva = $totalUsd > 0 ? $totalBs / $totalUsd : 1;
+
+                $tasaBcv = TasaCambio::where('tipo', 'bcv')
+                    ->whereDate('fecha', '<=', $fecha)
+                    ->latest()
+                    ->first();
+                $montoBcv = $tasaBcv ? (float) $tasaBcv->monto : 1;
+                $totalUsd = round($totalBs / $montoBcv, 2);
+                $tasaEfectiva = $montoBcv;
                 $metodos = ['efectivo', 'punto', 'biopago', 'divisas', 'pago_movil', 'transferencia'];
+                $esMixto = rand(1, 100) <= 15;
+                $metodoPago = $esMixto ? 'mixto' : $metodos[array_rand($metodos)];
+
+                $detallePago = null;
+                if ($esMixto) {
+                    $opciones = $metodos;
+                    $indice1 = array_rand($opciones);
+                    $metodo1 = $opciones[$indice1];
+                    unset($opciones[$indice1]);
+                    $metodo2 = $opciones[array_rand($opciones)];
+                    $monto1 = round($totalBs * (rand(30, 70) / 100), 2);
+                    $detallePago = [
+                        ['metodo' => $metodo1, 'monto' => $monto1],
+                        ['metodo' => $metodo2, 'monto' => round($totalBs - $monto1, 2)],
+                    ];
+                }
 
                 Factura::firstOrCreate(
                     ['correlativo' => $correlativo],
@@ -92,7 +113,8 @@ class FacturaSeeder extends Seeder
                         'user_id' => rand(1, 2),
                         'productos' => $itemsData,
                         'tasa_cambio' => round($tasaEfectiva, 2),
-                        'metodo_pago' => $metodos[array_rand($metodos)],
+                        'metodo_pago' => $metodoPago,
+                        'detalle_pago' => $detallePago,
                         'subtotal_bs' => $subtotalBs,
                         'iva_bs' => $ivaBs,
                         'total_bs' => $totalBs,

@@ -62,20 +62,15 @@ class PrinterService
                 $this->printer->feed();
             }
 
-            $this->printer->setBold(true);
-            $this->printer->text(str_pad("PRODUCTO", 20) . str_pad("P/U", 10) . str_pad("CANT", 6) . str_pad("TOTAL", 10) . "\n");
-            $this->printer->setBold(false);
-            $this->printer->text(str_repeat("-", 46) . "\n");
+            $detalItems = array_values(array_filter($productos, fn ($i) => ($i['tipo_venta'] ?? 'unitario') !== 'mayor'));
+            $mayorItems = array_values(array_filter($productos, fn ($i) => ($i['tipo_venta'] ?? 'unitario') === 'mayor'));
 
-            foreach ($productos as $item) {
-                $nombre = mb_substr($item['nombre'], 0, 18);
-                $precio = number_format($item['precio_unitario'], 2);
-                $cant = $item['cantidad'];
-                $total = number_format($item['total'], 2);
-                $this->printer->text(str_pad($nombre, 20) . str_pad("{$precio}", 10) . str_pad("{$cant}", 6) . str_pad("{$total}", 10) . "\n");
+            if (count($detalItems) > 0 && count($mayorItems) > 0) {
+                $this->printItemsSection('DETAL', $detalItems);
+                $this->printItemsSection('MAYOR', $mayorItems);
+            } else {
+                $this->printItemsSection(null, $productos);
             }
-
-            $this->printer->text(str_repeat("-", 46) . "\n");
 
             $this->printer->setBold(true);
             $this->printer->setTextSize(2, 2);
@@ -83,6 +78,28 @@ class PrinterService
             $this->printer->setTextSize(1, 1);
             $this->printer->text(str_pad("TOTAL USD:", 30) . str_pad('$' . number_format($factura->total_usd, 2), 16) . "\n");
             $this->printer->setBold(false);
+            $this->printer->feed();
+
+            $nombresMetodo = [
+                'efectivo' => 'Efectivo',
+                'punto' => 'Punto de Venta',
+                'biopago' => 'Biopago',
+                'divisas' => 'Divisas',
+                'pago_movil' => 'Pago Móvil',
+                'transferencia' => 'Transferencia',
+                'mixto' => 'Mixto',
+            ];
+
+            if ($factura->metodo_pago === 'mixto') {
+                $this->printer->text(str_pad("Pago Mixto", 46) . "\n");
+                foreach ($factura->detalle_pago ?? [] as $pago) {
+                    $nombre = $nombresMetodo[$pago['metodo']] ?? $pago['metodo'];
+                    $this->printer->text(str_pad("  {$nombre}:", 30) . str_pad('Bs ' . number_format($pago['monto'], 2), 16) . "\n");
+                }
+            } else {
+                $nombre = $nombresMetodo[$factura->metodo_pago] ?? $factura->metodo_pago;
+                $this->printer->text(str_pad("Pago: {$nombre}", 46) . "\n");
+            }
             $this->printer->feed();
 
             if ($factura->estado === 'credito') {
@@ -98,6 +115,38 @@ class PrinterService
             return true;
         } catch (\Exception $e) {
             return false;
+        }
+    }
+
+    protected function printItemsSection(?string $titulo, array $items): void
+    {
+        if ($titulo) {
+            $this->printer->setJustification(Printer::JUSTIFY_CENTER);
+            $this->printer->setBold(true);
+            $this->printer->text("{$titulo}\n");
+            $this->printer->setBold(false);
+            $this->printer->setJustification(Printer::JUSTIFY_LEFT);
+        }
+
+        $this->printer->setBold(true);
+        $this->printer->text(str_pad("PRODUCTO", 20) . str_pad("P/U", 10) . str_pad("CANT", 6) . str_pad("TOTAL", 10) . "\n");
+        $this->printer->setBold(false);
+        $this->printer->text(str_repeat("-", 46) . "\n");
+
+        $subtotal = 0;
+        foreach ($items as $item) {
+            $nombre = mb_substr($item['nombre'], 0, 18);
+            $precio = number_format($item['precio_unitario'], 2);
+            $cant = $item['cantidad'];
+            $total = number_format($item['total'], 2);
+            $subtotal += $item['total'];
+            $this->printer->text(str_pad($nombre, 20) . str_pad("{$precio}", 10) . str_pad("{$cant}", 6) . str_pad("{$total}", 10) . "\n");
+        }
+
+        $this->printer->text(str_repeat("-", 46) . "\n");
+
+        if ($titulo) {
+            $this->printer->text(str_pad("Subtotal {$titulo}:", 30) . str_pad('Bs ' . number_format($subtotal, 2), 16) . "\n");
         }
     }
 

@@ -68,6 +68,9 @@ class FacturaController extends Controller
             'items.*.cantidad' => 'required|integer|min:1',
             'items.*.tipo_venta' => 'required|in:unitario,mayor',
             'metodo_pago' => 'required|string',
+            'pagos' => 'required_if:metodo_pago,mixto|array|size:2',
+            'pagos.*.metodo' => 'required|in:efectivo,punto,biopago,divisas,pago_movil,transferencia|distinct',
+            'pagos.*.monto' => 'required|numeric|min:0.01',
             'cliente_id' => 'nullable|exists:clientes,id',
             'estado' => 'required|in:contado,credito',
         ]);
@@ -86,7 +89,6 @@ class FacturaController extends Controller
         $itemsData = [];
         $subtotalBs = 0;
         $ivaBs = 0;
-        $totalUsd = 0;
 
         DB::beginTransaction();
         try {
@@ -118,7 +120,6 @@ class FacturaController extends Controller
                 ];
 
                 $subtotalBs += $subtotalItemBs;
-                $totalUsd += $precioUsd * $cantidad;
 
                 if ($producto->tiene_iva) {
                     $ivaBs += $subtotalItemBs * ($ivaPorcentaje / 100);
@@ -127,7 +128,23 @@ class FacturaController extends Controller
 
             $totalBs = $subtotalBs + $ivaBs;
 
-            $tasaEfectiva = $totalUsd > 0 ? $totalBs / $totalUsd : 1;
+            $tasaBcv = $this->obtenerTasa('bcv');
+            $totalUsd = round($totalBs / $tasaBcv, 2);
+            $tasaEfectiva = $tasaBcv;
+
+            $detallePago = null;
+            if ($request->metodo_pago === 'mixto') {
+                $pagos = $request->input('pagos', []);
+                $sumaPagos = round(array_sum(array_column($pagos, 'monto')), 2);
+
+                if (abs($sumaPagos - $totalBs) > 0.01) {
+                    throw new \Exception("Los montos del pago mixto deben sumar el total de la factura (Bs {$totalBs}).");
+                }
+
+                $detallePago = array_map(function ($p) {
+                    return ['metodo' => $p['metodo'], 'monto' => round((float) $p['monto'], 2)];
+                }, $pagos);
+            }
 
             $factura = Factura::create([
                 'correlativo' => $correlativo,
@@ -136,6 +153,7 @@ class FacturaController extends Controller
                 'productos' => $itemsData,
                 'tasa_cambio' => round($tasaEfectiva, 2),
                 'metodo_pago' => $request->metodo_pago,
+                'detalle_pago' => $detallePago,
                 'subtotal_bs' => $subtotalBs,
                 'iva_bs' => $ivaBs,
                 'total_bs' => $totalBs,

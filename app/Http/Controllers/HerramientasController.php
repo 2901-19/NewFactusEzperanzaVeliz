@@ -345,6 +345,7 @@ class HerramientasController extends Controller
                 'nombre' => $item->producto->nombre ?? 'Producto',
                 'precio_unitario' => $item->precio_unitario_bs,
                 'cantidad' => $item->cantidad,
+                'tipo_venta' => $item->tipo_venta,
                 'total' => $item->subtotal,
             ];
         })->toArray();

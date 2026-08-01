@@ -23,8 +23,11 @@
                         @foreach ($productos as $p)
                         @php
                             $tasaValorPos = $tasas[$p->fuente_tasa]->monto ?? 1;
+                            $tasaBcvPos = $tasas['bcv']->monto ?? 1;
                             $puBsPos = $p->precio_unitario_usd * $tasaValorPos;
                             $pmBsPos = $p->precio_mayor_usd * $tasaValorPos;
+                            $puUsdRef = $puBsPos / $tasaBcvPos;
+                            $pmUsdRef = $pmBsPos / $tasaBcvPos;
                         @endphp
                         <tr>
                             <td class="text-start">{{ $p->nombre }}</td>
@@ -35,8 +38,8 @@
                                     <span class="text-muted sin-ref">Sin referencia</span>
                                 @endif
                             </td>
-                            <td>Bs {{ number_format($puBsPos, 2) }} <small class="text-muted">(${{ number_format($p->precio_unitario_usd, 2) }})</small></td>
-                            <td>Bs {{ number_format($pmBsPos, 2) }} <small class="text-muted">(${{ number_format($p->precio_mayor_usd, 2) }})</small></td>
+                            <td>Bs {{ number_format($puBsPos, 2) }} <small class="text-muted">(${{ number_format($puUsdRef, 2) }})</small></td>
+                            <td>Bs {{ number_format($pmBsPos, 2) }} <small class="text-muted">(${{ number_format($pmUsdRef, 2) }})</small></td>
                             <td class="text-center">
                                 <button class="btn btn-sm btn-outline-primary agregar-producto" data-id="{{ $p->id }}" title="Agregar al carrito">
                                     <i class="bi bi-cart-plus"></i>
@@ -52,9 +55,14 @@
 
     <div class="col-md-5">
         <div class="card">
-            <div class="card-header d-flex justify-content-between">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-cart"></i> Carrito</span>
-                <span class="badge bg-secondary" x-text="carrito.length + ' items'"></span>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-secondary" x-text="carrito.length + ' items'"></span>
+                    <button type="button" class="btn btn-sm btn-outline-danger py-0" @click="vaciarCarrito" :disabled="carrito.length === 0" title="Vaciar carrito">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
             </div>
             <div class="card-body p-2">
                 <template x-for="(item, index) in carrito" :key="index">
@@ -90,7 +98,38 @@
                         <option value="divisas">Divisas</option>
                         <option value="pago_movil">Pago Móvil</option>
                         <option value="transferencia">Transferencia</option>
+                        <option value="mixto">Mixto</option>
                     </select>
+                </div>
+                <div x-show="metodoPago === 'mixto'" class="mb-2 p-2 border rounded bg-light">
+                    <div class="small fw-bold mb-2"><i class="bi bi-wallet2"></i> Pago Mixto</div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <select x-model="pago1.metodo" @change="if (pago1.metodo === pago2.metodo) pago2.metodo = (opcionesPago2[0] || 'punto')" class="form-select form-select-sm">
+                                <template x-for="m in opcionesPago1" :key="m">
+                                    <option :value="m" x-text="nombreMetodo(m)"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <input type="number" min="0" step="0.01" x-model.number="pago1.monto" class="form-control form-control-sm" placeholder="Monto Bs">
+                        </div>
+                        <div class="col-6">
+                            <select x-model="pago2.metodo" class="form-select form-select-sm">
+                                <template x-for="m in opcionesPago2" :key="m">
+                                    <option :value="m" x-text="nombreMetodo(m)"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <input type="number" min="0" step="0.01" x-model.number="pago2.monto" class="form-control form-control-sm" placeholder="Monto Bs">
+                        </div>
+                    </div>
+                    <div class="small mt-2" :class="pagosValidos ? 'text-success' : 'text-danger'">
+                        <span x-show="diferenciaPagos > 0.01">Falta Bs <span x-text="diferenciaPagos.toFixed(2)"></span></span>
+                        <span x-show="diferenciaPagos < -0.01">Sobran Bs <span x-text="Math.abs(diferenciaPagos).toFixed(2)"></span></span>
+                        <span x-show="Math.abs(diferenciaPagos) <= 0.01">Montos cuadrados con el total.</span>
+                    </div>
                 </div>
                 <div class="mb-2">
                     <label class="form-label small">Tipo de Factura</label>
@@ -122,15 +161,27 @@
                     <span>IVA ({{ $ivaPorcentaje }}%):</span>
                     <span x-text="ivaBs.toFixed(2)"></span>
                 </div>
+                <template x-if="hayAmbosTipos">
+                    <div>
+                        <div class="d-flex justify-content-between small text-muted">
+                            <span>Subtotal Detal:</span>
+                            <span x-text="'Bs ' + subtotalDetalBs.toFixed(2)"></span>
+                        </div>
+                        <div class="d-flex justify-content-between small text-muted">
+                            <span>Subtotal Mayor:</span>
+                            <span x-text="'Bs ' + subtotalMayorBs.toFixed(2)"></span>
+                        </div>
+                    </div>
+                </template>
                 <div class="d-flex justify-content-between fw-bold">
                     <span>Total Bs:</span>
                     <span x-text="totalBs.toFixed(2)"></span>
                 </div>
                 <div class="d-flex justify-content-between small text-muted">
                     <span>Total USD:</span>
-                    <span x-text="'$' + totalUsd.toFixed(2)"></span>
+                    <span x-text="'$' + totalUsdRef.toFixed(2)"></span>
                 </div>
-                <button class="btn btn-success w-100 mt-3" @click="confirmarFactura" :disabled="carrito.length === 0 || (tipoFactura === 'credito' && !clienteId) || cargando">
+                <button class="btn btn-success w-100 mt-3" @click="confirmarFactura" :disabled="carrito.length === 0 || (tipoFactura === 'credito' && !clienteId) || (metodoPago === 'mixto' && !pagosValidos) || cargando">
                     <span x-show="!cargando"><i class="bi bi-check-lg"></i> Generar Factura</span>
                     <span x-show="cargando"><span class="spinner-border spinner-border-sm"></span> Procesando...</span>
                 </button>
@@ -151,10 +202,44 @@
                         </div>
                         <hr class="sep">
 
-                        <template x-for="(item, index) in carrito" :key="index">
-                            <div class="row-item">
-                                <span class="desc" x-text="item.cantidad + 'x ' + item.nombre"></span>
-                                <span class="monto" x-text="'Bs ' + getBsPriceTotal(index).toFixed(2)"></span>
+                        <template x-if="hayAmbosTipos">
+                            <div>
+                                <div class="ticket-seccion">DETAL</div>
+                                <template x-for="(item, index) in carrito" :key="index">
+                                    <template x-if="item.tipoVenta === 'unitario'">
+                                        <div class="row-item">
+                                            <span class="desc" x-text="item.cantidad + 'x ' + item.nombre"></span>
+                                            <span class="monto" x-text="'Bs ' + getBsPriceTotal(index).toFixed(2)"></span>
+                                        </div>
+                                    </template>
+                                </template>
+                                <div class="row-item">
+                                    <span>Subtotal Detal:</span>
+                                    <span x-text="'Bs ' + subtotalDetalBs.toFixed(2)"></span>
+                                </div>
+                                <div class="ticket-seccion">MAYOR</div>
+                                <template x-for="(item, index) in carrito" :key="index">
+                                    <template x-if="item.tipoVenta === 'mayor'">
+                                        <div class="row-item">
+                                            <span class="desc" x-text="item.cantidad + 'x ' + item.nombre"></span>
+                                            <span class="monto" x-text="'Bs ' + getBsPriceTotal(index).toFixed(2)"></span>
+                                        </div>
+                                    </template>
+                                </template>
+                                <div class="row-item">
+                                    <span>Subtotal Mayor:</span>
+                                    <span x-text="'Bs ' + subtotalMayorBs.toFixed(2)"></span>
+                                </div>
+                            </div>
+                        </template>
+                        <template x-if="!hayAmbosTipos">
+                            <div>
+                                <template x-for="(item, index) in carrito" :key="index">
+                                    <div class="row-item">
+                                        <span class="desc" x-text="item.cantidad + 'x ' + item.nombre"></span>
+                                        <span class="monto" x-text="'Bs ' + getBsPriceTotal(index).toFixed(2)"></span>
+                                    </div>
+                                </template>
                             </div>
                         </template>
 
@@ -180,13 +265,29 @@
                             </div>
                             <div class="row-item">
                                 <span>TOTAL USD:</span>
-                                <span>$ <span x-text="totalUsd.toFixed(2)"></span></span>
+                                <span>$ <span x-text="totalUsdRef.toFixed(2)"></span></span>
                             </div>
                             <hr class="sep">
-                            <div class="row-item">
+                            <div class="row-item" x-show="metodoPago !== 'mixto'">
                                 <span>Pago:</span>
-                                <span x-text="metodoPago.charAt(0).toUpperCase() + metodoPago.slice(1)"></span>
+                                <span x-text="nombreMetodo(metodoPago)"></span>
                             </div>
+                            <template x-if="metodoPago === 'mixto'">
+                                <div>
+                                    <div class="row-item">
+                                        <span>Pago Mixto:</span>
+                                        <span></span>
+                                    </div>
+                                    <div class="row-item">
+                                        <span x-text="nombreMetodo(pago1.metodo) + ':'"></span>
+                                        <span x-text="'Bs ' + (parseFloat(pago1.monto) || 0).toFixed(2)"></span>
+                                    </div>
+                                    <div class="row-item">
+                                        <span x-text="nombreMetodo(pago2.metodo) + ':'"></span>
+                                        <span x-text="'Bs ' + (parseFloat(pago2.monto) || 0).toFixed(2)"></span>
+                                    </div>
+                                </div>
+                            </template>
                             <div class="row-item">
                                 <span>Tipo:</span>
                                 <span x-text="tipoFactura.charAt(0).toUpperCase() + tipoFactura.slice(1)"></span>
@@ -200,7 +301,7 @@
                 </div>
                 <div class="d-flex gap-2 p-2 justify-content-center no-print">
                     <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-sm btn-success" @click="guardarFactura">
+                    <button type="button" class="btn btn-sm btn-success" @click="guardarFactura" :disabled="metodoPago === 'mixto' && !pagosValidos">
                         <i class="bi bi-check-lg"></i> Facturar
                     </button>
                 </div>
@@ -257,6 +358,8 @@ document.addEventListener('alpine:init', () => {
         metodoPago: 'efectivo',
         tipoFactura: 'contado',
         clienteId: '',
+        pago1: { metodo: 'efectivo', monto: 0 },
+        pago2: { metodo: 'punto', monto: 0 },
         cargando: false,
         nuevoCliente: { nombre: '', ci: '', telefono: '' },
         errorCliente: '',
@@ -339,10 +442,79 @@ document.addEventListener('alpine:init', () => {
             return this.subtotalBs + this.ivaBs;
         },
 
-        get totalUsd() {
+        get tasaBCV() {
+            return this.tasas.bcv
+                ? parseFloat(this.tasas.bcv.monto) || 1
+                : 1;
+        },
+
+        get totalUsdRef() {
+            return this.totalBs / this.tasaBCV;
+        },
+
+        get metodosDisponibles() {
+            return ['efectivo', 'punto', 'biopago', 'divisas', 'pago_movil', 'transferencia'];
+        },
+
+        get opcionesPago1() {
+            return this.metodosDisponibles;
+        },
+
+        get opcionesPago2() {
+            return this.metodosDisponibles.filter(m => m !== this.pago1.metodo);
+        },
+
+        get montoTotalPagos() {
+            return (parseFloat(this.pago1.monto) || 0) + (parseFloat(this.pago2.monto) || 0);
+        },
+
+        get diferenciaPagos() {
+            return this.totalBs - this.montoTotalPagos;
+        },
+
+        get pagosValidos() {
+            return this.pago1.metodo !== this.pago2.metodo
+                && (parseFloat(this.pago1.monto) || 0) > 0
+                && (parseFloat(this.pago2.monto) || 0) > 0
+                && Math.abs(this.diferenciaPagos) <= 0.01;
+        },
+
+        get subtotalDetalBs() {
             return this.carrito.reduce((sum, i) => {
-                return sum + (i.precioUnitario * i.cantidad);
+                if (i.tipoVenta !== 'unitario') return sum;
+                const tasa = this.tasas[i.fuente_tasa]
+                    ? parseFloat(this.tasas[i.fuente_tasa].monto)
+                    : 1;
+                return sum + (i.precio_unitario_usd * i.cantidad * tasa);
             }, 0);
+        },
+
+        get subtotalMayorBs() {
+            return this.carrito.reduce((sum, i) => {
+                if (i.tipoVenta !== 'mayor') return sum;
+                const tasa = this.tasas[i.fuente_tasa]
+                    ? parseFloat(this.tasas[i.fuente_tasa].monto)
+                    : 1;
+                return sum + (i.precio_mayor_usd * i.cantidad * tasa);
+            }, 0);
+        },
+
+        get hayAmbosTipos() {
+            return this.carrito.some(i => i.tipoVenta === 'unitario')
+                && this.carrito.some(i => i.tipoVenta === 'mayor');
+        },
+
+        nombreMetodo(m) {
+            const nombres = {
+                efectivo: 'Efectivo',
+                punto: 'Punto de Venta',
+                biopago: 'Biopago',
+                divisas: 'Divisas',
+                pago_movil: 'Pago Móvil',
+                transferencia: 'Transferencia',
+                mixto: 'Mixto',
+            };
+            return nombres[m] || m;
         },
 
         getBsPrice(index) {
@@ -433,6 +605,12 @@ document.addEventListener('alpine:init', () => {
                     body: JSON.stringify({
                         items,
                         metodo_pago: this.metodoPago,
+                        pagos: this.metodoPago === 'mixto'
+                            ? [
+                                { metodo: this.pago1.metodo, monto: parseFloat(this.pago1.monto) },
+                                { metodo: this.pago2.metodo, monto: parseFloat(this.pago2.monto) },
+                            ]
+                            : undefined,
                         cliente_id: this.tipoFactura === 'credito' ? this.clienteId : null,
                         estado: this.tipoFactura,
                     }),
@@ -446,6 +624,8 @@ document.addEventListener('alpine:init', () => {
                     this.metodoPago = 'efectivo';
                     this.tipoFactura = 'contado';
                     this.clienteId = '';
+                    this.pago1 = { metodo: 'efectivo', monto: 0 };
+                    this.pago2 = { metodo: 'punto', monto: 0 };
                 } else {
                     this.mostrarError('Error: ' + data.message);
                 }
@@ -462,6 +642,22 @@ document.addEventListener('alpine:init', () => {
 
         mostrarError(msg) {
             Swal.fire({ icon: 'error', title: 'Error', text: msg });
+        },
+
+        vaciarCarrito() {
+            if (this.carrito.length === 0) return;
+            Swal.fire({
+                title: '¿Vaciar carrito?',
+                text: 'Se eliminarán todos los productos del carrito.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, vaciar',
+                cancelButtonText: 'Cancelar',
+            }).then((r) => {
+                if (r.isConfirmed) {
+                    this.carrito = [];
+                }
+            });
         },
     }));
 });
