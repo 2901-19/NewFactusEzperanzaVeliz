@@ -13,7 +13,6 @@ class TasaCambioFactory extends Factory
     {
         return [
             'tipo' => fake()->randomElement(['promedio', 'dolar', 'bcv']),
-            'moneda' => 'Bs',
             'monto' => fake()->randomFloat(2, 40, 200),
             'fecha' => fake()->date('Y-m-d'),
         ];

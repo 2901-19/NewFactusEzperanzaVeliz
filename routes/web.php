@@ -46,7 +46,10 @@ Route::middleware('auth')->group(function () {
     Route::post('clientes/rapido', [ClienteController::class, 'storeRapido'])->name('clientes.rapido')->middleware('permiso:gestionar-clientes');
     Route::resource('impuestos', ImpuestoController::class)->except('show')->middleware('permiso:gestionar-impuestos');
     Route::get('/tasas-cambio', [TasaCambioController::class, 'index'])->name('tasas-cambio.index')->middleware('permiso:gestionar-tasas');
+    Route::post('/tasas-cambio', [TasaCambioController::class, 'store'])->name('tasas-cambio.store')->middleware('permiso:gestionar-tasas');
     Route::post('/tasas-cambio/actualizar', [TasaCambioController::class, 'actualizar'])->name('tasas-cambio.actualizar')->middleware('permiso:gestionar-tasas');
+    Route::post('/tasas-cambio/referencia', [TasaCambioController::class, 'fijarReferencia'])->name('tasas-cambio.referencia')->middleware('permiso:gestionar-tasas');
+    Route::post('/tasas-cambio/{tasa}/toggle', [TasaCambioController::class, 'toggleEstado'])->name('tasas-cambio.toggle')->middleware('permiso:gestionar-tasas');
     Route::resource('categorias', CategoriaController::class)->except('show')->middleware('permiso:gestionar-categorias');
     Route::post('/categorias/{categoria}/asignar-productos', [CategoriaController::class, 'asignarProductos'])->name('categorias.asignar-productos')->middleware('permiso:gestionar-categorias');
 

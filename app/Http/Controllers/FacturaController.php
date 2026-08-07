@@ -8,6 +8,7 @@ use App\Models\ItemFactura;
 use App\Models\Cliente;
 use App\Models\Impuesto;
 use App\Models\TasaCambio;
+use App\Models\Configuracion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -58,8 +59,9 @@ class FacturaController extends Controller
 
         $iva = Impuesto::latest('fecha')->first();
         $ivaPorcentaje = $iva ? (float) $iva->porcentaje : 16;
+        $tasaReferenciaTipo = Configuracion::obtener('tasa_referencia', 'bcv');
 
-        return view('facturas.pos', compact('productos', 'clientes', 'tasas', 'ivaPorcentaje'));
+        return view('facturas.pos', compact('productos', 'clientes', 'tasas', 'ivaPorcentaje', 'tasaReferenciaTipo'));
     }
 
     public function store(Request $request)
@@ -140,9 +142,9 @@ class FacturaController extends Controller
 
             $totalBs = round($subtotalBs + $ivaBs, 2);
 
-            $tasaBcv = $this->obtenerTasa('bcv');
-            $totalUsd = round($totalBs / $tasaBcv, 2);
-            $tasaEfectiva = $tasaBcv;
+            $tasaReferencia = $this->obtenerTasa(Configuracion::obtener('tasa_referencia', 'bcv'));
+            $totalUsd = round($totalBs / $tasaReferencia, 2);
+            $tasaEfectiva = $tasaReferencia;
 
             $detallePago = null;
             if ($request->metodo_pago === 'mixto') {

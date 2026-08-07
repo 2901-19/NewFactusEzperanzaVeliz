@@ -49,7 +49,7 @@
     <div class="card mb-4">
         <div class="card-header"><i class="bi bi-cash-coin me-1"></i> Precios y Cantidades</div>
         <div class="card-body">
-            <div x-data="precioCalc({{ old('costo_usd', $producto->costo_usd) }}, {{ old('margen_detal', $producto->margen_detal) }}, {{ old('margen_mayor', $producto->margen_mayor) }}, {{ $tasas['promedio'] ?? 0 }}, {{ $tasas['dolar'] ?? 0 }}, {{ $tasas['bcv'] ?? 0 }}, '{{ old('fuente_tasa', $producto->fuente_tasa) }}')">
+            <div x-data="precioCalc({{ old('costo_usd', $producto->costo_usd) }}, {{ old('margen_detal', $producto->margen_detal) }}, {{ old('margen_mayor', $producto->margen_mayor) }}, @json($mapaTasas), '{{ old('fuente_tasa', $producto->fuente_tasa) }}')">
                 <div class="row">
                     <div class="col-md-4 mb-3">
                         <label class="form-label">Costo del Producto (USD) *</label>
@@ -99,9 +99,11 @@
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Tasa del Producto</label>
                         <select name="fuente_tasa" x-model="fuenteTasa" class="form-select">
-                            <option value="promedio" {{ old('fuente_tasa', $producto->fuente_tasa) == 'promedio' ? 'selected' : '' }}>Promedio</option>
-                            <option value="dolar" {{ old('fuente_tasa', $producto->fuente_tasa) == 'dolar' ? 'selected' : '' }}>Dólar Paralelo</option>
-                            <option value="bcv" {{ old('fuente_tasa', $producto->fuente_tasa) == 'bcv' ? 'selected' : '' }}>BCV</option>
+                            @forelse ($opcionesTasa as $tipo => $nombre)
+                                <option value="{{ $tipo }}" {{ old('fuente_tasa', $producto->fuente_tasa) == $tipo ? 'selected' : '' }}>{{ $nombre }}</option>
+                            @empty
+                                <option value="{{ $producto->fuente_tasa }}" selected>{{ $producto->fuente_tasa }}</option>
+                            @endforelse
                         </select>
                     </div>
                 </div>
@@ -147,14 +149,14 @@ function stockCalc(unidadesPorLote, stockLotes, stockUnidades) {
     };
 }
 
-function precioCalc(costoUsd, margenDetal, margenMayor, tasaPromedio, tasaDolar, tasaBcv, fuenteTasa) {
+function precioCalc(costoUsd, margenDetal, margenMayor, tasas, fuenteTasa) {
     return {
         costoUsd: costoUsd || 0,
         margenDetal: margenDetal || 0,
         margenMayor: margenMayor || 0,
-        tasas: { promedio: parseFloat(tasaPromedio) || 0, dolar: parseFloat(tasaDolar) || 0, bcv: parseFloat(tasaBcv) || 0 },
-        fuenteTasa: fuenteTasa || 'promedio',
-        get tasa() { return this.tasas[this.fuenteTasa] || 0; },
+        tasas: tasas || {},
+        fuenteTasa: fuenteTasa || Object.keys(tasas || {})[0] || '',
+        get tasa() { return parseFloat(this.tasas[this.fuenteTasa]) || 0; },
         get precioDetalUsd() { return this.costoUsd * (1 + this.margenDetal / 100); },
         get precioMayorUsd() { return this.costoUsd * (1 + this.margenMayor / 100); },
         get costoBs() { return this.costoUsd * this.tasa; },

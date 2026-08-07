@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Models\Producto;
 use App\Models\Categoria;
+use App\Models\TasaCambio;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -18,6 +19,14 @@ class ProductoControllerTest extends TestCase
     {
         parent::setUp();
         $this->seed(\Database\Seeders\PermisoSeeder::class);
+        foreach (['promedio', 'dolar', 'bcv'] as $tipo) {
+            TasaCambio::create([
+                'tipo' => $tipo,
+                'nombre' => ucfirst($tipo),
+                'monto' => 50.00,
+                'fecha' => now()->toDateString(),
+            ]);
+        }
         $this->user = User::factory()->create(['rol' => 'admin']);
     }
 

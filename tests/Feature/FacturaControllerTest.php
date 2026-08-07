@@ -169,6 +169,33 @@ class FacturaControllerTest extends TestCase
         $this->assertEquals(45.0, (float) $factura->tasa_cambio);
     }
 
+    public function test_store_usa_tasa_de_referencia_configurada()
+    {
+        TasaCambio::factory()->create(['tipo' => 'dolar', 'monto' => 60.00, 'fecha' => '2026-07-04']);
+        \App\Models\Configuracion::updateOrCreate(['clave' => 'tasa_referencia'], ['valor' => 'dolar']);
+        $this->actingAs($this->cajero);
+
+        $response = $this->postJson('/facturas', [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'efectivo',
+            'estado' => 'contado',
+            'items' => [
+                [
+                    'producto_id' => $this->producto->id,
+                    'cantidad' => 1,
+                    'tipo_venta' => 'unitario',
+                ],
+            ],
+        ]);
+
+        $response->assertJson(['success' => true]);
+
+        $factura = Factura::first();
+        $this->assertEquals(580.0, (float) $factura->total_bs);
+        $this->assertEquals(9.67, (float) $factura->total_usd);
+        $this->assertEquals(60.0, (float) $factura->tasa_cambio);
+    }
+
     public function test_store_pago_mixto_guarda_detalle_pago()
     {
         $this->actingAs($this->cajero);

@@ -23,11 +23,11 @@
                         @foreach ($productos as $p)
                         @php
                             $tasaValorPos = $tasas[$p->fuente_tasa]->monto ?? 1;
-                            $tasaBcvPos = $tasas['bcv']->monto ?? 1;
+                            $tasaRefPos = $tasas[$tasaReferenciaTipo]->monto ?? 1;
                             $puBsPos = $p->precio_unitario_usd * $tasaValorPos;
                             $pmBsPos = $p->precio_mayor_usd * $tasaValorPos;
-                            $puUsdRef = $puBsPos / $tasaBcvPos;
-                            $pmUsdRef = $pmBsPos / $tasaBcvPos;
+                            $puUsdRef = $puBsPos / $tasaRefPos;
+                            $pmUsdRef = $pmBsPos / $tasaRefPos;
                         @endphp
                         <tr>
                             <td class="text-start">{{ $p->nombre }}</td>
@@ -353,6 +353,7 @@ document.addEventListener('alpine:init', () => {
         productos: @json($productos),
         clientes: @json($clientes),
         tasas: @json($tasas),
+        tasaReferencia: '{{ $tasaReferenciaTipo }}',
         ivaPorcentaje: {{ $ivaPorcentaje }},
         carrito: [],
         metodoPago: 'efectivo',
@@ -442,14 +443,14 @@ document.addEventListener('alpine:init', () => {
             return this.subtotalBs + this.ivaBs;
         },
 
-        get tasaBCV() {
-            return this.tasas.bcv
-                ? parseFloat(this.tasas.bcv.monto) || 1
+        get tasaRef() {
+            return this.tasas[this.tasaReferencia]
+                ? parseFloat(this.tasas[this.tasaReferencia].monto) || 1
                 : 1;
         },
 
         get totalUsdRef() {
-            return this.totalBs / this.tasaBCV;
+            return this.totalBs / this.tasaRef;
         },
 
         get metodosDisponibles() {

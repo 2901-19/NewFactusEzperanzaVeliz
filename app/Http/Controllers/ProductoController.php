@@ -3,22 +3,34 @@
 namespace App\Http\Controllers;
 
 use App\Models\Producto;
+use App\Models\TasaCambio;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class ProductoController extends Controller
 {
+    private function tasasParaVista()
+    {
+        $tasas = TasaCambio::get()->keyBy('tipo');
+
+        return [
+            'mapaTasas' => $tasas->map(fn ($t) => (float) $t->monto),
+            'opcionesTasa' => $tasas->filter(fn ($t) => $t->activo)->map(fn ($t) => $t->nombre),
+        ];
+    }
+
     public function index()
     {
         $productos = Producto::withTrashed()->with('categoria')->get();
-        $tasas = \App\Models\TasaCambio::pluck('monto', 'tipo');
+        $tasas = TasaCambio::pluck('monto', 'tipo');
         return view('productos.index', compact('productos', 'tasas'));
     }
 
     public function create()
     {
-        $tasas = \App\Models\TasaCambio::pluck('monto', 'tipo');
-        return view('productos.create', compact('tasas'));
+        ['mapaTasas' => $mapaTasas, 'opcionesTasa' => $opcionesTasa] = $this->tasasParaVista();
+        return view('productos.create', compact('mapaTasas', 'opcionesTasa'));
     }
 
     public function store(Request $request)
@@ -35,7 +47,7 @@ class ProductoController extends Controller
             'margen_detal' => 'required|numeric|min:0',
             'margen_mayor' => 'required|numeric|min:0',
             'tiene_iva' => 'boolean',
-            'fuente_tasa' => 'required|in:promedio,dolar,bcv',
+            'fuente_tasa' => ['required', Rule::exists('tasa_cambios', 'tipo')],
             'estado' => 'required|in:disponible,no_disponible',
         ]);
 
@@ -53,8 +65,11 @@ class ProductoController extends Controller
 
     public function edit(Producto $producto)
     {
-        $tasas = \App\Models\TasaCambio::pluck('monto', 'tipo');
-        return view('productos.edit', compact('producto', 'tasas'));
+        ['mapaTasas' => $mapaTasas, 'opcionesTasa' => $opcionesTasa] = $this->tasasParaVista();
+        if (!$opcionesTasa->has($producto->fuente_tasa) && $mapaTasas->has($producto->fuente_tasa)) {
+            $opcionesTasa->put($producto->fuente_tasa, $mapaTasas[$producto->fuente_tasa] . ' (inactiva)');
+        }
+        return view('productos.edit', compact('producto', 'mapaTasas', 'opcionesTasa'));
     }
 
     public function update(Request $request, Producto $producto)
@@ -71,7 +86,7 @@ class ProductoController extends Controller
             'margen_detal' => 'required|numeric|min:0',
             'margen_mayor' => 'required|numeric|min:0',
             'tiene_iva' => 'boolean',
-            'fuente_tasa' => 'required|in:promedio,dolar,bcv',
+            'fuente_tasa' => ['required', Rule::exists('tasa_cambios', 'tipo')],
             'estado' => 'required|in:disponible,no_disponible',
         ]);
 
