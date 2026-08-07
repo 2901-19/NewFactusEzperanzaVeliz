@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Producto;
-use App\Models\Cliente;
-use App\Models\Impuesto;
-use App\Models\TasaCambio;
 use App\Models\Categoria;
+use App\Models\Cliente;
 use App\Models\Configuracion;
+use App\Models\Factura;
+use App\Models\Impuesto;
+use App\Models\Producto;
+use App\Models\TasaCambio;
 use App\Services\PrinterService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -72,11 +73,11 @@ class HerramientasController extends Controller
         }
 
         $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-        $filename = 'backup_' . now()->format('Y_m_d_His') . '.json';
+        $filename = 'backup_'.now()->format('Y_m_d_His').'.json';
 
         return response($json, 200, [
             'Content-Type' => 'application/json',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
     }
 
@@ -93,12 +94,12 @@ class HerramientasController extends Controller
         $contenido = file_get_contents($request->file('archivo')->getRealPath());
         $data = json_decode($contenido, true);
 
-        if (!$data) {
+        if (! $data) {
             return back()->withErrors(['archivo' => 'El archivo JSON no tiene el formato correcto.']);
         }
 
         // Detectar formato antiguo (con 'productos' en lugar de 'precios'/'inventario')
-        $formatoAntiguo = isset($data['productos']) && !isset($data['precios']) && !isset($data['inventario']);
+        $formatoAntiguo = isset($data['productos']) && ! isset($data['precios']) && ! isset($data['inventario']);
 
         $tipos = $request->input('tipos', []);
 
@@ -116,7 +117,9 @@ class HerramientasController extends Controller
             $contadores = ['precios' => 0, 'inventario' => 0, 'clientes' => 0, 'tasas_cambio' => 0, 'categorias' => 0];
 
             foreach ($tipos as $key) {
-                if (!isset($data[$key]) || !is_array($data[$key])) continue;
+                if (! isset($data[$key]) || ! is_array($data[$key])) {
+                    continue;
+                }
 
                 switch ($key) {
                     case 'precios':
@@ -168,7 +171,7 @@ class HerramientasController extends Controller
                     case 'inventario':
                         foreach ($data['inventario'] as $item) {
                             $existe = Producto::where('nombre', $item['nombre'])->exists();
-                            if (!$existe) {
+                            if (! $existe) {
                                 Producto::create([
                                     'nombre' => $item['nombre'],
                                     'categoria_id' => $item['categoria_id'] ?? null,
@@ -198,7 +201,7 @@ class HerramientasController extends Controller
                             unset($item['id']);
 
                             $existe = Cliente::where('ci', $item['ci'] ?? '')->exists();
-                            if (!$existe) {
+                            if (! $existe) {
                                 Cliente::create($item);
                                 $contadores['clientes']++;
                             }
@@ -210,20 +213,33 @@ class HerramientasController extends Controller
                             $fillable = (new TasaCambio)->getFillable();
                             $item = array_intersect_key($item, array_flip($fillable));
                             unset($item['id']);
-                            if (isset($item['tipo']) && $item['tipo']) {
-                                TasaCambio::updateOrCreate(
-                                    ['tipo' => $item['tipo']],
-                                    $item
-                                );
-                                $contadores['tasas_cambio']++;
+
+                            if (empty($item['tipo'])) {
+                                continue;
                             }
+
+                            $item['origen'] = $item['origen'] ?? 'importado';
+                            $item['fecha'] = $item['fecha'] ?? now()->toDateString();
+
+                            if ((float) ($item['monto'] ?? 0) <= 0) {
+                                continue;
+                            }
+
+                            $vigente = TasaCambio::ultimaDe($item['tipo']);
+
+                            if ($vigente) {
+                                $vigente->update($item);
+                            } else {
+                                TasaCambio::create($item + ['activo' => true, 'user_id' => auth()->id()]);
+                            }
+                            $contadores['tasas_cambio']++;
                         }
                         break;
 
                     case 'categorias':
                         foreach ($data['categorias'] as $item) {
                             $existe = Categoria::where('nombre', $item['nombre'])->exists();
-                            if (!$existe) {
+                            if (! $existe) {
                                 Categoria::create([
                                     'nombre' => $item['nombre'],
                                     'descripcion' => $item['descripcion'] ?? '',
@@ -233,7 +249,7 @@ class HerramientasController extends Controller
                         }
                         break;
 
-                    // Compatibilidad con formato antiguo
+                        // Compatibilidad con formato antiguo
                     case 'productos':
                         foreach ($data['productos'] as $item) {
                             $fillable = (new Producto)->getFillable();
@@ -258,18 +274,29 @@ class HerramientasController extends Controller
             DB::commit();
 
             $partes = [];
-            if ($contadores['precios']) $partes[] = $contadores['precios'] . ' precios';
-            if ($contadores['inventario']) $partes[] = $contadores['inventario'] . ' inventarios';
-            if ($contadores['clientes']) $partes[] = $contadores['clientes'] . ' clientes';
-            if ($contadores['tasas_cambio']) $partes[] = $contadores['tasas_cambio'] . ' tasas';
-            if ($contadores['categorias']) $partes[] = $contadores['categorias'] . ' categorías';
+            if ($contadores['precios']) {
+                $partes[] = $contadores['precios'].' precios';
+            }
+            if ($contadores['inventario']) {
+                $partes[] = $contadores['inventario'].' inventarios';
+            }
+            if ($contadores['clientes']) {
+                $partes[] = $contadores['clientes'].' clientes';
+            }
+            if ($contadores['tasas_cambio']) {
+                $partes[] = $contadores['tasas_cambio'].' tasas';
+            }
+            if ($contadores['categorias']) {
+                $partes[] = $contadores['categorias'].' categorías';
+            }
 
-            $mensaje = 'Importación completada: ' . ($partes ? implode(', ', $partes) : 'no se procesaron datos');
+            $mensaje = 'Importación completada: '.($partes ? implode(', ', $partes) : 'no se procesaron datos');
 
             return back()->with('success', $mensaje);
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors(['archivo' => 'Error durante la importación: ' . $e->getMessage()]);
+
+            return back()->withErrors(['archivo' => 'Error durante la importación: '.$e->getMessage()]);
         }
     }
 
@@ -278,6 +305,7 @@ class HerramientasController extends Controller
     public function imprimirConfig()
     {
         $config = $this->getPrinterConfig();
+
         return view('herramientas.impresora', compact('config'));
     }
 
@@ -308,17 +336,17 @@ class HerramientasController extends Controller
     public function imprimirTest(Request $request)
     {
         $config = $this->getPrinterConfig();
-        $service = new PrinterService();
+        $service = new PrinterService;
 
         $ok = $service->connect($config['tipo'], $config['host'], $config['port'], $config['nombre']);
 
-        if (!$ok) {
+        if (! $ok) {
             return back()->withErrors(['error' => 'No se pudo conectar a la impresora. Verifique la configuración.']);
         }
 
         $ok = $service->printTest();
 
-        if (!$ok) {
+        if (! $ok) {
             return back()->withErrors(['error' => 'Error al imprimir la prueba.']);
         }
 
@@ -331,6 +359,7 @@ class HerramientasController extends Controller
         if (file_exists($path)) {
             return json_decode(file_get_contents($path), true);
         }
+
         return [
             'tipo' => 'network',
             'host' => '192.168.1.100',
@@ -341,7 +370,7 @@ class HerramientasController extends Controller
 
     public function imprimirFactura($factura)
     {
-        $factura = \App\Models\Factura::with('cliente', 'items.producto')->findOrFail($factura);
+        $factura = Factura::with('cliente', 'items.producto')->findOrFail($factura);
         $items = $factura->items->map(function ($item) {
             return [
                 'nombre' => $item->producto->nombre ?? 'Producto',
@@ -353,16 +382,16 @@ class HerramientasController extends Controller
         })->toArray();
 
         $config = $this->getPrinterConfig();
-        $service = new PrinterService();
+        $service = new PrinterService;
         $ok = $service->connect($config['tipo'], $config['host'], $config['port'], $config['nombre']);
 
-        if (!$ok) {
+        if (! $ok) {
             return back()->withErrors(['error' => 'No se pudo conectar a la impresora.']);
         }
 
         $ok = $service->printReceipt($factura, $items, auth()->user()->usuario);
 
-        if (!$ok) {
+        if (! $ok) {
             return back()->withErrors(['error' => 'Error al imprimir el ticket.']);
         }
 
@@ -378,7 +407,7 @@ class HerramientasController extends Controller
             ->orderBy('nombre')
             ->get();
 
-        $tasas = \App\Models\TasaCambio::pluck('monto', 'tipo');
+        $tasas = TasaCambio::mapaMontos();
 
         if ($request->query('export') === 'json') {
             $data = $productos->map(fn ($p) => [
@@ -407,13 +436,13 @@ class HerramientasController extends Controller
             ->orderBy('nombre')
             ->get();
 
-        $tasas = \App\Models\TasaCambio::pluck('monto', 'tipo');
+        $tasas = TasaCambio::mapaMontos();
         $fecha = now()->format('d/m/Y H:i');
 
         $pdf = Pdf::loadView('herramientas.precios-pdf', compact('productos', 'tasas', 'fecha'));
         $pdf->setPaper('letter', 'portrait');
 
-        return $pdf->download('lista_precios_' . now()->format('Y_m_d') . '.pdf');
+        return $pdf->download('lista_precios_'.now()->format('Y_m_d').'.pdf');
     }
 
     // ========== CONFIGURACIÓN DEL NEGOCIO ==========
@@ -421,6 +450,7 @@ class HerramientasController extends Controller
     public function configuracion()
     {
         $configs = Configuracion::pluck('valor', 'clave')->toArray();
+
         return view('herramientas.configuracion', compact('configs'));
     }
 

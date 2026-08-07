@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Producto;
-use App\Models\Factura;
-use App\Models\ItemFactura;
 use App\Models\Cliente;
-use App\Models\Impuesto;
-use App\Models\TasaCambio;
 use App\Models\Configuracion;
+use App\Models\Factura;
+use App\Models\Impuesto;
+use App\Models\ItemFactura;
+use App\Models\Producto;
+use App\Models\TasaCambio;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -44,18 +44,14 @@ class FacturaController extends Controller
             }
         });
 
-        return redirect()->route('facturas.index')->with('success', 'Factura N° ' . $factura->correlativo . ' anulada. Stock restaurado.');
+        return redirect()->route('facturas.index')->with('success', 'Factura N° '.$factura->correlativo.' anulada. Stock restaurado.');
     }
 
     public function pos()
     {
         $productos = Producto::where('estado', 'disponible')->whereNull('deleted_at')->get();
         $clientes = Cliente::all();
-        $tasas = TasaCambio::select('tipo', 'monto')
-            ->selectRaw('MAX(created_at) as ultima')
-            ->groupBy('tipo', 'monto')
-            ->get()
-            ->keyBy('tipo');
+        $tasas = TasaCambio::ultimasPorTipo();
 
         $iva = Impuesto::latest('fecha')->first();
         $ivaPorcentaje = $iva ? (float) $iva->porcentaje : 16;
@@ -79,7 +75,7 @@ class FacturaController extends Controller
             'estado' => 'required|in:contado,credito',
         ]);
 
-        if ($request->estado === 'credito' && !$request->cliente_id) {
+        if ($request->estado === 'credito' && ! $request->cliente_id) {
             return back()->withErrors(['cliente_id' => 'Debe seleccionar un cliente para facturas a crédito.']);
         }
 
@@ -101,7 +97,7 @@ class FacturaController extends Controller
 
             foreach ($request->items as $item) {
                 $producto = $productos[$item['producto_id']] ?? null;
-                if (!$producto) {
+                if (! $producto) {
                     throw new \Exception('Uno de los productos ya no está disponible.');
                 }
                 $cantidad = (int) $item['cantidad'];
@@ -191,6 +187,7 @@ class FacturaController extends Controller
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
@@ -208,6 +205,7 @@ class FacturaController extends Controller
     public function show(Factura $factura)
     {
         $factura->load('cliente', 'items.producto');
+
         return view('facturas.show', compact('factura'));
     }
 
@@ -219,7 +217,7 @@ class FacturaController extends Controller
 
         $factura->update(['estado_credito' => 'cancelado']);
 
-        return redirect()->route('facturas.creditos')->with('success', 'Crédito N° ' . $factura->correlativo . ' cancelado correctamente.');
+        return redirect()->route('facturas.creditos')->with('success', 'Crédito N° '.$factura->correlativo.' cancelado correctamente.');
     }
 
     private function descontarStock(Producto $producto, int $cantidad): void
@@ -228,6 +226,7 @@ class FacturaController extends Controller
 
         if ($producto->stock_unidades >= $restantes) {
             $producto->decrement('stock_unidades', $restantes);
+
             return;
         }
 
@@ -254,7 +253,7 @@ class FacturaController extends Controller
     {
         $tasa = TasaCambio::where('tipo', $fuente)->latest()->first();
 
-        if (!$tasa || (float) $tasa->monto <= 0) {
+        if (! $tasa || (float) $tasa->monto <= 0) {
             throw new \RuntimeException("La tasa de cambio '{$fuente}' no está configurada. Actualícela antes de vender.");
         }
 

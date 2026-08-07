@@ -12,7 +12,7 @@ class ProductoController extends Controller
 {
     private function tasasParaVista()
     {
-        $tasas = TasaCambio::get()->keyBy('tipo');
+        $tasas = TasaCambio::ultimasPorTipo();
 
         return [
             'mapaTasas' => $tasas->map(fn ($t) => (float) $t->monto),
@@ -23,13 +23,15 @@ class ProductoController extends Controller
     public function index()
     {
         $productos = Producto::withTrashed()->with('categoria')->get();
-        $tasas = TasaCambio::pluck('monto', 'tipo');
+        $tasas = TasaCambio::mapaMontos();
+
         return view('productos.index', compact('productos', 'tasas'));
     }
 
     public function create()
     {
         ['mapaTasas' => $mapaTasas, 'opcionesTasa' => $opcionesTasa] = $this->tasasParaVista();
+
         return view('productos.create', compact('mapaTasas', 'opcionesTasa'));
     }
 
@@ -66,9 +68,10 @@ class ProductoController extends Controller
     public function edit(Producto $producto)
     {
         ['mapaTasas' => $mapaTasas, 'opcionesTasa' => $opcionesTasa] = $this->tasasParaVista();
-        if (!$opcionesTasa->has($producto->fuente_tasa) && $mapaTasas->has($producto->fuente_tasa)) {
-            $opcionesTasa->put($producto->fuente_tasa, $mapaTasas[$producto->fuente_tasa] . ' (inactiva)');
+        if (! $opcionesTasa->has($producto->fuente_tasa) && $mapaTasas->has($producto->fuente_tasa)) {
+            $opcionesTasa->put($producto->fuente_tasa, $mapaTasas[$producto->fuente_tasa].' (inactiva)');
         }
+
         return view('productos.edit', compact('producto', 'mapaTasas', 'opcionesTasa'));
     }
 
@@ -108,6 +111,7 @@ class ProductoController extends Controller
     public function destroy(Producto $producto)
     {
         $producto->delete();
+
         return redirect()->route('productos.index')->with('success', 'Producto desactivado correctamente.');
     }
 
@@ -115,6 +119,7 @@ class ProductoController extends Controller
     {
         $producto = Producto::withTrashed()->findOrFail($id);
         $producto->restore();
+
         return redirect()->route('productos.index')->with('success', 'Producto activado nuevamente.');
     }
 }

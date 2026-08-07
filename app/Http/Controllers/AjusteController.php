@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Producto;
+use App\Models\TasaCambio;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -11,7 +12,8 @@ class AjusteController extends Controller
     public function editarPrecios()
     {
         $productos = Producto::whereNull('deleted_at')->with('categoria')->get();
-        $tasas = \App\Models\TasaCambio::pluck('monto', 'tipo');
+        $tasas = TasaCambio::mapaMontos();
+
         return view('productos.ajustar-precios', compact('productos', 'tasas'));
     }
 
@@ -49,6 +51,7 @@ class AjusteController extends Controller
     public function editarInventario()
     {
         $productos = Producto::whereNull('deleted_at')->with('categoria')->get();
+
         return view('productos.ajustar-inventario', compact('productos'));
     }
 

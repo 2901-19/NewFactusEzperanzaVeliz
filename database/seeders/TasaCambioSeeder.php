@@ -17,15 +17,18 @@ class TasaCambioSeeder extends Seeder
         ];
 
         foreach ($tasas as $tasa) {
-            TasaCambio::updateOrCreate(
-                ['tipo' => $tasa['tipo']],
-                [
+            $vigente = TasaCambio::ultimaDe($tasa['tipo']);
+
+            if ($vigente) {
+                $vigente->update([
                     'nombre' => $tasa['nombre'],
                     'monto' => $tasa['monto'],
                     'fecha' => now()->toDateString(),
                     'activo' => true,
-                ]
-            );
+                ]);
+            } else {
+                TasaCambio::create($tasa + ['fecha' => now()->toDateString(), 'activo' => true]);
+            }
         }
 
         Configuracion::updateOrCreate(

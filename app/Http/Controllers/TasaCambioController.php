@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Configuracion;
 use App\Models\TasaCambio;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class TasaCambioController extends Controller
@@ -13,30 +14,86 @@ class TasaCambioController extends Controller
 
     public function index()
     {
-        $tasas = TasaCambio::orderByRaw('activo DESC, tipo ASC')->get()->keyBy('tipo');
+        $tasas = TasaCambio::ultimasPorTipo()->sortBy(
+            fn ($t) => [! $t->activo, $t->tipo]
+        );
         $tasaReferencia = Configuracion::obtener(self::TASA_REFERENCIA_CLAVE, 'bcv');
 
         return view('tasas_cambio.index', compact('tasas', 'tasaReferencia'));
     }
 
+    public function historial(Request $request)
+    {
+        $tipos = TasaCambio::ultimasPorTipo();
+
+        $query = TasaCambio::with('user')->orderByDesc('created_at')->orderByDesc('id');
+
+        if ($request->filled('tipo')) {
+            $query->where('tipo', $request->tipo);
+        }
+
+        $historial = $query->paginate(20);
+
+        $filas = $historial->items();
+        foreach ($filas as $i => $fila) {
+            $fila->variacion = null;
+            for ($j = $i + 1; $j < count($filas); $j++) {
+                if ($filas[$j]->tipo !== $fila->tipo) {
+                    continue;
+                }
+
+                $anterior = (float) $filas[$j]->monto;
+                $fila->variacion = round((($fila->monto - $anterior) / $anterior) * 100, 2);
+                break;
+            }
+        }
+
+        $tipoFiltro = $request->get('tipo', '');
+
+        return view('tasas_cambio.historial', compact('historial', 'tipos', 'tipoFiltro'));
+    }
+
     public function store(Request $request)
     {
         $data = $request->validate([
-            'tipo' => ['required', 'string', 'max:50', 'regex:/^[a-z0-9_]+$/', Rule::unique('tasa_cambios', 'tipo')],
-            'nombre' => 'nullable|string|max:255',
+            'tipo' => ['nullable', 'string', 'max:50', 'regex:/^[a-z0-9_]+$/', Rule::unique('tasa_cambios', 'tipo')],
+            'nombre' => 'required|string|max:255',
             'monto' => 'required|numeric|gt:0',
         ]);
 
+        $tipo = $request->input('tipo') ?: $this->generarTipo($data['nombre']);
+
         TasaCambio::create([
-            'tipo' => $data['tipo'],
-            'nombre' => $data['nombre'] ?: ucwords(str_replace('_', ' ', $data['tipo'])),
+            'tipo' => $tipo,
+            'nombre' => $data['nombre'],
             'monto' => $data['monto'],
             'fecha' => now()->toDateString(),
             'activo' => true,
+            'user_id' => auth()->id(),
+            'origen' => 'manual',
         ]);
 
         return redirect()->route('tasas-cambio.index')
-            ->with('success', 'Tasa "' . ($data['nombre'] ?: $data['tipo']) . '" creada correctamente.');
+            ->with('success', 'Tasa "'.$data['nombre'].'" creada correctamente.');
+    }
+
+    private function generarTipo(string $nombre): string
+    {
+        $base = Str::lower(Str::slug($nombre, '_'));
+        $base = preg_replace('/[^a-z0-9_]/', '', $base);
+
+        if ($base === '') {
+            $base = 'tasa';
+        }
+
+        $tipo = $base;
+        $i = 2;
+        while (TasaCambio::where('tipo', $tipo)->exists()) {
+            $tipo = $base.'_'.$i;
+            $i++;
+        }
+
+        return $tipo;
     }
 
     public function actualizar(Request $request)
@@ -46,31 +103,37 @@ class TasaCambioController extends Controller
             'monto' => 'required|numeric|gt:0',
         ]);
 
-        $tasa = TasaCambio::where('tipo', $data['tipo'])->latest('id')->first();
+        $vigente = TasaCambio::ultimaDe($data['tipo']);
 
-        $tasa->update([
+        TasaCambio::create([
+            'tipo' => $data['tipo'],
+            'nombre' => $vigente->nombre,
             'monto' => $data['monto'],
             'fecha' => now()->toDateString(),
+            'activo' => $vigente->activo,
+            'user_id' => auth()->id(),
+            'origen' => 'manual',
         ]);
 
         return redirect()->route('tasas-cambio.index')
-            ->with('success', 'Tasa ' . $tasa->nombre . ' actualizada a ' . number_format($data['monto'], 2) . ' USD.');
+            ->with('success', 'Tasa '.$vigente->nombre.' actualizada a '.number_format($data['monto'], 2).' USD.');
     }
 
     public function toggleEstado(TasaCambio $tasa)
     {
         $tasaReferencia = Configuracion::obtener(self::TASA_REFERENCIA_CLAVE, 'bcv');
+        $vigente = TasaCambio::ultimaDe($tasa->tipo);
 
-        if ($tasa->activo && $tasa->tipo === $tasaReferencia) {
+        if ($vigente->activo && $vigente->tipo === $tasaReferencia) {
             return back()->withErrors(['error' => 'No se puede desactivar la tasa de referencia. Elige otra tasa como referencia primero.']);
         }
 
-        $tasa->update(['activo' => !$tasa->activo]);
+        TasaCambio::where('tipo', $tasa->tipo)->update(['activo' => ! $vigente->activo]);
 
-        $accion = $tasa->activo ? 'activada' : 'desactivada';
+        $accion = $vigente->activo ? 'desactivada' : 'activada';
 
         return redirect()->route('tasas-cambio.index')
-            ->with('success', 'Tasa "' . $tasa->nombre . '" ' . $accion . ' correctamente.');
+            ->with('success', 'Tasa "'.$vigente->nombre.'" '.$accion.' correctamente.');
     }
 
     public function fijarReferencia(Request $request)
@@ -84,9 +147,9 @@ class TasaCambioController extends Controller
             ['valor' => $request->referencia]
         );
 
-        $tasa = TasaCambio::where('tipo', $request->referencia)->latest('id')->first();
+        $tasa = TasaCambio::ultimaDe($request->referencia);
 
         return redirect()->route('tasas-cambio.index')
-            ->with('success', 'La tasa "' . $tasa->nombre . '" ahora es la referencia para los cálculos de venta.');
+            ->with('success', 'La tasa "'.$tasa->nombre.'" ahora es la referencia para los cálculos de venta.');
     }
 }

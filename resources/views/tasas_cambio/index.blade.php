@@ -1,14 +1,19 @@
 @extends('layouts.app')
 @section('titulo', 'Tasas de Cambio')
 @section('contenido')
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
     <div>
         <h2>Tasas de Cambio</h2>
         <p class="text-muted small mb-0">Actualiza el monto de cada tasa, crea nuevas o marca la tasa de referencia para los cálculos de venta.</p>
     </div>
-    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevaTasa">
-        <i class="bi bi-plus-circle"></i> Nueva Tasa
-    </button>
+    <div class="d-flex gap-2">
+        <a href="{{ route('tasas-cambio.historial') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-clock-history"></i> Historial
+        </a>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevaTasa">
+            <i class="bi bi-plus-circle"></i> Nueva Tasa
+        </button>
+    </div>
 </div>
 
 <div class="table-responsive">
@@ -16,7 +21,6 @@
         <thead class="table-dark">
             <tr>
                 <th>Nombre</th>
-                <th>Código</th>
                 <th>Monto</th>
                 <th>Última Actualización</th>
                 <th>Estado</th>
@@ -36,7 +40,6 @@
                             <span class="badge bg-success ms-1">REFERENCIA</span>
                         @endif
                     </td>
-                    <td><code>{{ $tasa->tipo }}</code></td>
                     <td>
                         <form method="POST" action="{{ route('tasas-cambio.actualizar') }}" class="row g-1 align-items-center">
                             @csrf
@@ -103,12 +106,7 @@
             <div class="modal-body">
                 <div class="mb-3">
                     <label class="form-label">Nombre *</label>
-                    <input type="text" name="nombre" class="form-control" placeholder="Ej: Dólar Zelle" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Código (tipo) *</label>
-                    <input type="text" name="tipo" class="form-control" placeholder="Ej: zelle" pattern="[a-z0-9_]+" required>
-                    <small class="form-text text-muted">Solo minúsculas, números y guiones bajos. Sin espacios.</small>
+                    <input type="text" name="nombre" class="form-control" placeholder="Ej: Dólar Zelle" required maxlength="255">
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Monto *</label>

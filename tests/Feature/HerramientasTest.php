@@ -2,8 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use App\Models\Configuracion;
+use App\Models\User;
+use Database\Seeders\PermisoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
@@ -17,7 +18,7 @@ class HerramientasTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\PermisoSeeder::class);
+        $this->seed(PermisoSeeder::class);
         $this->admin = User::factory()->create(['rol' => 'admin']);
     }
 
@@ -130,7 +131,8 @@ class HerramientasTest extends TestCase
 
         $response->assertSessionHas('success');
         $this->assertDatabaseCount('tasa_cambios', 1);
-        $this->assertDatabaseHas('tasa_cambios', ['tipo' => 'promedio', 'monto' => 52.00]);
+        $this->assertDatabaseHas('tasa_cambios', ['tipo' => 'promedio', 'monto' => 52.00, 'origen' => 'importado']);
+        $this->assertDatabaseMissing('tasa_cambios', ['tipo' => 'promedio', 'monto' => 50.00]);
     }
 
     public function test_importar_inventario_normaliza_unidades_por_paquete()
