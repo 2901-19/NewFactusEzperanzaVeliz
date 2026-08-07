@@ -15,6 +15,7 @@ class CategoriaSeeder extends Seeder
             'Aseo Personal' => 'Jabón, shampoo, desodorante',
             'Limpieza' => 'Cloro, detergente, desinfectante',
             'Lácteos' => 'Leche, queso, margarina, huevos',
+            'Botanas' => 'Papas, galletas, snacks',
         ];
 
         foreach ($categorias as $nombre => $desc) {

@@ -19,7 +19,7 @@ class DatabaseSeeder extends Seeder
             ClienteSeeder::class,
             ProductoSeeder::class,
             TasaCambioSeeder::class,
-            FacturaSeeder::class,
+            VentasAnualesSeeder::class,
         ]);
     }
 }
