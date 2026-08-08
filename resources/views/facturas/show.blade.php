@@ -36,6 +36,7 @@
         <span class="t-cant">CANT</span>
         <span class="desc">DESC</span>
         <span class="t-precio-u">PREC U</span>
+        <span class="t-precio-usd">USD</span>
         <span class="monto">PREC T</span>
     </div>
     @foreach ($detalItems as $item)
@@ -43,6 +44,7 @@
         <span class="t-cant">{{ $item->cantidad }}</span>
         <span class="desc">{{ $item->producto->nombre ?? 'Producto' }}</span>
         <span class="t-precio-u">{{ number_format($item->precio_unitario_bs, 2) }}</span>
+        <span class="t-precio-usd">{{ number_format($item->precio_unitario_bs / $factura->tasa_cambio, 2) }}</span>
         <span class="monto">{{ number_format($item->subtotal, 2) }}</span>
     </div>
     @endforeach
@@ -55,6 +57,7 @@
         <span class="t-cant">CANT</span>
         <span class="desc">DESC</span>
         <span class="t-precio-u">PREC U</span>
+        <span class="t-precio-usd">USD</span>
         <span class="monto">PREC T</span>
     </div>
     @foreach ($mayorItems as $item)
@@ -62,6 +65,7 @@
         <span class="t-cant">{{ $item->cantidad }}</span>
         <span class="desc">{{ $item->producto->nombre ?? 'Producto' }}</span>
         <span class="t-precio-u">{{ number_format($item->precio_unitario_bs, 2) }}</span>
+        <span class="t-precio-usd">{{ number_format($item->precio_unitario_bs / $factura->tasa_cambio, 2) }}</span>
         <span class="monto">{{ number_format($item->subtotal, 2) }}</span>
     </div>
     @endforeach
@@ -74,6 +78,7 @@
         <span class="t-cant">CANT</span>
         <span class="desc">DESC</span>
         <span class="t-precio-u">PREC U</span>
+        <span class="t-precio-usd">USD</span>
         <span class="monto">PREC T</span>
     </div>
     @foreach ($factura->items as $item)
@@ -81,6 +86,7 @@
         <span class="t-cant">{{ $item->cantidad }}</span>
         <span class="desc">{{ $item->producto->nombre ?? 'Producto' }}</span>
         <span class="t-precio-u">{{ number_format($item->precio_unitario_bs, 2) }}</span>
+        <span class="t-precio-usd">{{ number_format($item->precio_unitario_bs / $factura->tasa_cambio, 2) }}</span>
         <span class="monto">{{ number_format($item->subtotal, 2) }}</span>
     </div>
     @endforeach

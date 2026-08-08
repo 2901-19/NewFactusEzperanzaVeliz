@@ -184,6 +184,12 @@
     white-space: nowrap;
     margin-left: 0.5rem;
 }
+.ticket .row-item .t-precio-usd {
+    width: 3rem;
+    text-align: right;
+    white-space: nowrap;
+    margin-left: 0.5rem;
+}
 .ticket .row-item .monto {
     width: 3.4rem;
     text-align: right;
