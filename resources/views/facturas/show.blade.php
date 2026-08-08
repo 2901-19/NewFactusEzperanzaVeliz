@@ -32,10 +32,18 @@
 
     @if ($hayAmbos)
     <div class="ticket-seccion">DETAL</div>
+    <div class="row-item row-head">
+        <span class="t-cant">CANT</span>
+        <span class="desc">DESC</span>
+        <span class="t-precio-u">PREC U</span>
+        <span class="monto">PREC T</span>
+    </div>
     @foreach ($detalItems as $item)
-    <div class="row-item">
-        <span class="desc">{{ $item->cantidad }}x {{ $item->producto->nombre ?? 'Producto' }}</span>
-        <span class="monto">Bs {{ number_format($item->subtotal, 2) }}</span>
+    <div class="row-item ticket-item">
+        <span class="t-cant">{{ $item->cantidad }}</span>
+        <span class="desc">{{ $item->producto->nombre ?? 'Producto' }}</span>
+        <span class="t-precio-u">{{ number_format($item->precio_unitario_bs, 2) }}</span>
+        <span class="monto">{{ number_format($item->subtotal, 2) }}</span>
     </div>
     @endforeach
     <div class="row-item">
@@ -43,10 +51,18 @@
         <span>Bs {{ number_format($subtotalDetal, 2) }}</span>
     </div>
     <div class="ticket-seccion">MAYOR</div>
+    <div class="row-item row-head">
+        <span class="t-cant">CANT</span>
+        <span class="desc">DESC</span>
+        <span class="t-precio-u">PREC U</span>
+        <span class="monto">PREC T</span>
+    </div>
     @foreach ($mayorItems as $item)
-    <div class="row-item">
-        <span class="desc">{{ $item->cantidad }}x {{ $item->producto->nombre ?? 'Producto' }}</span>
-        <span class="monto">Bs {{ number_format($item->subtotal, 2) }}</span>
+    <div class="row-item ticket-item">
+        <span class="t-cant">{{ $item->cantidad }}</span>
+        <span class="desc">{{ $item->producto->nombre ?? 'Producto' }}</span>
+        <span class="t-precio-u">{{ number_format($item->precio_unitario_bs, 2) }}</span>
+        <span class="monto">{{ number_format($item->subtotal, 2) }}</span>
     </div>
     @endforeach
     <div class="row-item">
@@ -54,10 +70,18 @@
         <span>Bs {{ number_format($subtotalMayor, 2) }}</span>
     </div>
     @else
+    <div class="row-item row-head">
+        <span class="t-cant">CANT</span>
+        <span class="desc">DESC</span>
+        <span class="t-precio-u">PREC U</span>
+        <span class="monto">PREC T</span>
+    </div>
     @foreach ($factura->items as $item)
-    <div class="row-item">
-        <span class="desc">{{ $item->cantidad }}x {{ $item->producto->nombre ?? 'Producto' }}</span>
-        <span class="monto">Bs {{ number_format($item->subtotal, 2) }}</span>
+    <div class="row-item ticket-item">
+        <span class="t-cant">{{ $item->cantidad }}</span>
+        <span class="desc">{{ $item->producto->nombre ?? 'Producto' }}</span>
+        <span class="t-precio-u">{{ number_format($item->precio_unitario_bs, 2) }}</span>
+        <span class="monto">{{ number_format($item->subtotal, 2) }}</span>
     </div>
     @endforeach
     @endif

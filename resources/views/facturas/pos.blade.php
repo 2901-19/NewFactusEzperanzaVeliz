@@ -205,11 +205,19 @@
                         <template x-if="hayAmbosTipos">
                             <div>
                                 <div class="ticket-seccion">DETAL</div>
+                                <div class="row-item row-head" x-show="carrito.length > 0">
+                                    <span class="t-cant">CANT</span>
+                                    <span class="desc">DESC</span>
+                                    <span class="t-precio-u">PREC U</span>
+                                    <span class="monto">PREC T</span>
+                                </div>
                                 <template x-for="(item, index) in carrito" :key="index">
                                     <template x-if="item.tipoVenta === 'unitario'">
-                                        <div class="row-item">
-                                            <span class="desc" x-text="item.cantidad + 'x ' + item.nombre"></span>
-                                            <span class="monto" x-text="'Bs ' + getBsPriceTotal(index).toFixed(2)"></span>
+                                        <div class="row-item ticket-item">
+                                            <span class="t-cant" x-text="item.cantidad"></span>
+                                            <span class="desc" x-text="item.nombre"></span>
+                                            <span class="t-precio-u" x-text="getBsPrice(index).toFixed(2)"></span>
+                                            <span class="monto" x-text="getBsPriceTotal(index).toFixed(2)"></span>
                                         </div>
                                     </template>
                                 </template>
@@ -218,11 +226,19 @@
                                     <span x-text="'Bs ' + subtotalDetalBs.toFixed(2)"></span>
                                 </div>
                                 <div class="ticket-seccion">MAYOR</div>
+                                <div class="row-item row-head" x-show="carrito.length > 0">
+                                    <span class="t-cant">CANT</span>
+                                    <span class="desc">DESC</span>
+                                    <span class="t-precio-u">PREC U</span>
+                                    <span class="monto">PREC T</span>
+                                </div>
                                 <template x-for="(item, index) in carrito" :key="index">
                                     <template x-if="item.tipoVenta === 'mayor'">
-                                        <div class="row-item">
-                                            <span class="desc" x-text="item.cantidad + 'x ' + item.nombre"></span>
-                                            <span class="monto" x-text="'Bs ' + getBsPriceTotal(index).toFixed(2)"></span>
+                                        <div class="row-item ticket-item">
+                                            <span class="t-cant" x-text="item.cantidad"></span>
+                                            <span class="desc" x-text="item.nombre"></span>
+                                            <span class="t-precio-u" x-text="getBsPrice(index).toFixed(2)"></span>
+                                            <span class="monto" x-text="getBsPriceTotal(index).toFixed(2)"></span>
                                         </div>
                                     </template>
                                 </template>
@@ -234,10 +250,18 @@
                         </template>
                         <template x-if="!hayAmbosTipos">
                             <div>
+                                <div class="row-item row-head" x-show="carrito.length > 0">
+                                    <span class="t-cant">CANT</span>
+                                    <span class="desc">DESC</span>
+                                    <span class="t-precio-u">PREC U</span>
+                                    <span class="monto">PREC T</span>
+                                </div>
                                 <template x-for="(item, index) in carrito" :key="index">
-                                    <div class="row-item">
-                                        <span class="desc" x-text="item.cantidad + 'x ' + item.nombre"></span>
-                                        <span class="monto" x-text="'Bs ' + getBsPriceTotal(index).toFixed(2)"></span>
+                                    <div class="row-item ticket-item">
+                                        <span class="t-cant" x-text="item.cantidad"></span>
+                                        <span class="desc" x-text="item.nombre"></span>
+                                        <span class="t-precio-u" x-text="getBsPrice(index).toFixed(2)"></span>
+                                        <span class="monto" x-text="getBsPriceTotal(index).toFixed(2)"></span>
                                     </div>
                                 </template>
                             </div>

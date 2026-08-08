@@ -160,13 +160,32 @@
     font-size: 0.88rem;
     line-height: 1.6;
 }
+.ticket .row-item.row-head {
+    font-size: 0.78rem;
+    font-weight: bold;
+    border-bottom: 1px dashed #aaa;
+    margin-bottom: 0.25rem;
+    padding-bottom: 0.15rem;
+}
 .ticket .row-item .desc {
     flex: 1;
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    padding-right: 0.5rem;
+}
+.ticket .row-item .t-cant {
+    width: 2.4rem;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+}
+.ticket .row-item .t-precio-u {
+    width: 3.4rem;
+    text-align: right;
+    white-space: nowrap;
+    margin-left: 0.5rem;
 }
 .ticket .row-item .monto {
+    width: 3.4rem;
     text-align: right;
     white-space: nowrap;
     margin-left: 0.5rem;
