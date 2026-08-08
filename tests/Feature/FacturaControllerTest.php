@@ -557,7 +557,7 @@ class FacturaControllerTest extends TestCase
             ],
         ]);
 
-        $response->assertStatus(500);
+        $response->assertStatus(422);
         $response->assertJson(['success' => false]);
         $this->assertDatabaseCount('facturas', 0);
 
@@ -583,7 +583,7 @@ class FacturaControllerTest extends TestCase
             ],
         ]);
 
-        $response->assertStatus(500);
+        $response->assertStatus(422);
         $response->assertJson(['success' => false]);
         $this->assertDatabaseCount('facturas', 0);
     }

@@ -56,7 +56,7 @@ class TasaCambioController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'tipo' => ['nullable', 'string', 'max:50', 'regex:/^[a-z0-9_]+$/', Rule::unique('tasa_cambios', 'tipo')],
+            'tipo' => ['nullable', 'string', 'max:50', 'regex:/^[a-z0-9_]+$/'],
             'nombre' => 'required|string|max:255',
             'monto' => 'required|numeric|gt:0',
         ]);

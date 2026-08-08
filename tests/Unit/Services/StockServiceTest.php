@@ -39,6 +39,28 @@ class StockServiceTest extends TestCase
         StockService::descomponer(5, 0);
     }
 
+    public function test_agregar_recompone_en_paquetes_y_unidades()
+    {
+        $producto = Producto::factory()->create(['stock_paquetes' => 2, 'unidades_por_paquete' => 12, 'stock_unidades' => 3]);
+
+        StockService::agregar($producto, 10);
+
+        $producto->refresh();
+        $this->assertEquals(3, $producto->stock_paquetes);
+        $this->assertEquals(1, $producto->stock_unidades);
+    }
+
+    public function test_agregar_mantiene_total_correcto()
+    {
+        $producto = Producto::factory()->create(['stock_paquetes' => 0, 'unidades_por_paquete' => 6, 'stock_unidades' => 4]);
+
+        StockService::agregar($producto, 5);
+
+        $producto->refresh();
+        $this->assertEquals(1, $producto->stock_paquetes);
+        $this->assertEquals(3, $producto->stock_unidades);
+    }
+
     public function test_descontar_usa_unidades_disponibles()
     {
         $producto = Producto::factory()->create(['stock_paquetes' => 1, 'unidades_por_paquete' => 12, 'stock_unidades' => 10]);

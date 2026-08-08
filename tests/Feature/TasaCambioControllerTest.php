@@ -179,9 +179,9 @@ class TasaCambioControllerTest extends TestCase
         ]);
     }
 
-    public function test_crear_rechaza_tipo_duplicado()
+    public function test_crear_tipo_existente_inserta_historial()
     {
-        TasaCambio::factory()->create(['tipo' => 'promedio']);
+        TasaCambio::factory()->create(['tipo' => 'promedio', 'monto' => 50.00]);
 
         $response = $this->post('/tasas-cambio', [
             'tipo' => 'promedio',
@@ -189,8 +189,10 @@ class TasaCambioControllerTest extends TestCase
             'monto' => 60.00,
         ]);
 
-        $response->assertSessionHasErrors(['tipo']);
-        $this->assertDatabaseCount('tasa_cambios', 1);
+        $response->assertRedirect('/tasas-cambio');
+        $response->assertSessionHas('success');
+        $this->assertDatabaseCount('tasa_cambios', 2);
+        $this->assertEquals(60.00, (float) TasaCambio::ultimaDe('promedio')->monto);
     }
 
     public function test_crear_genera_tipo_desde_el_nombre()

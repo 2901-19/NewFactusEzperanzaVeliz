@@ -23,6 +23,13 @@ class StockService
         ];
     }
 
+    public static function agregar(Producto $producto, int $cantidad): void
+    {
+        $total = self::totalUnidades($producto) + $cantidad;
+
+        $producto->update(self::descomponer($total, $producto->unidades_por_paquete));
+    }
+
     public static function descontar(Producto $producto, int $cantidad): void
     {
         $restantes = $cantidad;

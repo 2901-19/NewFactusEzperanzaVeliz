@@ -45,7 +45,7 @@ Laravel 12 + PHP 8.2 POS app (FACTUS — Esperanza Veliz). PostgreSQL in dev, Bo
 
 ## Frontend gotchas
 
-- DataTables is initialized with Spanish via `window.DataTableSpanish` in `resources/views/layouts/app.blade.php:35`, currently using an async `url: '/js/i18n/es-ES.json'` fetch. **Known bug:** async language load combined with `order` + `columnDefs:[{targets:'_all',defaultContent:''}]` makes DataTables 2.3.8 wipe all rows ("Ningún dato disponible"). Fix: pass a literal Spanish object (like the defaults in `resources/js/app.js`) instead of a `url`.
+- DataTables is initialized with Spanish via `window.DataTableSpanish` in `resources/views/layouts/app.blade.php` — it passes a **literal Spanish object** (same shape as the defaults in `resources/js/app.js`). Do NOT switch it back to an async `url: '/js/i18n/es-ES.json'` fetch: the async load combined with `order` + `columnDefs:[{targets:'_all',defaultContent:''}]` makes DataTables 2.3.8 wipe all rows ("Ningún dato disponible").
 - Blades mix server-rendered HTML with DataTables/Alpine; UI copy is Spanish.
 
 ## Misc

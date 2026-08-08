@@ -43,7 +43,7 @@ class FacturaController extends Controller
             foreach ($factura->items as $item) {
                 $producto = Producto::withTrashed()->find($item->producto_id);
                 if ($producto) {
-                    $producto->increment('stock_unidades', $item->cantidad);
+                    StockService::agregar($producto, $item->cantidad);
                 }
             }
         });
@@ -82,7 +82,7 @@ class FacturaController extends Controller
             return back()->withErrors(['cliente_id' => 'Debe seleccionar un cliente para facturas a crédito.']);
         }
 
-        $correlativo = strtoupper(substr(uniqid(), -7));
+        $correlativo = $this->generarCorrelativo();
 
         $ivaPorcentaje = ImpuestoService::porcentajeVigente();
 
@@ -190,7 +190,7 @@ class FacturaController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         }
     }
 
@@ -237,5 +237,14 @@ class FacturaController extends Controller
 
         return redirect()->route('facturas.creditos')
             ->with('success', 'Crédito N° '.$factura->correlativo.' cobrado correctamente: Bs '.number_format($pagoBs, 2).' (US$ '.number_format($pagoUsd, 2).').');
+    }
+
+    private function generarCorrelativo(): string
+    {
+        do {
+            $correlativo = strtoupper(substr(uniqid(), -7));
+        } while (Factura::where('correlativo', $correlativo)->exists());
+
+        return $correlativo;
     }
 }
