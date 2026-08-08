@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Cliente;
 use App\Models\Factura;
 use App\Models\Producto;
-use App\Models\Cliente;
+use App\Services\CatalogoService;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
@@ -41,7 +42,7 @@ class DashboardController extends Controller
         $productosStockBajo = Producto::whereNull('deleted_at')
             ->where('estado', 'disponible')
             ->get()
-            ->filter(fn ($p) => $p->stock_total <= 10)
+            ->filter(fn ($p) => $p->stock_total <= CatalogoService::UMBRAL_STOCK_BAJO)
             ->take(10);
 
         $totalProductos = Producto::whereNull('deleted_at')->count();

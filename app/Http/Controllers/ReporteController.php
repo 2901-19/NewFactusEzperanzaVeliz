@@ -6,6 +6,7 @@ use App\Models\Cliente;
 use App\Models\Factura;
 use App\Models\ItemFactura;
 use App\Models\Producto;
+use App\Services\CatalogoService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -14,16 +15,6 @@ use Illuminate\Support\Facades\DB;
 
 class ReporteController extends Controller
 {
-    private const METODOS = [
-        'efectivo' => 'Efectivo',
-        'punto' => 'Punto de Venta',
-        'biopago' => 'Biopago',
-        'divisas' => 'Divisas',
-        'pago_movil' => 'Pago Móvil',
-        'transferencia' => 'Transferencia',
-        'mixto' => 'Mixto',
-    ];
-
     // ===== REPORTE DE VENTAS =====
 
     public function facturas(Request $request)
@@ -42,8 +33,9 @@ class ReporteController extends Controller
 
         if ($request->get('export') === 'pdf') {
             $pdf = Pdf::loadView('reportes.export.facturas-pdf', compact('facturas', 'kpis', 'desglose', 'desde', 'hasta'));
+
             return $pdf->setPaper('letter', 'portrait')
-                ->download('reporte_facturas_' . date('Ymd') . '.pdf');
+                ->download('reporte_facturas_'.date('Ymd').'.pdf');
         }
 
         if ($request->get('export') === 'csv') {
@@ -51,7 +43,7 @@ class ReporteController extends Controller
         }
 
         $clientes = Cliente::orderBy('nombre')->get();
-        $nombresMetodo = self::METODOS;
+        $nombresMetodo = CatalogoService::metodosPago();
 
         return view('reportes.facturas', compact('facturas', 'kpis', 'desglose', 'desde', 'hasta', 'clientes', 'nombresMetodo'));
     }
@@ -82,7 +74,7 @@ class ReporteController extends Controller
             ->selectRaw('COUNT(*) as cantidad, COALESCE(SUM(total_bs), 0) as total_bs')
             ->first();
 
-        $nombresMetodo = self::METODOS;
+        $nombresMetodo = CatalogoService::metodosPago();
 
         return view('reportes.estadisticas', compact(
             'kpis', 'desde', 'hasta', 'porDia', 'porMetodo',
@@ -105,7 +97,7 @@ class ReporteController extends Controller
         $mensual = [];
         foreach ($facturas as $f) {
             $mes = (int) $f->fecha_venta->format('n');
-            if (!isset($mensual[$mes])) {
+            if (! isset($mensual[$mes])) {
                 $mensual[$mes] = ['cantidad' => 0, 'total_bs' => 0.0, 'total_usd' => 0.0];
             }
             $mensual[$mes]['cantidad']++;
@@ -129,8 +121,9 @@ class ReporteController extends Controller
 
         if ($request->get('export') === 'pdf') {
             $pdf = Pdf::loadView('reportes.export.balance-pdf', compact('mensual', 'meses', 'anio'));
+
             return $pdf->setPaper('letter', 'portrait')
-                ->download('balance_mensual_' . $anio . '.pdf');
+                ->download('balance_mensual_'.$anio.'.pdf');
         }
 
         return view('reportes.balance', compact('mensual', 'meses', 'anio', 'serieBs'));
@@ -143,7 +136,7 @@ class ReporteController extends Controller
         $productos = Producto::whereNull('deleted_at')
             ->where('estado', 'disponible')
             ->get()
-            ->filter(fn ($p) => $p->stock_total <= 10)
+            ->filter(fn ($p) => $p->stock_total <= CatalogoService::UMBRAL_STOCK_BAJO)
             ->sortBy('stock_total');
 
         return view('reportes.stock', compact('productos'));
@@ -194,7 +187,7 @@ class ReporteController extends Controller
 
     private function desgloseMetodo(Collection $facturas): array
     {
-        $desglose = array_fill_keys(array_keys(self::METODOS), 0.0);
+        $desglose = array_fill_keys(array_keys(CatalogoService::metodosPago()), 0.0);
 
         foreach ($facturas as $f) {
             if ($f->metodo_pago === 'mixto') {
@@ -257,7 +250,7 @@ class ReporteController extends Controller
 
         foreach ($items as $item) {
             $fecha = $item->factura?->fecha_venta;
-            if (!$fecha) {
+            if (! $fecha) {
                 continue;
             }
             $clave = $porDia ? $fecha->format('Y-m-d') : $fecha->startOfWeek()->format('Y-m-d');
@@ -292,7 +285,7 @@ class ReporteController extends Controller
         $pct = fn (float $valor) => $totalBs > 0 ? round(($valor / $totalBs) * 100, 1) : 0;
 
         $semanaLabels = array_map(
-            fn ($clave) => $porDia ? Carbon::parse($clave)->format('d/m') : 'Sem ' . Carbon::parse($clave)->format('d/m'),
+            fn ($clave) => $porDia ? Carbon::parse($clave)->format('d/m') : 'Sem '.Carbon::parse($clave)->format('d/m'),
             $claves
         );
 
@@ -354,18 +347,18 @@ class ReporteController extends Controller
             $csv .= implode(';', [
                 $f->correlativo,
                 $f->cliente->nombre ?? 'Contado',
-                self::METODOS[$f->metodo_pago] ?? $f->metodo_pago,
+                CatalogoService::nombreMetodo($f->metodo_pago) ?? $f->metodo_pago,
                 $f->estado,
                 $f->fecha_venta?->format('Y-m-d') ?? $f->fecha_venta,
                 number_format($f->subtotal_bs, 2, ',', ''),
                 number_format($f->iva_bs, 2, ',', ''),
                 number_format($f->total_bs, 2, ',', ''),
                 number_format($f->total_usd, 2, ',', ''),
-            ]) . "\n";
+            ])."\n";
         }
 
         return response()->streamDownload(function () use ($csv) {
             echo $csv;
-        }, 'reporte_facturas_' . date('Ymd') . '.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+        }, 'reporte_facturas_'.date('Ymd').'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 }

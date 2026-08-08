@@ -93,16 +93,7 @@ class PrinterService
             $this->printer->setBold(false);
             $this->printer->feed();
 
-            $nombresMetodo = [
-                'efectivo' => 'Efectivo',
-                'punto' => 'Punto de Venta',
-                'biopago' => 'Biopago',
-                'divisas' => 'Divisas',
-                'pago_movil' => 'Pago Móvil',
-                'transferencia' => 'Transferencia',
-                'mixto' => 'Mixto',
-                'credito' => 'Crédito',
-            ];
+            $nombresMetodo = CatalogoService::metodosPago();
 
             if (! $esCredito) {
                 if ($factura->metodo_pago === 'mixto') {

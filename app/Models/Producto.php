@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Services\TasaCambioService;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Producto extends Model
 {
-    use SoftDeletes, HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'nombre',
@@ -40,13 +41,12 @@ class Producto extends Model
 
     private function obtenerTasa(): float
     {
-        $tasa = \App\Models\TasaCambio::where('tipo', $this->fuente_tasa)->latest()->first();
-        return $tasa ? (float) $tasa->monto : 1;
+        return TasaCambioService::monto($this->fuente_tasa) ?? 1;
     }
 
     public function getImagenUrlAttribute(): ?string
     {
-        return $this->imagen ? asset('storage/' . $this->imagen) : null;
+        return $this->imagen ? asset('storage/'.$this->imagen) : null;
     }
 
     protected function casts(): array

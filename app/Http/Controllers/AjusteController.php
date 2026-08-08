@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Producto;
 use App\Models\TasaCambio;
+use App\Services\PrecioService;
+use App\Services\StockService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -26,19 +28,15 @@ class AjusteController extends Controller
                 'margen_mayor' => 'required|numeric|min:0',
             ]);
 
-            $precioUnitario = round($validated['costo_usd'] * (1 + $validated['margen_detal'] / 100), 2);
-            $precioMayor = round($validated['costo_usd'] * (1 + $validated['margen_mayor'] / 100), 2);
+            $precios = PrecioService::preciosDesdeMargenes($validated['costo_usd'], $validated['margen_detal'], $validated['margen_mayor']);
 
-            $producto->update($validated + [
-                'precio_unitario_usd' => $precioUnitario,
-                'precio_mayor_usd' => $precioMayor,
-            ]);
+            $producto->update($validated + $precios);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Precio actualizado correctamente',
-                'precio_unitario_usd' => $precioUnitario,
-                'precio_mayor_usd' => $precioMayor,
+                'precio_unitario_usd' => $precios['precio_unitario_usd'],
+                'precio_mayor_usd' => $precios['precio_mayor_usd'],
             ]);
         } catch (ValidationException $e) {
             return response()->json([
@@ -63,7 +61,7 @@ class AjusteController extends Controller
                 'operacion' => 'required|in:+,-',
             ]);
 
-            $totalActual = ($producto->stock_paquetes * $producto->unidades_por_paquete) + $producto->stock_unidades;
+            $totalActual = StockService::totalUnidades($producto);
             $upp = $producto->unidades_por_paquete;
 
             if ($upp <= 0) {
@@ -85,19 +83,15 @@ class AjusteController extends Controller
                 }
             }
 
-            $nuevosPaquetes = intdiv($nuevoTotal, $upp);
-            $nuevasUnidades = $nuevoTotal % $upp;
+            $componentes = StockService::descomponer($nuevoTotal, $upp);
 
-            $producto->update([
-                'stock_paquetes' => $nuevosPaquetes,
-                'stock_unidades' => $nuevasUnidades,
-            ]);
+            $producto->update($componentes);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Inventario actualizado correctamente',
-                'stock_paquetes' => $nuevosPaquetes,
-                'stock_unidades' => $nuevasUnidades,
+                'stock_paquetes' => $componentes['stock_paquetes'],
+                'stock_unidades' => $componentes['stock_unidades'],
             ]);
         } catch (ValidationException $e) {
             return response()->json([

@@ -115,7 +115,7 @@ class HerramientasTest extends TestCase
         $response->assertStatus(200);
     }
 
-    public function test_importar_tasas_repetidas_actualiza_sin_fallar()
+    public function test_importar_tasas_repetidas_conserva_historial()
     {
         $this->actingAs($this->admin);
 
@@ -130,9 +130,9 @@ class HerramientasTest extends TestCase
         ]);
 
         $response->assertSessionHas('success');
-        $this->assertDatabaseCount('tasa_cambios', 1);
+        $this->assertDatabaseCount('tasa_cambios', 2);
+        $this->assertDatabaseHas('tasa_cambios', ['tipo' => 'promedio', 'monto' => 50.00, 'origen' => 'importado']);
         $this->assertDatabaseHas('tasa_cambios', ['tipo' => 'promedio', 'monto' => 52.00, 'origen' => 'importado']);
-        $this->assertDatabaseMissing('tasa_cambios', ['tipo' => 'promedio', 'monto' => 50.00]);
     }
 
     public function test_importar_inventario_normaliza_unidades_por_paquete()

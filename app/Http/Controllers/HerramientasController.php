@@ -9,6 +9,7 @@ use App\Models\Factura;
 use App\Models\Impuesto;
 use App\Models\Producto;
 use App\Models\TasaCambio;
+use App\Services\PrecioService;
 use App\Services\PrinterService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -132,8 +133,9 @@ class HerramientasController extends Controller
                                 $pu = $item['precio_unitario_usd'] ?? $producto->precio_unitario_usd ?? 0;
                                 $costoUsd = $margenDetal > 0 ? round($pu / (1 + $margenDetal / 100), 2) : $pu;
                             }
-                            $precioUnitario = round($costoUsd * (1 + $margenDetal / 100), 2);
-                            $precioMayor = round($costoUsd * (1 + $margenMayor / 100), 2);
+                            $precios = PrecioService::preciosDesdeMargenes($costoUsd, $margenDetal, $margenMayor);
+                            $precioUnitario = $precios['precio_unitario_usd'];
+                            $precioMayor = $precios['precio_mayor_usd'];
 
                             $estadoImportado = ($precioUnitario <= 0 && $precioMayor <= 0) ? 'no_disponible' : 'disponible';
 
@@ -227,11 +229,15 @@ class HerramientasController extends Controller
 
                             $vigente = TasaCambio::ultimaDe($item['tipo']);
 
-                            if ($vigente) {
-                                $vigente->update($item);
-                            } else {
-                                TasaCambio::create($item + ['activo' => true, 'user_id' => auth()->id()]);
-                            }
+                            TasaCambio::create([
+                                'tipo' => $item['tipo'],
+                                'nombre' => $item['nombre'] ?? $vigente->nombre ?? null,
+                                'monto' => $item['monto'],
+                                'fecha' => $item['fecha'],
+                                'activo' => $vigente ? $vigente->activo : true,
+                                'user_id' => auth()->id(),
+                                'origen' => 'importado',
+                            ]);
                             $contadores['tasas_cambio']++;
                         }
                         break;

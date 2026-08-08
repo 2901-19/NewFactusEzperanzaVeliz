@@ -5,12 +5,16 @@ namespace App\Http\Controllers;
 use App\Models\Cliente;
 use App\Models\Configuracion;
 use App\Models\Factura;
-use App\Models\Impuesto;
 use App\Models\ItemFactura;
 use App\Models\Producto;
 use App\Models\TasaCambio;
+use App\Services\CatalogoService;
+use App\Services\ImpuestoService;
+use App\Services\StockService;
+use App\Services\TasaCambioService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class FacturaController extends Controller
 {
@@ -53,8 +57,7 @@ class FacturaController extends Controller
         $clientes = Cliente::all();
         $tasas = TasaCambio::ultimasPorTipo();
 
-        $iva = Impuesto::latest('fecha')->first();
-        $ivaPorcentaje = $iva ? (float) $iva->porcentaje : 16;
+        $ivaPorcentaje = ImpuestoService::porcentajeVigente();
         $tasaReferenciaTipo = Configuracion::obtener('tasa_referencia', 'bcv');
 
         return view('facturas.pos', compact('productos', 'clientes', 'tasas', 'ivaPorcentaje', 'tasaReferenciaTipo'));
@@ -69,7 +72,7 @@ class FacturaController extends Controller
             'items.*.tipo_venta' => 'required|in:unitario,mayor',
             'metodo_pago' => 'required|string',
             'pagos' => 'required_if:metodo_pago,mixto|array|size:2',
-            'pagos.*.metodo' => 'required|in:efectivo,punto,biopago,divisas,pago_movil,transferencia|distinct',
+            'pagos.*.metodo' => ['required', Rule::in(CatalogoService::metodosValidos()), 'distinct'],
             'pagos.*.monto' => 'required|numeric|min:0.01',
             'cliente_id' => 'nullable|exists:clientes,id',
             'estado' => 'required|in:contado,credito',
@@ -81,8 +84,7 @@ class FacturaController extends Controller
 
         $correlativo = strtoupper(substr(uniqid(), -7));
 
-        $iva = Impuesto::latest('fecha')->first();
-        $ivaPorcentaje = $iva ? (float) $iva->porcentaje : 16;
+        $ivaPorcentaje = ImpuestoService::porcentajeVigente();
 
         $itemsData = [];
         $subtotalBs = 0;
@@ -114,11 +116,11 @@ class FacturaController extends Controller
                     throw new \Exception("El producto {$producto->nombre} no tiene precio configurado.");
                 }
 
-                $tasa = $this->obtenerTasa($producto->fuente_tasa);
+                $tasa = TasaCambioService::montoOException($producto->fuente_tasa);
                 $precioBs = $precioUsd * $tasa;
                 $subtotalItemBs = round($precioBs * $cantidad, 2);
 
-                $this->descontarStock($producto, $cantidad);
+                StockService::descontar($producto, $cantidad);
 
                 $itemsData[] = [
                     'producto_id' => $producto->id,
@@ -138,7 +140,7 @@ class FacturaController extends Controller
 
             $totalBs = round($subtotalBs + $ivaBs, 2);
 
-            $tasaReferencia = $this->obtenerTasa(Configuracion::obtener('tasa_referencia', 'bcv'));
+            $tasaReferencia = TasaCambioService::montoOException(Configuracion::obtener('tasa_referencia', 'bcv'));
             $totalUsd = round($totalBs / $tasaReferencia, 2);
             $tasaEfectiva = $tasaReferencia;
 
@@ -219,10 +221,10 @@ class FacturaController extends Controller
         }
 
         $request->validate([
-            'metodo_pago' => 'required|in:efectivo,punto,biopago,divisas,pago_movil,transferencia',
+            'metodo_pago' => ['required', Rule::in(CatalogoService::metodosValidos())],
         ]);
 
-        $tasaVigente = $this->obtenerTasa(Configuracion::obtener('tasa_referencia', 'bcv'));
+        $tasaVigente = TasaCambioService::montoOException(Configuracion::obtener('tasa_referencia', 'bcv'));
         $pagoUsd = (float) $factura->total_usd;
         $pagoBs = round($pagoUsd * $tasaVigente, 2);
 
@@ -235,45 +237,5 @@ class FacturaController extends Controller
 
         return redirect()->route('facturas.creditos')
             ->with('success', 'Crédito N° '.$factura->correlativo.' cobrado correctamente: Bs '.number_format($pagoBs, 2).' (US$ '.number_format($pagoUsd, 2).').');
-    }
-
-    private function descontarStock(Producto $producto, int $cantidad): void
-    {
-        $restantes = $cantidad;
-
-        if ($producto->stock_unidades >= $restantes) {
-            $producto->decrement('stock_unidades', $restantes);
-
-            return;
-        }
-
-        $restantes -= $producto->stock_unidades;
-        $producto->update(['stock_unidades' => 0]);
-
-        $paquetesNecesarios = (int) ceil($restantes / $producto->unidades_por_paquete);
-
-        if ($producto->stock_paquetes < $paquetesNecesarios) {
-            throw new \Exception("Stock insuficiente para {$producto->nombre}");
-        }
-
-        $producto->decrement('stock_paquetes', $paquetesNecesarios);
-
-        $unidadesGeneradas = $paquetesNecesarios * $producto->unidades_por_paquete;
-        $sobrantes = $unidadesGeneradas - $restantes;
-
-        if ($sobrantes > 0) {
-            $producto->increment('stock_unidades', $sobrantes);
-        }
-    }
-
-    private function obtenerTasa(string $fuente): float
-    {
-        $tasa = TasaCambio::ultimaDe($fuente);
-
-        if (! $tasa || (float) $tasa->monto <= 0) {
-            throw new \RuntimeException("La tasa de cambio '{$fuente}' no está configurada. Actualicela antes de vender.");
-        }
-
-        return (float) $tasa->monto;
     }
 }

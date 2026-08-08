@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Producto;
 use App\Models\TasaCambio;
+use App\Services\PrecioService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -57,8 +58,7 @@ class ProductoController extends Controller
             $data['imagen'] = $request->file('imagen')->store('productos', 'public');
         }
 
-        $data['precio_unitario_usd'] = round($data['costo_usd'] * (1 + $data['margen_detal'] / 100), 2);
-        $data['precio_mayor_usd'] = round($data['costo_usd'] * (1 + $data['margen_mayor'] / 100), 2);
+        $data += PrecioService::preciosDesdeMargenes($data['costo_usd'], $data['margen_detal'], $data['margen_mayor']);
 
         Producto::create($data);
 
@@ -100,8 +100,7 @@ class ProductoController extends Controller
             $data['imagen'] = $request->file('imagen')->store('productos', 'public');
         }
 
-        $data['precio_unitario_usd'] = round($data['costo_usd'] * (1 + $data['margen_detal'] / 100), 2);
-        $data['precio_mayor_usd'] = round($data['costo_usd'] * (1 + $data['margen_mayor'] / 100), 2);
+        $data += PrecioService::preciosDesdeMargenes($data['costo_usd'], $data['margen_detal'], $data['margen_mayor']);
 
         $producto->update($data);
 
