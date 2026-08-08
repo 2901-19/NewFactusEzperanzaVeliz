@@ -162,7 +162,7 @@ class FacturaController extends Controller
                 'user_id' => auth()->id(),
                 'productos' => $itemsData,
                 'tasa_cambio' => round($tasaEfectiva, 2),
-                'metodo_pago' => $request->metodo_pago,
+                'metodo_pago' => $request->estado === 'credito' ? 'credito' : $request->metodo_pago,
                 'detalle_pago' => $detallePago,
                 'subtotal_bs' => $subtotalBs,
                 'iva_bs' => $ivaBs,
@@ -199,7 +199,10 @@ class FacturaController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
-        return view('facturas.creditos', compact('facturas'));
+        $tasaReferencia = TasaCambio::ultimaDe(Configuracion::obtener('tasa_referencia', 'bcv'));
+        $tasaVigente = $tasaReferencia ? (float) $tasaReferencia->monto : null;
+
+        return view('facturas.creditos', compact('facturas', 'tasaVigente'));
     }
 
     public function show(Factura $factura)
@@ -209,15 +212,29 @@ class FacturaController extends Controller
         return view('facturas.show', compact('factura'));
     }
 
-    public function pagarCredito(Factura $factura)
+    public function pagarCredito(Request $request, Factura $factura)
     {
         if ($factura->estado !== 'credito' || $factura->estado_credito === 'cancelado') {
             return back()->withErrors(['error' => 'Esta factura no está pendiente de crédito.']);
         }
 
-        $factura->update(['estado_credito' => 'cancelado']);
+        $request->validate([
+            'metodo_pago' => 'required|in:efectivo,punto,biopago,divisas,pago_movil,transferencia',
+        ]);
 
-        return redirect()->route('facturas.creditos')->with('success', 'Crédito N° '.$factura->correlativo.' cancelado correctamente.');
+        $tasaVigente = $this->obtenerTasa(Configuracion::obtener('tasa_referencia', 'bcv'));
+        $pagoUsd = (float) $factura->total_usd;
+        $pagoBs = round($pagoUsd * $tasaVigente, 2);
+
+        $factura->update([
+            'metodo_pago' => $request->metodo_pago,
+            'estado_credito' => 'cancelado',
+            'pago_bs' => $pagoBs,
+            'fecha_pago' => now(),
+        ]);
+
+        return redirect()->route('facturas.creditos')
+            ->with('success', 'Crédito N° '.$factura->correlativo.' cobrado correctamente: Bs '.number_format($pagoBs, 2).' (US$ '.number_format($pagoUsd, 2).').');
     }
 
     private function descontarStock(Producto $producto, int $cantidad): void
@@ -251,10 +268,10 @@ class FacturaController extends Controller
 
     private function obtenerTasa(string $fuente): float
     {
-        $tasa = TasaCambio::where('tipo', $fuente)->latest()->first();
+        $tasa = TasaCambio::ultimaDe($fuente);
 
         if (! $tasa || (float) $tasa->monto <= 0) {
-            throw new \RuntimeException("La tasa de cambio '{$fuente}' no está configurada. Actualícela antes de vender.");
+            throw new \RuntimeException("La tasa de cambio '{$fuente}' no está configurada. Actualicela antes de vender.");
         }
 
         return (float) $tasa->monto;

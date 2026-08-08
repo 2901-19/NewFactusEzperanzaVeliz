@@ -10,8 +10,8 @@
             <tr>
                 <th>Correlativo</th>
                 <th class="text-start">Cliente</th>
-                <th>Total Bs</th>
-                <th>Total USD</th>
+                <th>Deuda US$</th>
+                <th>A pagar hoy (Bs)</th>
                 <th>Fecha</th>
                 <th>Estado</th>
                 <th>Acciones</th>
@@ -22,8 +22,18 @@
             <tr class="{{ $f->estado_credito === 'cancelado' ? 'table-success' : '' }}">
                 <td>{{ $f->correlativo }}</td>
                 <td class="text-start">{{ $f->cliente->nombre ?? 'Sin dato' }}</td>
-                <td>Bs {{ number_format($f->total_bs, 2) }}</td>
                 <td>${{ number_format($f->total_usd, 2) }}</td>
+                <td>
+                    @if ($f->estado_credito === 'cancelado')
+                        <span class="text-muted" title="Pagado: Bs {{ number_format($f->pago_bs, 2) }} el {{ $f->fecha_pago?->format('d/m/Y') ?? '' }}">
+                            <i class="bi bi-check2-circle"></i> Bs {{ number_format($f->pago_bs, 2) }}
+                        </span>
+                    @elseif ($tasaVigente)
+                        Bs {{ number_format($f->total_usd * $tasaVigente, 2) }}
+                    @else
+                        <span class="text-muted" title="Sin tasa de referencia configurada">—</span>
+                    @endif
+                </td>
                 <td>{{ $f->fecha_venta }}</td>
                 <td>
                     @if ($f->estado_credito === 'pendiente')
@@ -37,8 +47,8 @@
                         <i class="bi bi-eye"></i>
                     </a>
                     @if ($f->estado_credito === 'pendiente')
-                        <button class="btn btn-sm btn-success btn-pagar" data-url="{{ route('facturas.pagar-credito', $f->id) }}" data-correlativo="{{ $f->correlativo }}">
-                            <i class="bi bi-check-lg"></i> Pagar
+                        <button class="btn btn-sm btn-success btn-abrir-cobro" data-id="{{ $f->id }}" data-url="{{ route('facturas.pagar-credito', $f->id) }}" data-correlativo="{{ $f->correlativo }}" data-usd="{{ number_format($f->total_usd, 2) }}" data-bs="{{ $tasaVigente ? number_format($f->total_usd * $tasaVigente, 2) : '' }}">
+                            <i class="bi bi-check-lg"></i> Cobrar
                         </button>
                     @endif
                 </td>
@@ -49,6 +59,45 @@
 </div>
 <div class="text-muted small">Total: {{ $facturas->count() }} facturas</div>
 @endsection
+
+{{-- Modal de cobro --}}
+<div class="modal fade" id="cobroModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <form id="cobroForm" method="POST">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title">Cobrar crédito <span id="cobroCorrelativo"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small mb-3">
+                        <strong>Deuda US$:</strong> <span id="cobroUsd"></span><br>
+                        <strong>A pagar hoy (Bs):</strong> <span id="cobroBs"></span>
+                    </p>
+                    <div class="mb-2">
+                        <label class="form-label small">Método de pago *</label>
+                        <select name="metodo_pago" id="cobroMetodo" class="form-select form-select-sm" required>
+                            <option value="" disabled selected>Seleccione</option>
+                            <option value="efectivo">Efectivo</option>
+                            <option value="punto">Punto de Venta</option>
+                            <option value="biopago">Biopago</option>
+                            <option value="divisas">Divisas</option>
+                            <option value="pago_movil">Pago Móvil</option>
+                            <option value="transferencia">Transferencia</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-sm btn-success">
+                        <i class="bi bi-check-lg"></i> Confirmar cobro
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -57,17 +106,14 @@ document.addEventListener('DOMContentLoaded', function () {
         order: [[4, 'desc']],
         pageLength: 25,
     });
-    $(document).on('click', '.btn-pagar', function () {
+    $(document).on('click', '.btn-abrir-cobro', function () {
         const btn = $(this);
-        Swal.fire({
-            title: '¿Marcar como pagado?',
-            text: 'Crédito N° ' + btn.data('correlativo'),
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#198754',
-            confirmButtonText: 'Sí, pagado',
-            cancelButtonText: 'Cancelar',
-        }).then((r) => { if (r.isConfirmed) $.post(btn.data('url'), { _token: csrf }).then(() => location.reload()); });
+        $('#cobroForm').attr('action', btn.data('url'));
+        $('#cobroCorrelativo').text('N° ' + btn.data('correlativo'));
+        $('#cobroUsd').text('US$ ' + btn.data('usd'));
+        $('#cobroBs').text(btn.data('bs') !== '' ? 'Bs ' + btn.data('bs') : '—');
+        $('#cobroMetodo').val('');
+        new bootstrap.Modal(document.getElementById('cobroModal')).show();
     });
 });
 </script>

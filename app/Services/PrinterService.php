@@ -64,18 +64,32 @@ class PrinterService
             $detalItems = array_values(array_filter($productos, fn ($i) => ($i['tipo_venta'] ?? 'unitario') !== 'mayor'));
             $mayorItems = array_values(array_filter($productos, fn ($i) => ($i['tipo_venta'] ?? 'unitario') === 'mayor'));
 
+            $esCredito = $factura->estado === 'credito';
+            $tasaCambio = (float) $factura->tasa_cambio ?: 1;
+            $moneda = $esCredito ? '$' : 'Bs';
+
+            if ($esCredito) {
+                $detalItems = $this->convertirAUsd($detalItems, $tasaCambio);
+                $mayorItems = $this->convertirAUsd($mayorItems, $tasaCambio);
+                $productos = $this->convertirAUsd($productos, $tasaCambio);
+            }
+
             if (count($detalItems) > 0 && count($mayorItems) > 0) {
-                $this->printItemsSection('DETAL', $detalItems);
-                $this->printItemsSection('MAYOR', $mayorItems);
+                $this->printItemsSection('DETAL', $detalItems, $moneda);
+                $this->printItemsSection('MAYOR', $mayorItems, $moneda);
             } else {
-                $this->printItemsSection(null, $productos);
+                $this->printItemsSection(null, $productos, $moneda);
             }
 
             $this->printer->setBold(true);
             $this->printer->setTextSize(2, 2);
-            $this->printer->text(str_pad('TOTAL Bs:', 30).str_pad(number_format($factura->total_bs, 2), 16)."\n");
-            $this->printer->setTextSize(1, 1);
-            $this->printer->text(str_pad('TOTAL USD:', 30).str_pad('$'.number_format($factura->total_usd, 2), 16)."\n");
+            if ($esCredito) {
+                $this->printer->text(str_pad('TOTAL USD:', 30).str_pad('$'.number_format($factura->total_usd, 2), 16)."\n");
+            } else {
+                $this->printer->text(str_pad('TOTAL Bs:', 30).str_pad(number_format($factura->total_bs, 2), 16)."\n");
+                $this->printer->setTextSize(1, 1);
+                $this->printer->text(str_pad('TOTAL USD:', 30).str_pad('$'.number_format($factura->total_usd, 2), 16)."\n");
+            }
             $this->printer->setBold(false);
             $this->printer->feed();
 
@@ -87,22 +101,35 @@ class PrinterService
                 'pago_movil' => 'Pago Móvil',
                 'transferencia' => 'Transferencia',
                 'mixto' => 'Mixto',
+                'credito' => 'Crédito',
             ];
 
-            if ($factura->metodo_pago === 'mixto') {
-                $this->printer->text(str_pad('Pago Mixto', 46)."\n");
-                foreach ($factura->detalle_pago ?? [] as $pago) {
-                    $nombre = $nombresMetodo[$pago['metodo']] ?? $pago['metodo'];
-                    $this->printer->text(str_pad("  {$nombre}:", 30).str_pad('Bs '.number_format($pago['monto'], 2), 16)."\n");
+            if (! $esCredito) {
+                if ($factura->metodo_pago === 'mixto') {
+                    $this->printer->text(str_pad('Pago Mixto', 46)."\n");
+                    foreach ($factura->detalle_pago ?? [] as $pago) {
+                        $nombre = $nombresMetodo[$pago['metodo']] ?? $pago['metodo'];
+                        $this->printer->text(str_pad("  {$nombre}:", 30).str_pad('Bs '.number_format($pago['monto'], 2), 16)."\n");
+                    }
+                } else {
+                    $nombre = $nombresMetodo[$factura->metodo_pago] ?? $factura->metodo_pago;
+                    $this->printer->text(str_pad("Pago: {$nombre}", 46)."\n");
                 }
-            } else {
-                $nombre = $nombresMetodo[$factura->metodo_pago] ?? $factura->metodo_pago;
-                $this->printer->text(str_pad("Pago: {$nombre}", 46)."\n");
+                $this->printer->feed();
             }
-            $this->printer->feed();
 
             if ($factura->estado === 'credito') {
-                $this->printer->text("** CRÉDITO PENDIENTE **\n");
+                $this->printer->setBold(true);
+                if ($factura->estado_credito === 'cancelado') {
+                    $nombreMetodo = $nombresMetodo[$factura->metodo_pago] ?? $factura->metodo_pago;
+                    $this->printer->text("** CRÉDITO COBRADO **\n");
+                    $this->printer->text(str_pad("Pago: {$nombreMetodo}", 46)."\n");
+                    $this->printer->text(str_pad('Bs '.number_format($factura->pago_bs, 2), 46)."\n");
+                    $this->printer->text(str_pad($factura->fecha_pago?->format('d/m/Y H:i') ?? '', 46)."\n");
+                } else {
+                    $this->printer->text("** CRÉDITO PENDIENTE **\n");
+                }
+                $this->printer->setBold(false);
                 $this->printer->feed();
             }
 
@@ -118,7 +145,7 @@ class PrinterService
         }
     }
 
-    protected function printItemsSection(?string $titulo, array $items): void
+    protected function printItemsSection(?string $titulo, array $items, string $moneda = 'Bs'): void
     {
         if ($titulo) {
             $this->printer->setJustification(Printer::JUSTIFY_CENTER);
@@ -156,8 +183,18 @@ class PrinterService
         $this->printer->text(str_repeat('-', 45)."\n");
 
         if ($titulo) {
-            $this->printer->text(str_pad("Subtotal {$titulo}:", 30).str_pad('Bs '.number_format($subtotal, 2), 16)."\n");
+            $this->printer->text(str_pad("Subtotal {$titulo}:", 30).str_pad($moneda.' '.number_format($subtotal, 2), 16)."\n");
         }
+    }
+
+    protected function convertirAUsd(array $items, float $tasa): array
+    {
+        return array_map(function ($item) use ($tasa) {
+            $item['precio_unitario'] = (float) $item['precio_unitario'] / $tasa;
+            $item['total'] = (float) $item['total'] / $tasa;
+
+            return $item;
+        }, $items);
     }
 
     public function printTest()

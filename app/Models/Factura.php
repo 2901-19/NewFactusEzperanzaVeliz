@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Factura extends Model
 {
     use HasFactory;
+
     protected $fillable = [
         'correlativo',
         'cliente_id',
@@ -20,6 +21,8 @@ class Factura extends Model
         'iva_bs',
         'total_bs',
         'total_usd',
+        'pago_bs',
+        'fecha_pago',
         'estado',
         'estado_credito',
         'fecha_venta',
@@ -31,6 +34,7 @@ class Factura extends Model
             'productos' => 'array',
             'detalle_pago' => 'array',
             'fecha_venta' => 'datetime',
+            'fecha_pago' => 'datetime',
         ];
     }
 

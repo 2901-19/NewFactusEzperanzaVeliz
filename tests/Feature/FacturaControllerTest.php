@@ -2,14 +2,15 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
-use App\Models\Cliente;
-use App\Models\Producto;
 use App\Models\Categoria;
-use App\Models\TasaCambio;
-use App\Models\Impuesto;
+use App\Models\Cliente;
+use App\Models\Configuracion;
 use App\Models\Factura;
-use App\Models\ItemFactura;
+use App\Models\Impuesto;
+use App\Models\Producto;
+use App\Models\TasaCambio;
+use App\Models\User;
+use Database\Seeders\PermisoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -18,15 +19,19 @@ class FacturaControllerTest extends TestCase
     use RefreshDatabase;
 
     private User $cajero;
+
     private Cliente $cliente;
+
     private Producto $producto;
+
     private TasaCambio $tasa;
+
     private Impuesto $iva;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\PermisoSeeder::class);
+        $this->seed(PermisoSeeder::class);
         $this->cajero = User::factory()->create(['rol' => 'cajero']);
         $this->cliente = Cliente::factory()->create();
         $categoria = Categoria::factory()->create();
@@ -172,7 +177,7 @@ class FacturaControllerTest extends TestCase
     public function test_store_usa_tasa_de_referencia_configurada()
     {
         TasaCambio::factory()->create(['tipo' => 'dolar', 'monto' => 60.00, 'fecha' => '2026-07-04']);
-        \App\Models\Configuracion::updateOrCreate(['clave' => 'tasa_referencia'], ['valor' => 'dolar']);
+        Configuracion::updateOrCreate(['clave' => 'tasa_referencia'], ['valor' => 'dolar']);
         $this->actingAs($this->cajero);
 
         $response = $this->postJson('/facturas', [
@@ -375,7 +380,7 @@ class FacturaControllerTest extends TestCase
 
         $factura = Factura::first();
 
-        $response = $this->post("/facturas/{$factura->id}/pagar-credito");
+        $response = $this->post("/facturas/{$factura->id}/pagar-credito", ['metodo_pago' => 'efectivo']);
 
         $response->assertRedirect();
         $response->assertSessionHas('success');
@@ -383,7 +388,78 @@ class FacturaControllerTest extends TestCase
         $this->assertDatabaseHas('facturas', [
             'id' => $factura->id,
             'estado_credito' => 'cancelado',
+            'metodo_pago' => 'efectivo',
+            'pago_bs' => round($factura->total_usd * 45.00, 2),
         ]);
+        $factura->refresh();
+        $this->assertNotNull($factura->fecha_pago);
+    }
+
+    public function test_pagar_credito_usa_tasa_referencia_vigente_del_cobro()
+    {
+        $this->actingAs($this->cajero);
+
+        $this->postJson('/facturas', [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'credito',
+            'estado' => 'credito',
+            'items' => [
+                [
+                    'producto_id' => $this->producto->id,
+                    'cantidad' => 5,
+                    'tipo_venta' => 'unitario',
+                ],
+            ],
+        ]);
+
+        $factura = Factura::first();
+        $usdAlVender = round($factura->total_usd, 2);
+
+        TasaCambio::factory()->create([
+            'tipo' => 'bcv',
+            'monto' => 60.00,
+            'fecha' => '2026-08-07',
+        ]);
+
+        $response = $this->post("/facturas/{$factura->id}/pagar-credito", ['metodo_pago' => 'punto']);
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('facturas', [
+            'id' => $factura->id,
+            'estado_credito' => 'cancelado',
+            'metodo_pago' => 'punto',
+            'pago_bs' => round($usdAlVender * 60.00, 2),
+        ]);
+    }
+
+    public function test_pagar_credito_requiere_metodo_pago_simple()
+    {
+        $this->actingAs($this->cajero);
+
+        $this->postJson('/facturas', [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'credito',
+            'estado' => 'credito',
+            'items' => [
+                [
+                    'producto_id' => $this->producto->id,
+                    'cantidad' => 3,
+                    'tipo_venta' => 'unitario',
+                ],
+            ],
+        ]);
+
+        $factura = Factura::first();
+
+        $response = $this->post("/facturas/{$factura->id}/pagar-credito");
+        $response->assertSessionHasErrors('metodo_pago');
+
+        $response = $this->post("/facturas/{$factura->id}/pagar-credito", ['metodo_pago' => 'mixto']);
+        $response->assertSessionHasErrors('metodo_pago');
+
+        $factura->refresh();
+        $this->assertEquals('pendiente', $factura->estado_credito);
+        $this->assertNull($factura->fecha_pago);
     }
 
     public function test_validacion_requiere_items()
@@ -530,7 +606,7 @@ class FacturaControllerTest extends TestCase
         ]);
 
         $factura = Factura::first();
-        $this->post("/facturas/{$factura->id}/pagar-credito");
+        $this->post("/facturas/{$factura->id}/pagar-credito", ['metodo_pago' => 'efectivo']);
         $factura->refresh();
         $this->assertEquals('cancelado', $factura->estado_credito);
 

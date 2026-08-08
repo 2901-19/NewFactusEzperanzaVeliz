@@ -28,6 +28,18 @@
         $subtotalDetal = $detalItems->sum('subtotal');
         $subtotalMayor = $mayorItems->sum('subtotal');
         $hayAmbos = $subtotalDetal > 0 && $subtotalMayor > 0;
+        $esCredito = $factura->estado === 'credito';
+        $tasaCambio = (float) $factura->tasa_cambio;
+        $nombresMetodo = [
+            'efectivo' => 'Efectivo',
+            'punto' => 'Punto de Venta',
+            'biopago' => 'Biopago',
+            'divisas' => 'Divisas',
+            'pago_movil' => 'Pago Móvil',
+            'transferencia' => 'Transferencia',
+            'mixto' => 'Mixto',
+            'credito' => 'Crédito',
+        ];
     @endphp
 
     @if ($hayAmbos)
@@ -36,58 +48,73 @@
         <span class="t-cant">CANT</span>
         <span class="desc">DESC</span>
         <span class="t-precio-u">PREC U</span>
-        <span class="t-precio-usd">USD</span>
+        @if (!$esCredito)<span class="t-precio-usd">USD</span>@endif
         <span class="monto">PREC T</span>
     </div>
     @foreach ($detalItems as $item)
     <div class="row-item ticket-item">
         <span class="t-cant">{{ $item->cantidad }}</span>
         <span class="desc">{{ $item->producto->nombre ?? 'Producto' }}</span>
+        @if ($esCredito)
+        <span class="t-precio-u">$ {{ number_format($item->precio_unitario_bs / $tasaCambio, 2) }}</span>
+        <span class="monto">$ {{ number_format($item->subtotal / $tasaCambio, 2) }}</span>
+        @else
         <span class="t-precio-u">{{ number_format($item->precio_unitario_bs, 2) }}</span>
-        <span class="t-precio-usd">{{ number_format($item->precio_unitario_bs / $factura->tasa_cambio, 2) }}</span>
+        <span class="t-precio-usd">{{ number_format($item->precio_unitario_bs / $tasaCambio, 2) }}</span>
         <span class="monto">{{ number_format($item->subtotal, 2) }}</span>
+        @endif
     </div>
     @endforeach
     <div class="row-item">
         <span>Subtotal Detal:</span>
-        <span>Bs {{ number_format($subtotalDetal, 2) }}</span>
+        <span>{{ $esCredito ? '$ ' . number_format($subtotalDetal / $tasaCambio, 2) : 'Bs ' . number_format($subtotalDetal, 2) }}</span>
     </div>
     <div class="ticket-seccion">MAYOR</div>
     <div class="row-item row-head">
         <span class="t-cant">CANT</span>
         <span class="desc">DESC</span>
         <span class="t-precio-u">PREC U</span>
-        <span class="t-precio-usd">USD</span>
+        @if (!$esCredito)<span class="t-precio-usd">USD</span>@endif
         <span class="monto">PREC T</span>
     </div>
     @foreach ($mayorItems as $item)
     <div class="row-item ticket-item">
         <span class="t-cant">{{ $item->cantidad }}</span>
         <span class="desc">{{ $item->producto->nombre ?? 'Producto' }}</span>
+        @if ($esCredito)
+        <span class="t-precio-u">$ {{ number_format($item->precio_unitario_bs / $tasaCambio, 2) }}</span>
+        <span class="monto">$ {{ number_format($item->subtotal / $tasaCambio, 2) }}</span>
+        @else
         <span class="t-precio-u">{{ number_format($item->precio_unitario_bs, 2) }}</span>
-        <span class="t-precio-usd">{{ number_format($item->precio_unitario_bs / $factura->tasa_cambio, 2) }}</span>
+        <span class="t-precio-usd">{{ number_format($item->precio_unitario_bs / $tasaCambio, 2) }}</span>
         <span class="monto">{{ number_format($item->subtotal, 2) }}</span>
+        @endif
     </div>
     @endforeach
     <div class="row-item">
         <span>Subtotal Mayor:</span>
-        <span>Bs {{ number_format($subtotalMayor, 2) }}</span>
+        <span>{{ $esCredito ? '$ ' . number_format($subtotalMayor / $tasaCambio, 2) : 'Bs ' . number_format($subtotalMayor, 2) }}</span>
     </div>
     @else
     <div class="row-item row-head">
         <span class="t-cant">CANT</span>
         <span class="desc">DESC</span>
         <span class="t-precio-u">PREC U</span>
-        <span class="t-precio-usd">USD</span>
+        @if (!$esCredito)<span class="t-precio-usd">USD</span>@endif
         <span class="monto">PREC T</span>
     </div>
     @foreach ($factura->items as $item)
     <div class="row-item ticket-item">
         <span class="t-cant">{{ $item->cantidad }}</span>
         <span class="desc">{{ $item->producto->nombre ?? 'Producto' }}</span>
+        @if ($esCredito)
+        <span class="t-precio-u">$ {{ number_format($item->precio_unitario_bs / $tasaCambio, 2) }}</span>
+        <span class="monto">$ {{ number_format($item->subtotal / $tasaCambio, 2) }}</span>
+        @else
         <span class="t-precio-u">{{ number_format($item->precio_unitario_bs, 2) }}</span>
-        <span class="t-precio-usd">{{ number_format($item->precio_unitario_bs / $factura->tasa_cambio, 2) }}</span>
+        <span class="t-precio-usd">{{ number_format($item->precio_unitario_bs / $tasaCambio, 2) }}</span>
         <span class="monto">{{ number_format($item->subtotal, 2) }}</span>
+        @endif
     </div>
     @endforeach
     @endif
@@ -95,35 +122,26 @@
     <hr class="sep">
     <div class="totales">
         <div class="row-item">
-            <span>Subtotal Bs:</span>
-            <span>Bs {{ number_format($factura->subtotal_bs, 2) }}</span>
+            <span>{{ $esCredito ? 'Subtotal USD:' : 'Subtotal Bs:' }}</span>
+            <span>{{ $esCredito ? '$ ' . number_format($factura->subtotal_bs / $tasaCambio, 2) : 'Bs ' . number_format($factura->subtotal_bs, 2) }}</span>
         </div>
         <div class="row-item">
             <span>IVA (16%):</span>
-            <span>Bs {{ number_format($factura->iva_bs, 2) }}</span>
+            <span>{{ $esCredito ? '$ ' . number_format($factura->iva_bs / $tasaCambio, 2) : 'Bs ' . number_format($factura->iva_bs, 2) }}</span>
         </div>
         <hr class="sep-double">
         <div class="row-item total-final">
-            <span>TOTAL Bs:</span>
-            <span>Bs {{ number_format($factura->total_bs, 2) }}</span>
+            <span>{{ $esCredito ? 'TOTAL USD:' : 'TOTAL Bs:' }}</span>
+            <span>{{ $esCredito ? '$ ' . number_format($factura->total_usd, 2) : 'Bs ' . number_format($factura->total_bs, 2) }}</span>
         </div>
+        @if (!$esCredito)
         <div class="row-item">
             <span>TOTAL USD:</span>
             <span>$ {{ number_format($factura->total_usd, 2) }}</span>
         </div>
+        @endif
         <hr class="sep">
-        @php
-            $nombresMetodo = [
-                'efectivo' => 'Efectivo',
-                'punto' => 'Punto de Venta',
-                'biopago' => 'Biopago',
-                'divisas' => 'Divisas',
-                'pago_movil' => 'Pago Móvil',
-                'transferencia' => 'Transferencia',
-                'mixto' => 'Mixto',
-            ];
-        @endphp
-        @if ($factura->metodo_pago === 'mixto')
+        @if ($factura->metodo_pago === 'mixto' && !$esCredito)
         <div class="row-item">
             <span>Pago Mixto:</span>
             <span></span>
@@ -134,11 +152,38 @@
             <span>Bs {{ number_format($pago['monto'], 2) }}</span>
         </div>
         @endforeach
-        @else
+        @elseif ($factura->estado === 'credito' && $factura->estado_credito === 'cancelado')
         <div class="row-item">
             <span>Pago:</span>
             <span>{{ $nombresMetodo[$factura->metodo_pago] ?? $factura->metodo_pago }}</span>
         </div>
+        @elseif ($factura->estado !== 'credito')
+        <div class="row-item">
+            <span>Pago:</span>
+            <span>{{ $nombresMetodo[$factura->metodo_pago] ?? $factura->metodo_pago }}</span>
+        </div>
+        @endif
+        @if ($factura->estado === 'credito')
+        <hr class="sep">
+        @if ($factura->estado_credito === 'cancelado')
+        <div class="row-item">
+            <span>Crédito cobrado (US$):</span>
+            <span>$ {{ number_format($factura->total_usd, 2) }}</span>
+        </div>
+        <div class="row-item">
+            <span>Cobrado en Bs:</span>
+            <span>Bs {{ number_format($factura->pago_bs, 2) }}</span>
+        </div>
+        <div class="row-item">
+            <span>Fecha de cobro:</span>
+            <span>{{ $factura->fecha_pago?->format('d/m/Y') ?? '—' }}</span>
+        </div>
+        @else
+        <div class="row-item">
+            <span>Crédito pendiente (US$):</span>
+            <span>$ {{ number_format($factura->total_usd, 2) }}</span>
+        </div>
+        @endif
         @endif
     </div>
     <hr class="sep-double">

@@ -89,7 +89,7 @@
             </div>
 
             <div class="card-footer">
-                <div class="mb-2">
+                <div class="mb-2" x-show="tipoFactura !== 'credito'">
                     <label class="form-label small">Método de Pago</label>
                     <select x-model="metodoPago" class="form-select form-select-sm">
                         <option value="efectivo">Efectivo</option>
@@ -101,7 +101,7 @@
                         <option value="mixto">Mixto</option>
                     </select>
                 </div>
-                <div x-show="metodoPago === 'mixto'" class="mb-2 p-2 border rounded bg-light">
+                <div x-show="metodoPago === 'mixto' && tipoFactura !== 'credito'" class="mb-2 p-2 border rounded bg-light">
                     <div class="small fw-bold mb-2"><i class="bi bi-wallet2"></i> Pago Mixto</div>
                     <div class="row g-2">
                         <div class="col-6">
@@ -133,7 +133,7 @@
                 </div>
                 <div class="mb-2">
                     <label class="form-label small">Tipo de Factura</label>
-                    <select x-model="tipoFactura" class="form-select form-select-sm" @change="clienteId = ''">
+                    <select x-model="tipoFactura" class="form-select form-select-sm" @change="clienteId = ''; if (tipoFactura === 'credito') metodoPago = 'efectivo'">
                         <option value="contado">Contado</option>
                         <option value="credito">Crédito</option>
                     </select>
@@ -216,14 +216,14 @@
                                         <div class="row-item ticket-item">
                                             <span class="t-cant" x-text="item.cantidad"></span>
                                             <span class="desc" x-text="item.nombre"></span>
-                                            <span class="t-precio-u" x-text="getBsPrice(index).toFixed(2)"></span>
-                                            <span class="monto" x-text="getBsPriceTotal(index).toFixed(2)"></span>
+                                            <span class="t-precio-u" x-text="(tipoFactura === 'credito' ? getUsdPrice(index) : getBsPrice(index)).toFixed(2)"></span>
+                                            <span class="monto" x-text="(tipoFactura === 'credito' ? getUsdPriceTotal(index) : getBsPriceTotal(index)).toFixed(2)"></span>
                                         </div>
                                     </template>
                                 </template>
                                 <div class="row-item">
                                     <span>Subtotal Detal:</span>
-                                    <span x-text="'Bs ' + subtotalDetalBs.toFixed(2)"></span>
+                                    <span x-text="(tipoFactura === 'credito' ? subtotalDetalUsd : subtotalDetalBs).toFixed(2)"></span>
                                 </div>
                                 <div class="ticket-seccion">MAYOR</div>
                                 <div class="row-item row-head" x-show="carrito.length > 0">
@@ -237,14 +237,14 @@
                                         <div class="row-item ticket-item">
                                             <span class="t-cant" x-text="item.cantidad"></span>
                                             <span class="desc" x-text="item.nombre"></span>
-                                            <span class="t-precio-u" x-text="getBsPrice(index).toFixed(2)"></span>
-                                            <span class="monto" x-text="getBsPriceTotal(index).toFixed(2)"></span>
+                                            <span class="t-precio-u" x-text="(tipoFactura === 'credito' ? getUsdPrice(index) : getBsPrice(index)).toFixed(2)"></span>
+                                            <span class="monto" x-text="(tipoFactura === 'credito' ? getUsdPriceTotal(index) : getBsPriceTotal(index)).toFixed(2)"></span>
                                         </div>
                                     </template>
                                 </template>
                                 <div class="row-item">
                                     <span>Subtotal Mayor:</span>
-                                    <span x-text="'Bs ' + subtotalMayorBs.toFixed(2)"></span>
+                                    <span x-text="(tipoFactura === 'credito' ? subtotalMayorUsd : subtotalMayorBs).toFixed(2)"></span>
                                 </div>
                             </div>
                         </template>
@@ -260,8 +260,8 @@
                                     <div class="row-item ticket-item">
                                         <span class="t-cant" x-text="item.cantidad"></span>
                                         <span class="desc" x-text="item.nombre"></span>
-                                        <span class="t-precio-u" x-text="getBsPrice(index).toFixed(2)"></span>
-                                        <span class="monto" x-text="getBsPriceTotal(index).toFixed(2)"></span>
+                                        <span class="t-precio-u" x-text="(tipoFactura === 'credito' ? getUsdPrice(index) : getBsPrice(index)).toFixed(2)"></span>
+                                        <span class="monto" x-text="(tipoFactura === 'credito' ? getUsdPriceTotal(index) : getBsPriceTotal(index)).toFixed(2)"></span>
                                     </div>
                                 </template>
                             </div>
@@ -275,28 +275,27 @@
 
                         <div class="totales">
                             <div class="row-item">
-                                <span>Subtotal Bs:</span>
-                                <span x-text="subtotalBs.toFixed(2)"></span>
+                                <span>Subtotal <span x-text="tipoFactura === 'credito' ? 'USD:' : 'Bs:'"></span></span>
+                                <span x-text="(tipoFactura === 'credito' ? subtotalBs / tasaRef : subtotalBs).toFixed(2)"></span>
                             </div>
                             <div class="row-item">
                                 <span>IVA ({{ $ivaPorcentaje }}%):</span>
-                                <span x-text="ivaBs.toFixed(2)"></span>
+                                <span x-text="(tipoFactura === 'credito' ? ivaUsd : ivaBs).toFixed(2)"></span>
                             </div>
                             <hr class="sep-double">
                             <div class="row-item total-final">
-                                <span>TOTAL Bs:</span>
-                                <span x-text="totalBs.toFixed(2)"></span>
+                                <span>TOTAL <span x-text="tipoFactura === 'credito' ? 'USD:' : 'Bs:'"></span></span>
+                                <span x-text="(tipoFactura === 'credito' ? totalUsdRef : totalBs).toFixed(2)"></span>
                             </div>
-                            <div class="row-item">
+                            <div class="row-item" x-show="tipoFactura !== 'credito'">
                                 <span>TOTAL USD:</span>
                                 <span>$ <span x-text="totalUsdRef.toFixed(2)"></span></span>
                             </div>
-                            <hr class="sep">
-                            <div class="row-item" x-show="metodoPago !== 'mixto'">
+                            <div class="row-item" x-show="tipoFactura !== 'credito' && metodoPago !== 'mixto'">
                                 <span>Pago:</span>
                                 <span x-text="nombreMetodo(metodoPago)"></span>
                             </div>
-                            <template x-if="metodoPago === 'mixto'">
+                            <template x-if="tipoFactura !== 'credito' && metodoPago === 'mixto'">
                                 <div>
                                     <div class="row-item">
                                         <span>Pago Mixto:</span>
@@ -524,6 +523,14 @@ document.addEventListener('alpine:init', () => {
             }, 0);
         },
 
+        get subtotalDetalUsd() {
+            return this.subtotalDetalBs / this.tasaRef;
+        },
+
+        get subtotalMayorUsd() {
+            return this.subtotalMayorBs / this.tasaRef;
+        },
+
         get hayAmbosTipos() {
             return this.carrito.some(i => i.tipoVenta === 'unitario')
                 && this.carrito.some(i => i.tipoVenta === 'mayor');
@@ -558,6 +565,22 @@ document.addEventListener('alpine:init', () => {
                 ? parseFloat(this.tasas[i.fuente_tasa].monto)
                 : 1;
             return i.precioUnitario * i.cantidad * tasa;
+        },
+
+        getUsdPrice(index) {
+            return this.getBsPrice(index) / this.tasaRef;
+        },
+
+        getUsdPriceTotal(index) {
+            return this.getBsPriceTotal(index) / this.tasaRef;
+        },
+
+        get subtotalUsd() {
+            return this.subtotalBs / this.tasaRef;
+        },
+
+        get ivaUsd() {
+            return this.ivaBs / this.tasaRef;
         },
 
         abrirModalCliente() {
