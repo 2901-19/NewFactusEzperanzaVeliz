@@ -59,33 +59,29 @@
     <div class="col-lg-6">
         <div class="card h-100">
             <div class="card-header">
-                <i class="bi bi-layers"></i> Detal vs Mayor
+                <i class="bi bi-layers"></i> Ventas por presentación
                 <div class="small text-muted fw-normal">
-                    Detal: venta por unidad. Mayor: venta por caja o paquete. Agrupado por {{ $agrupadoPor }} del período
+                    Ingresos según la presentación vendida (Unidad, Mayor, bultos...). Agrupado por {{ $agrupadoPor }} del período
                 </div>
             </div>
             <div class="card-body">
                 @if (count($semanaLabels) > 0)
-                <div class="d-flex gap-2 mb-2">
-                    <span class="badge rounded-pill text-white" style="background-color:#198754">Detal {{ $detalResumen['pct'] }}%</span>
-                    <span class="badge rounded-pill text-white" style="background-color:#fd7e14">Mayor {{ $mayorResumen['pct'] }}%</span>
+                <div class="d-flex flex-wrap gap-2 mb-2">
+                    @foreach ($resumenes as $nombre => $res)
+                    <span class="badge rounded-pill text-white" style="background-color:{{ $colores[$nombre] }}">{{ $nombre }} {{ $res['pct'] }}%</span>
+                    @endforeach
                 </div>
-                <canvas id="chartDetalMayor" height="120"></canvas>
+                <canvas id="chartPresentaciones" height="120"></canvas>
                 <div class="row g-2 mt-2 text-center">
-                    <div class="col-6">
-                        <div class="border rounded p-2 bg-success-subtle">
-                            <div class="small text-muted">Detal</div>
-                            <div class="fw-bold">Bs {{ number_format($detalResumen['bs'], 2) }}</div>
-                            <div class="small">{{ number_format($detalResumen['unidades']) }} unidades</div>
+                    @foreach ($resumenes as $nombre => $res)
+                    <div class="col-6 col-md-4">
+                        <div class="border rounded p-2" style="background-color:{{ $colores[$nombre] }}18; border-color:{{ $colores[$nombre] }}">
+                            <div class="small text-muted">{{ $nombre }}</div>
+                            <div class="fw-bold">Bs {{ number_format($res['bs'], 2) }}</div>
+                            <div class="small">{{ number_format($res['unidades']) }} unidades</div>
                         </div>
                     </div>
-                    <div class="col-6">
-                        <div class="border rounded p-2 bg-warning-subtle">
-                            <div class="small text-muted">Mayor</div>
-                            <div class="fw-bold">Bs {{ number_format($mayorResumen['bs'], 2) }}</div>
-                            <div class="small">{{ number_format($mayorResumen['unidades']) }} unidades</div>
-                        </div>
-                    </div>
+                    @endforeach
                 </div>
                 @else
                 <div class="text-center text-muted py-4">Sin ventas en el período.</div>
@@ -174,14 +170,21 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     @if (count($semanaLabels) > 0)
-    new Chart(document.getElementById('chartDetalMayor'), {
+    const series = @json($seriesPresentaciones);
+    const colores = @json($colores);
+    const unidadesSeries = @json($unidadesSeries);
+    const nombresPresentaciones = Object.keys(series);
+
+    new Chart(document.getElementById('chartPresentaciones'), {
         type: 'bar',
         data: {
             labels: @json($semanaLabels),
-            datasets: [
-                { label: 'Detal', data: @json($detalSeries), backgroundColor: '#198754', stack: 'ventas' },
-                { label: 'Mayor', data: @json($mayorSeries), backgroundColor: '#fd7e14', stack: 'ventas' },
-            ],
+            datasets: nombresPresentaciones.map((nombre) => ({
+                label: nombre,
+                data: series[nombre],
+                backgroundColor: colores[nombre] || '#6f42c1',
+                stack: 'ventas',
+            })),
         },
         options: {
             scales: {
@@ -192,7 +195,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 tooltip: {
                     callbacks: {
                         label: (ctx) => {
-                            const unidades = ctx.datasetIndex === 0 ? @json($detalUnidades) : @json($mayorUnidades);
+                            const unidades = unidadesSeries[ctx.dataset.label] || [];
                             return ' ' + ctx.dataset.label + ': Bs ' + ctx.parsed.y.toLocaleString('es-VE') + ' · ' + (unidades[ctx.dataIndex] ?? 0) + ' unidades';
                         },
                     },

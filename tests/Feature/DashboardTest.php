@@ -2,12 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
+use App\Models\Categoria;
 use App\Models\Cliente;
 use App\Models\Producto;
-use App\Models\Categoria;
-use App\Models\Factura;
 use App\Models\TasaCambio;
+use App\Models\User;
+use Database\Seeders\PermisoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -16,12 +16,13 @@ class DashboardTest extends TestCase
     use RefreshDatabase;
 
     private User $user;
+
     private TasaCambio $tasa;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\PermisoSeeder::class);
+        $this->seed(PermisoSeeder::class);
         $this->user = User::factory()->create(['rol' => 'admin']);
         $this->tasa = TasaCambio::factory()->create([
             'tipo' => 'promedio',

@@ -7,6 +7,7 @@ use App\Models\Configuracion;
 use App\Models\Factura;
 use App\Models\ItemFactura;
 use App\Models\Producto;
+use App\Models\ProductoPresentacion;
 use App\Models\TasaCambio;
 use App\Services\CatalogoService;
 use App\Services\ImpuestoService;
@@ -43,7 +44,7 @@ class FacturaController extends Controller
             foreach ($factura->items as $item) {
                 $producto = Producto::withTrashed()->find($item->producto_id);
                 if ($producto) {
-                    StockService::agregar($producto, $item->cantidad);
+                    StockService::agregar($producto, (float) $item->cantidad * (float) ($item->factor_conversion ?: 1));
                 }
             }
         });
@@ -53,7 +54,21 @@ class FacturaController extends Controller
 
     public function pos()
     {
-        $productos = Producto::where('estado', 'disponible')->whereNull('deleted_at')->get();
+        $productos = Producto::where('estado', 'disponible')->whereNull('deleted_at')->with('presentaciones')->get();
+
+        $productos->each(function ($producto) {
+            $producto->setAttribute('presentaciones', $producto->presentaciones
+                ->filter(fn ($pr) => $pr->activa)
+                ->values()
+                ->map(fn ($pr) => [
+                    'id' => $pr->id,
+                    'nombre' => $pr->nombre,
+                    'factor_conversion' => (float) $pr->factor_conversion,
+                    'margen' => (float) $pr->margen,
+                    'precio_usd' => (float) $pr->precio_usd,
+                ]));
+        });
+
         $clientes = Cliente::all();
         $tasas = TasaCambio::ultimasPorTipo();
 
@@ -68,8 +83,8 @@ class FacturaController extends Controller
         $request->validate([
             'items' => 'required|array|min:1',
             'items.*.producto_id' => 'required|exists:productos,id',
-            'items.*.cantidad' => 'required|integer|min:1',
-            'items.*.tipo_venta' => 'required|in:unitario,mayor',
+            'items.*.presentacion_id' => 'required|exists:producto_presentaciones,id',
+            'items.*.cantidad' => 'required|numeric|min:0.001',
             'metodo_pago' => 'required|string',
             'pagos' => 'required_if:metodo_pago,mixto|array|size:2',
             'pagos.*.metodo' => ['required', Rule::in(CatalogoService::metodosValidos()), 'distinct'],
@@ -97,22 +112,33 @@ class FacturaController extends Controller
                 ->get()
                 ->keyBy('id');
 
+            $presentaciones = ProductoPresentacion::whereIn('id', collect($request->items)->pluck('presentacion_id'))
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+
             foreach ($request->items as $item) {
                 $producto = $productos[$item['producto_id']] ?? null;
                 if (! $producto) {
                     throw new \Exception('Uno de los productos ya no está disponible.');
                 }
-                $cantidad = (int) $item['cantidad'];
 
-                if ($cantidad > $producto->stock_total) {
-                    throw new \Exception("Stock insuficiente para {$producto->nombre}. Disponible: {$producto->stock_total} uds.");
+                $presentacion = $presentaciones[$item['presentacion_id']] ?? null;
+                if (! $presentacion || $presentacion->producto_id !== $producto->id || ! $presentacion->activa) {
+                    throw new \Exception("La presentación seleccionada para {$producto->nombre} ya no está disponible.");
                 }
 
-                $esMayor = ($item['tipo_venta'] ?? 'unitario') === 'mayor';
-                $precioUsd = $esMayor ? $producto->precio_mayor_usd : $producto->precio_unitario_usd;
-                $tipoVenta = $esMayor ? 'mayor' : 'unitario';
+                $cantidad = (float) $item['cantidad'];
+                $factor = (float) $presentacion->factor_conversion;
+                $cantidadBase = round($cantidad * $factor, 4);
 
-                if ((float) $precioUsd <= 0) {
+                if ($producto->controla_inventario && $cantidadBase > (float) $producto->stock_actual) {
+                    throw new \Exception("Stock insuficiente para {$producto->nombre}. Disponible: {$producto->stock_actual} {$producto->unidad_medida}.");
+                }
+
+                $precioUsd = (float) $presentacion->precio_usd;
+
+                if ($precioUsd <= 0) {
                     throw new \Exception("El producto {$producto->nombre} no tiene precio configurado.");
                 }
 
@@ -120,12 +146,14 @@ class FacturaController extends Controller
                 $precioBs = $precioUsd * $tasa;
                 $subtotalItemBs = round($precioBs * $cantidad, 2);
 
-                StockService::descontar($producto, $cantidad);
+                StockService::descontar($producto, $cantidadBase);
 
                 $itemsData[] = [
                     'producto_id' => $producto->id,
+                    'presentacion_id' => $presentacion->id,
+                    'presentacion_nombre' => $presentacion->nombre,
+                    'factor_conversion' => $factor,
                     'cantidad' => $cantidad,
-                    'tipo_venta' => $tipoVenta,
                     'precio_unitario_usd' => $precioUsd,
                     'precio_unitario_bs' => round($precioBs, 2),
                     'subtotal' => $subtotalItemBs,

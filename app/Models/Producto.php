@@ -16,23 +16,14 @@ class Producto extends Model
         'categoria_id',
         'descripcion',
         'imagen',
-        'unidades_por_paquete',
-        'stock_paquetes',
-        'stock_unidades',
         'costo_usd',
-        'margen_detal',
-        'margen_mayor',
-        'precio_unitario_usd',
-        'precio_mayor_usd',
+        'stock_actual',
+        'controla_inventario',
+        'unidad_medida',
         'tiene_iva',
         'fuente_tasa',
         'estado',
     ];
-
-    public function getStockTotalAttribute(): int
-    {
-        return ($this->stock_paquetes * $this->unidades_por_paquete) + $this->stock_unidades;
-    }
 
     public function getCostoBsAttribute(): float
     {
@@ -49,10 +40,25 @@ class Producto extends Model
         return $this->imagen ? asset('storage/'.$this->imagen) : null;
     }
 
+    public function getPrecioBaseAttribute(): float
+    {
+        $base = $this->presentaciones()->where('activa', true)->where('factor_conversion', 1)->first();
+
+        return $base ? (float) $base->precio_usd : 0;
+    }
+
+    public function getPrecioBaseBsAttribute(): float
+    {
+        return round($this->precio_base * $this->obtenerTasa(), 2);
+    }
+
     protected function casts(): array
     {
         return [
             'tiene_iva' => 'boolean',
+            'controla_inventario' => 'boolean',
+            'costo_usd' => 'float',
+            'stock_actual' => 'float',
         ];
     }
 
@@ -64,5 +70,15 @@ class Producto extends Model
     public function categoria()
     {
         return $this->belongsTo(Categoria::class);
+    }
+
+    public function presentaciones()
+    {
+        return $this->hasMany(ProductoPresentacion::class);
+    }
+
+    public function presentacionesActivas()
+    {
+        return $this->presentaciones()->where('activa', true);
     }
 }

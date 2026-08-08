@@ -3,7 +3,7 @@
 namespace Tests\Unit;
 
 use App\Models\Producto;
-use App\Models\Categoria;
+use App\Models\ProductoPresentacion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -11,48 +11,60 @@ class ProductoTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_calcula_stock_total_correctamente()
+    public function test_stock_actual_es_decimal()
     {
-        $producto = Producto::factory()->create([
-            'unidades_por_paquete' => 12,
-            'stock_paquetes' => 3,
-            'stock_unidades' => 5,
-        ]);
+        $producto = Producto::factory()->create(['stock_actual' => 12.5]);
 
-        $this->assertEquals(41, $producto->stock_total);
+        $this->assertEquals(12.5, (float) $producto->stock_actual);
     }
 
-    public function test_stock_total_con_cero_paquetes()
+    public function test_stock_actual_por_defecto_cero()
     {
-        $producto = Producto::factory()->create([
-            'unidades_por_paquete' => 12,
-            'stock_paquetes' => 0,
-            'stock_unidades' => 7,
-        ]);
+        $producto = Producto::factory()->create(['stock_actual' => 0]);
 
-        $this->assertEquals(7, $producto->stock_total);
+        $this->assertEquals(0, (float) $producto->stock_actual);
     }
 
-    public function test_stock_total_con_cero_unidades()
+    public function test_precio_base_usa_presentacion_con_factor_1()
     {
-        $producto = Producto::factory()->create([
-            'unidades_por_paquete' => 6,
-            'stock_paquetes' => 4,
-            'stock_unidades' => 0,
+        $producto = Producto::factory()->create();
+        ProductoPresentacion::factory()->create([
+            'producto_id' => $producto->id,
+            'nombre' => 'Mayor',
+            'factor_conversion' => 12,
+            'precio_usd' => 96.00,
+            'activa' => true,
+        ]);
+        ProductoPresentacion::factory()->create([
+            'producto_id' => $producto->id,
+            'nombre' => 'Unidad',
+            'factor_conversion' => 1,
+            'precio_usd' => 10.00,
+            'activa' => true,
         ]);
 
-        $this->assertEquals(24, $producto->stock_total);
+        $this->assertEquals(10.00, (float) $producto->precio_base);
     }
 
-    public function test_stock_total_cero()
+    public function test_precio_base_ignora_presentaciones_inactivas()
     {
-        $producto = Producto::factory()->create([
-            'unidades_por_paquete' => 10,
-            'stock_paquetes' => 0,
-            'stock_unidades' => 0,
+        $producto = Producto::factory()->create();
+        ProductoPresentacion::factory()->create([
+            'producto_id' => $producto->id,
+            'nombre' => 'Unidad',
+            'factor_conversion' => 1,
+            'precio_usd' => 10.00,
+            'activa' => false,
         ]);
 
-        $this->assertEquals(0, $producto->stock_total);
+        $this->assertEquals(0, (float) $producto->precio_base);
+    }
+
+    public function test_precio_base_sin_presentaciones_es_cero()
+    {
+        $producto = Producto::factory()->create();
+
+        $this->assertEquals(0, (float) $producto->precio_base);
     }
 
     public function test_soft_delete_funciona()

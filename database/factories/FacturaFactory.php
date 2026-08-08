@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Models\Factura;
 use App\Models\Cliente;
+use App\Models\Factura;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -32,7 +32,7 @@ class FacturaFactory extends Factory
 
     public function credito(): static
     {
-        return $this->state(fn(array $attrs) => [
+        return $this->state(fn (array $attrs) => [
             'estado' => 'credito',
             'estado_credito' => 'pendiente',
         ]);
@@ -40,7 +40,7 @@ class FacturaFactory extends Factory
 
     public function anulada(): static
     {
-        return $this->state(fn(array $attrs) => [
+        return $this->state(fn (array $attrs) => [
             'estado' => 'anulada',
             'estado_credito' => null,
         ]);

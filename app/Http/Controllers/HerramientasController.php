@@ -38,15 +38,18 @@ class HerramientasController extends Controller
         $data = ['exportado_en' => now()->toDateTimeString()];
 
         if (in_array('precios', $tipos)) {
-            $data['precios'] = Producto::all()->map(fn ($p) => [
+            $data['precios'] = Producto::with('presentaciones')->get()->map(fn ($p) => [
                 'nombre' => $p->nombre,
                 'costo_usd' => $p->costo_usd,
-                'margen_detal' => $p->margen_detal,
-                'margen_mayor' => $p->margen_mayor,
-                'precio_unitario_usd' => $p->precio_unitario_usd,
-                'precio_mayor_usd' => $p->precio_mayor_usd,
                 'tiene_iva' => $p->tiene_iva,
                 'fuente_tasa' => $p->fuente_tasa,
+                'presentaciones' => $p->presentaciones->map(fn ($pr) => [
+                    'nombre' => $pr->nombre,
+                    'factor_conversion' => $pr->factor_conversion,
+                    'margen' => $pr->margen,
+                    'precio_usd' => $pr->precio_usd,
+                    'activa' => $pr->activa,
+                ])->values(),
             ]);
         }
 
@@ -56,7 +59,9 @@ class HerramientasController extends Controller
                 'categoria_id' => $p->categoria_id,
                 'descripcion' => $p->descripcion,
                 'imagen' => $p->imagen,
-                'unidades_por_paquete' => $p->unidades_por_paquete,
+                'controla_inventario' => $p->controla_inventario,
+                'unidad_medida' => $p->unidad_medida,
+                'stock_actual' => $p->stock_actual,
                 'estado' => $p->estado,
             ]);
         }
@@ -126,45 +131,51 @@ class HerramientasController extends Controller
                     case 'precios':
                         foreach ($data['precios'] as $item) {
                             $producto = Producto::where('nombre', $item['nombre'])->first();
-                            $margenDetal = $item['margen_detal'] ?? $producto->margen_detal ?? 0;
-                            $margenMayor = $item['margen_mayor'] ?? $producto->margen_mayor ?? 0;
-                            $costoUsd = $item['costo_usd'] ?? null;
-                            if ($costoUsd === null) {
-                                $pu = $item['precio_unitario_usd'] ?? $producto->precio_unitario_usd ?? 0;
-                                $costoUsd = $margenDetal > 0 ? round($pu / (1 + $margenDetal / 100), 2) : $pu;
-                            }
-                            $precios = PrecioService::preciosDesdeMargenes($costoUsd, $margenDetal, $margenMayor);
-                            $precioUnitario = $precios['precio_unitario_usd'];
-                            $precioMayor = $precios['precio_mayor_usd'];
+                            $costoUsd = (float) ($item['costo_usd'] ?? $producto->costo_usd ?? 0);
 
-                            $estadoImportado = ($precioUnitario <= 0 && $precioMayor <= 0) ? 'no_disponible' : 'disponible';
+                            $presentaciones = $item['presentaciones'] ?? [];
+                            if (empty($presentaciones)) {
+                                // Formato antiguo: margen_detal se aplica a la presentación Unidad
+                                $margenDetal = $item['margen_detal'] ?? null;
+                                if ($margenDetal === null) {
+                                    $pu = $item['precio_unitario_usd'] ?? null;
+                                    $margenDetal = ($pu !== null && $costoUsd > 0) ? round((($pu / $costoUsd) - 1) * 100, 2) : 0;
+                                }
+                                $presentaciones[] = ['nombre' => 'Unidad', 'factor_conversion' => 1, 'margen' => $margenDetal, 'activa' => true];
+                            }
+
+                            $datosPresentaciones = collect($presentaciones)->map(fn ($pr) => [
+                                'nombre' => $pr['nombre'] ?? 'Unidad',
+                                'factor_conversion' => (float) ($pr['factor_conversion'] ?? 1),
+                                'margen' => (float) ($pr['margen'] ?? 0),
+                                'precio_usd' => PrecioService::precioPresentacion(
+                                    $costoUsd,
+                                    (float) ($pr['margen'] ?? 0),
+                                    (float) ($pr['factor_conversion'] ?? 1)
+                                ),
+                                'activa' => (bool) ($pr['activa'] ?? true),
+                            ])->values()->all();
+
+                            $estadoImportado = collect($datosPresentaciones)->contains(fn ($pr) => $pr['precio_usd'] > 0) ? 'disponible' : 'no_disponible';
 
                             if ($producto) {
                                 $producto->update([
                                     'costo_usd' => $costoUsd,
-                                    'margen_detal' => $margenDetal,
-                                    'margen_mayor' => $margenMayor,
-                                    'precio_unitario_usd' => $precioUnitario,
-                                    'precio_mayor_usd' => $precioMayor,
                                     'tiene_iva' => $item['tiene_iva'] ?? $producto->tiene_iva,
                                     'fuente_tasa' => $item['fuente_tasa'] ?? $producto->fuente_tasa,
                                     'estado' => $estadoImportado,
                                 ]);
+                                $producto->presentaciones()->delete();
+                                $producto->presentaciones()->createMany($datosPresentaciones);
                             } else {
-                                Producto::create([
+                                $producto = Producto::create([
                                     'nombre' => $item['nombre'],
                                     'costo_usd' => $costoUsd,
-                                    'margen_detal' => $margenDetal,
-                                    'margen_mayor' => $margenMayor,
-                                    'precio_unitario_usd' => $precioUnitario,
-                                    'precio_mayor_usd' => $precioMayor,
                                     'tiene_iva' => $item['tiene_iva'] ?? true,
                                     'fuente_tasa' => $item['fuente_tasa'] ?? 'promedio',
-                                    'stock_paquetes' => 0,
-                                    'stock_unidades' => 0,
-                                    'unidades_por_paquete' => 1,
                                     'estado' => $estadoImportado,
                                 ]);
+                                $producto->presentaciones()->createMany($datosPresentaciones);
                             }
                             $contadores['precios']++;
                         }
@@ -179,15 +190,11 @@ class HerramientasController extends Controller
                                     'categoria_id' => $item['categoria_id'] ?? null,
                                     'descripcion' => $item['descripcion'] ?? '',
                                     'imagen' => $item['imagen'] ?? null,
-                                    'unidades_por_paquete' => max(1, (int) ($item['unidades_por_paquete'] ?? 1)),
+                                    'controla_inventario' => (bool) ($item['controla_inventario'] ?? true),
+                                    'unidad_medida' => $item['unidad_medida'] ?? 'unidad',
+                                    'stock_actual' => (float) ($item['stock_actual'] ?? 0),
                                     'estado' => 'no_disponible',
-                                    'stock_paquetes' => 0,
-                                    'stock_unidades' => 0,
                                     'costo_usd' => 0,
-                                    'margen_detal' => 0,
-                                    'margen_mayor' => 0,
-                                    'precio_unitario_usd' => 0,
-                                    'precio_mayor_usd' => 0,
                                     'tiene_iva' => true,
                                     'fuente_tasa' => 'promedio',
                                 ]);
@@ -378,11 +385,15 @@ class HerramientasController extends Controller
     {
         $factura = Factura::with('cliente', 'items.producto')->findOrFail($factura);
         $items = $factura->items->map(function ($item) {
+            $nombre = $item->producto->nombre ?? 'Producto';
+            if ($item->presentacion_nombre) {
+                $nombre .= ' ('.$item->presentacion_nombre.')';
+            }
+
             return [
-                'nombre' => $item->producto->nombre ?? 'Producto',
+                'nombre' => $nombre,
                 'precio_unitario' => $item->precio_unitario_bs,
                 'cantidad' => $item->cantidad,
-                'tipo_venta' => $item->tipo_venta,
                 'total' => $item->subtotal,
             ];
         })->toArray();
@@ -410,6 +421,7 @@ class HerramientasController extends Controller
     {
         $productos = Producto::whereNull('deleted_at')
             ->where('estado', 'disponible')
+            ->with('presentaciones')
             ->orderBy('nombre')
             ->get();
 
@@ -419,14 +431,16 @@ class HerramientasController extends Controller
             $data = $productos->map(fn ($p) => [
                 'nombre' => $p->nombre,
                 'costo_usd' => $p->costo_usd,
-                'margen_detal' => $p->margen_detal,
-                'margen_mayor' => $p->margen_mayor,
-                'precio_unitario_usd' => $p->precio_unitario_usd,
-                'precio_mayor_usd' => $p->precio_mayor_usd,
                 'tiene_iva' => $p->tiene_iva,
                 'fuente_tasa' => $p->fuente_tasa,
-                'precio_unitario_bs' => round($p->precio_unitario_usd * ($tasas[$p->fuente_tasa] ?? 1), 2),
-                'precio_mayor_bs' => round($p->precio_mayor_usd * ($tasas[$p->fuente_tasa] ?? 1), 2),
+                'presentaciones' => $p->presentaciones->map(fn ($pr) => [
+                    'nombre' => $pr->nombre,
+                    'factor_conversion' => $pr->factor_conversion,
+                    'margen' => $pr->margen,
+                    'precio_usd' => $pr->precio_usd,
+                    'precio_bs' => round($pr->precio_usd * ($tasas[$p->fuente_tasa] ?? 1), 2),
+                    'activa' => $pr->activa,
+                ])->values(),
             ]);
 
             return response()->json($data);
@@ -439,6 +453,7 @@ class HerramientasController extends Controller
     {
         $productos = Producto::whereNull('deleted_at')
             ->where('estado', 'disponible')
+            ->with('presentaciones')
             ->orderBy('nombre')
             ->get();
 

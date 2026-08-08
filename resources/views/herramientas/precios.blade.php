@@ -17,24 +17,27 @@
         <thead class="table-dark">
             <tr>
                 <th class="text-start">Producto</th>
-                <th>Precio Unitario</th>
-                <th>Precio Mayor</th>
+                <th>Presentación</th>
+                <th>Precio Bs</th>
+                <th>Precio USD</th>
                 <th>IVA</th>
             </tr>
         </thead>
         <tbody>
             @foreach ($productos as $p)
+            @foreach ($p->presentaciones->where('activa', true) as $pr)
             @php
                 $tasaValor = $tasas[$p->fuente_tasa] ?? 1;
-                $puBs = $p->precio_unitario_usd * $tasaValor;
-                $pmBs = $p->precio_mayor_usd * $tasaValor;
+                $precioBs = $pr->precio_usd * $tasaValor;
             @endphp
             <tr>
                 <td class="text-start">{{ $p->nombre }}</td>
-                <td>Bs {{ number_format($puBs, 2) }} <small class="text-muted">(${{ number_format($p->precio_unitario_usd, 2) }})</small></td>
-                <td>Bs {{ number_format($pmBs, 2) }} <small class="text-muted">(${{ number_format($p->precio_mayor_usd, 2) }})</small></td>
+                <td>{{ $pr->nombre }}</td>
+                <td>Bs {{ number_format($precioBs, 2) }}</td>
+                <td>${{ number_format($pr->precio_usd, 2) }}</td>
                 <td>{{ $p->tiene_iva ? 'Sí' : 'No' }}</td>
             </tr>
+            @endforeach
             @endforeach
         </tbody>
     </table>

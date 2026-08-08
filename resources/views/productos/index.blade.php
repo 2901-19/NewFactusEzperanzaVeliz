@@ -26,20 +26,15 @@
                 <th class="text-start">Nombre</th>
                 <th>Ref.</th>
                 <th>Categoría</th>
-                <th>Existencia Total</th>
-                <th>Precio Unitario</th>
-                <th>Precio Mayor</th>
+                <th>Existencia</th>
+                <th>Precios (presentaciones)</th>
                 <th>Estado</th>
                 <th>Acciones</th>
             </tr>
         </thead>
         <tbody>
             @foreach ($productos as $p)
-            @php
-                $tasaValor = $tasas[$p->fuente_tasa] ?? 1;
-                $puBs = $p->precio_unitario_usd * $tasaValor;
-                $pmBs = $p->precio_mayor_usd * $tasaValor;
-            @endphp
+            @php $tasaValor = $tasas[$p->fuente_tasa] ?? 1; @endphp
             <tr class="{{ $p->trashed() ? 'table-secondary text-muted' : '' }}">
                 <td class="text-start">{{ $p->nombre }}</td>
                 <td>
@@ -50,9 +45,26 @@
                     @endif
                 </td>
                 <td>{{ $p->categoria->nombre ?? '-' }}</td>
-                <td>{{ $p->stock_total }} uds</td>
-                <td>Bs {{ number_format($puBs, 2) }} <small class="text-muted">(${{ number_format($p->precio_unitario_usd, 2) }})</small></td>
-                <td>Bs {{ number_format($pmBs, 2) }} <small class="text-muted">(${{ number_format($p->precio_mayor_usd, 2) }})</small></td>
+                <td>
+                    @if ($p->controla_inventario)
+                        {{ number_format($p->stock_actual, 2, ',', '.') }} {{ $p->unidad_medida ?? 'unidad' }}
+                    @else
+                        <span class="badge bg-secondary">Sin inventario</span>
+                    @endif
+                </td>
+                <td>
+                    @forelse ($p->presentaciones as $pres)
+                        @if ($pres->activa)
+                        <div class="small text-nowrap">
+                            {{ $pres->nombre }}:
+                            <span class="fw-bold">Bs {{ number_format($pres->precio_usd * $tasaValor, 2) }}</span>
+                            <small class="text-muted">(${{ number_format($pres->precio_usd, 2) }})</small>
+                        </div>
+                        @endif
+                    @empty
+                        <span class="text-muted">Sin precios</span>
+                    @endforelse
+                </td>
                 <td>
                     @if ($p->trashed())
                         <span class="badge bg-secondary">Inactivo</span>

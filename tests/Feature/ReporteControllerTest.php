@@ -2,14 +2,16 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
-use App\Models\Cliente;
-use App\Models\Producto;
 use App\Models\Categoria;
-use App\Models\TasaCambio;
-use App\Models\Impuesto;
+use App\Models\Cliente;
 use App\Models\Factura;
+use App\Models\Impuesto;
 use App\Models\ItemFactura;
+use App\Models\Producto;
+use App\Models\ProductoPresentacion;
+use App\Models\TasaCambio;
+use App\Models\User;
+use Database\Seeders\PermisoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -18,30 +20,48 @@ class ReporteControllerTest extends TestCase
     use RefreshDatabase;
 
     private User $cajero;
+
     private Cliente $cliente;
+
     private Producto $producto;
+
+    private ProductoPresentacion $presentacionUnidad;
+
+    private ProductoPresentacion $presentacionMayor;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\PermisoSeeder::class);
+        $this->seed(PermisoSeeder::class);
         $this->cajero = User::factory()->create(['rol' => 'admin']);
         $this->cliente = Cliente::factory()->create();
         $categoria = Categoria::factory()->create();
         $this->producto = Producto::factory()->create([
             'categoria_id' => $categoria->id,
             'nombre' => 'Producto Test',
-            'unidades_por_paquete' => 12,
-            'stock_paquetes' => 10,
-            'stock_unidades' => 5,
-            'precio_unitario_usd' => 10.00,
-            'precio_mayor_usd' => 8.00,
             'costo_usd' => 5.00,
-            'margen_detal' => 0,
-            'margen_mayor' => 0,
+            'stock_actual' => 125,
+            'controla_inventario' => true,
+            'unidad_medida' => 'unidad',
             'tiene_iva' => true,
             'fuente_tasa' => 'promedio',
             'estado' => 'disponible',
+        ]);
+        $this->presentacionUnidad = ProductoPresentacion::factory()->create([
+            'producto_id' => $this->producto->id,
+            'nombre' => 'Unidad',
+            'factor_conversion' => 1,
+            'margen' => 0,
+            'precio_usd' => 10.00,
+            'activa' => true,
+        ]);
+        $this->presentacionMayor = ProductoPresentacion::factory()->create([
+            'producto_id' => $this->producto->id,
+            'nombre' => 'Mayor',
+            'factor_conversion' => 12,
+            'margen' => 0,
+            'precio_usd' => 96.00,
+            'activa' => true,
         ]);
         TasaCambio::factory()->create(['tipo' => 'promedio', 'monto' => 50.00, 'fecha' => '2026-07-04']);
         TasaCambio::factory()->create(['tipo' => 'bcv', 'monto' => 45.00, 'fecha' => '2026-07-04']);
@@ -67,8 +87,10 @@ class ReporteControllerTest extends TestCase
         return ItemFactura::create(array_merge([
             'factura_id' => $factura->id,
             'producto_id' => $this->producto->id,
+            'presentacion_id' => $this->presentacionUnidad->id,
+            'presentacion_nombre' => 'Unidad',
+            'factor_conversion' => 1,
             'cantidad' => 2,
-            'tipo_venta' => 'unitario',
             'precio_unitario_usd' => 10.00,
             'precio_unitario_bs' => 500.00,
             'subtotal' => 1000.00,
@@ -167,7 +189,14 @@ class ReporteControllerTest extends TestCase
 
         $factura = $this->crearFactura();
         $this->crearItem($factura);
-        $this->crearItem($factura, ['tipo_venta' => 'mayor', 'precio_unitario_usd' => 8.00, 'precio_unitario_bs' => 400.00, 'subtotal' => 800.00]);
+        $this->crearItem($factura, [
+            'presentacion_id' => $this->presentacionMayor->id,
+            'presentacion_nombre' => 'Mayor',
+            'factor_conversion' => 12,
+            'precio_unitario_usd' => 96.00,
+            'precio_unitario_bs' => 4800.00,
+            'subtotal' => 800.00,
+        ]);
 
         $response = $this->get('/reportes/estadisticas?desde=2026-07-01&hasta=2026-07-31');
 
@@ -187,11 +216,16 @@ class ReporteControllerTest extends TestCase
         $this->assertEquals(1800.0, $topProductos[0]->ingreso_bs);
 
         $this->assertEquals('semana', $response->viewData('agrupadoPor'));
-        $detalResumen = $response->viewData('detalResumen');
-        $this->assertEquals(1000.0, $detalResumen['bs']);
-        $this->assertEquals(2, $detalResumen['unidades']);
-        $this->assertEquals(55.6, $detalResumen['pct']);
-        $this->assertEquals(1800.0, $response->viewData('detalResumen')['bs'] + $response->viewData('mayorResumen')['bs']);
+        $resumenes = $response->viewData('resumenes');
+        $this->assertEquals(1000.0, $resumenes['Unidad']['bs']);
+        $this->assertEquals(2, $resumenes['Unidad']['unidades']);
+        $this->assertEquals(55.6, $resumenes['Unidad']['pct']);
+        $this->assertEquals(1800.0, $resumenes['Unidad']['bs'] + $resumenes['Mayor']['bs']);
+
+        $series = $response->viewData('seriesPresentaciones');
+        $this->assertContains(1000.0, $series['Unidad']);
+        $this->assertContains(800.0, $series['Mayor']);
+        $this->assertEquals(1800.0, array_sum($series['Unidad']) + array_sum($series['Mayor']));
 
         $creditos = $response->viewData('creditos');
         $this->assertEquals(0, $creditos->cantidad);
@@ -209,7 +243,7 @@ class ReporteControllerTest extends TestCase
         $response->assertStatus(200);
         $this->assertEquals('día', $response->viewData('agrupadoPor'));
         $this->assertCount(1, $response->viewData('semanaLabels'));
-        $this->assertEquals(['detalSeries' => 1000.0], ['detalSeries' => $response->viewData('detalSeries')[0]]);
+        $this->assertEquals(['Unidad' => 1000.0], ['Unidad' => $response->viewData('seriesPresentaciones')['Unidad'][0]]);
     }
 
     public function test_balance_agrupa_mensualmente()

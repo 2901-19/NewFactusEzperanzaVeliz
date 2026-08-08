@@ -22,24 +22,27 @@
         <thead>
             <tr>
                 <th>Producto</th>
-                <th>Precio Unitario</th>
-                <th>Precio Mayor</th>
+                <th>Presentación</th>
+                <th>Precio Bs</th>
+                <th>Precio USD</th>
                 <th>IVA</th>
             </tr>
         </thead>
         <tbody>
             @foreach ($productos as $p)
+            @foreach ($p->presentaciones->where('activa', true) as $pr)
             @php
                 $tasaValorPdf = $tasas[$p->fuente_tasa] ?? 1;
-                $puBsPdf = $p->precio_unitario_usd * $tasaValorPdf;
-                $pmBsPdf = $p->precio_mayor_usd * $tasaValorPdf;
+                $precioBsPdf = $pr->precio_usd * $tasaValorPdf;
             @endphp
             <tr>
                 <td>{{ $p->nombre }}</td>
-                <td class="moneda">Bs {{ number_format($puBsPdf, 2) }}<br><small>(${{ number_format($p->precio_unitario_usd, 2) }})</small></td>
-                <td class="moneda">Bs {{ number_format($pmBsPdf, 2) }}<br><small>(${{ number_format($p->precio_mayor_usd, 2) }})</small></td>
+                <td>{{ $pr->nombre }}</td>
+                <td class="moneda">Bs {{ number_format($precioBsPdf, 2) }}</td>
+                <td class="moneda">${{ number_format($pr->precio_usd, 2) }}</td>
                 <td class="iva">{{ $p->tiene_iva ? 'Sí' : 'No' }}</td>
             </tr>
+            @endforeach
             @endforeach
         </tbody>
     </table>

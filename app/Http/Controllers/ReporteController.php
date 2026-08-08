@@ -65,7 +65,7 @@ class ReporteController extends Controller
         $porDia = $this->ventasPorDia($facturas, $desde, $hasta);
         $porMetodo = $this->desgloseMetodo($facturas);
 
-        [$semanaLabels, $detalSeries, $mayorSeries, $detalResumen, $mayorResumen, $detalUnidades, $mayorUnidades, $agrupadoPor] = $this->detalVsMayor($desde, $hasta);
+        [$semanaLabels, $seriesPresentaciones, $unidadesSeries, $resumenes, $colores, $agrupadoPor] = $this->ventasPorPresentacion($desde, $hasta);
         $topProductos = $this->topProductos($desde, $hasta);
         $topClientes = $this->topClientes($facturas);
 
@@ -78,8 +78,7 @@ class ReporteController extends Controller
 
         return view('reportes.estadisticas', compact(
             'kpis', 'desde', 'hasta', 'porDia', 'porMetodo',
-            'semanaLabels', 'detalSeries', 'mayorSeries', 'detalResumen', 'mayorResumen',
-            'detalUnidades', 'mayorUnidades', 'agrupadoPor',
+            'semanaLabels', 'seriesPresentaciones', 'unidadesSeries', 'resumenes', 'colores', 'agrupadoPor',
             'topProductos', 'topClientes', 'creditos', 'nombresMetodo'
         ));
     }
@@ -135,9 +134,10 @@ class ReporteController extends Controller
     {
         $productos = Producto::whereNull('deleted_at')
             ->where('estado', 'disponible')
+            ->where('controla_inventario', true)
             ->get()
-            ->filter(fn ($p) => $p->stock_total <= CatalogoService::UMBRAL_STOCK_BAJO)
-            ->sortBy('stock_total');
+            ->filter(fn ($p) => (float) $p->stock_actual <= CatalogoService::UMBRAL_STOCK_BAJO)
+            ->sortBy('stock_actual');
 
         return view('reportes.stock', compact('productos'));
     }
@@ -232,21 +232,18 @@ class ReporteController extends Controller
         return $porDia;
     }
 
-    private function detalVsMayor(string $desde, string $hasta): array
+    private function ventasPorPresentacion(string $desde, string $hasta): array
     {
         $items = ItemFactura::with('factura')
             ->whereHas('factura', fn ($q) => $q
                 ->where('estado', '!=', 'anulada')
                 ->whereDate('fecha_venta', '>=', $desde)
                 ->whereDate('fecha_venta', '<=', $hasta))
-            ->get(['factura_id', 'cantidad', 'tipo_venta', 'subtotal']);
+            ->get(['factura_id', 'cantidad', 'presentacion_nombre', 'subtotal']);
 
         $porDia = Carbon::parse($desde)->diffInDays(Carbon::parse($hasta)) <= 6;
 
-        $detal = [];
-        $mayor = [];
-        $detalUnidades = [];
-        $mayorUnidades = [];
+        $acumulado = [];
 
         foreach ($items as $item) {
             $fecha = $item->factura?->fecha_venta;
@@ -254,14 +251,9 @@ class ReporteController extends Controller
                 continue;
             }
             $clave = $porDia ? $fecha->format('Y-m-d') : $fecha->startOfWeek()->format('Y-m-d');
-
-            if ($item->tipo_venta === 'mayor') {
-                $mayor[$clave] = ($mayor[$clave] ?? 0) + (float) $item->subtotal;
-                $mayorUnidades[$clave] = ($mayorUnidades[$clave] ?? 0) + (int) $item->cantidad;
-            } else {
-                $detal[$clave] = ($detal[$clave] ?? 0) + (float) $item->subtotal;
-                $detalUnidades[$clave] = ($detalUnidades[$clave] ?? 0) + (int) $item->cantidad;
-            }
+            $nombre = $item->presentacion_nombre ?: 'Unidad';
+            $acumulado[$nombre][$clave]['bs'] = ($acumulado[$nombre][$clave]['bs'] ?? 0) + (float) $item->subtotal;
+            $acumulado[$nombre][$clave]['unidades'] = ($acumulado[$nombre][$clave]['unidades'] ?? 0) + (float) $item->cantidad;
         }
 
         $claves = [];
@@ -281,27 +273,48 @@ class ReporteController extends Controller
             }
         }
 
-        $totalBs = round(array_sum($detal) + array_sum($mayor), 2);
+        $totalPorNombre = [];
+        foreach ($acumulado as $nombre => $porClave) {
+            $totalPorNombre[$nombre] = array_sum(array_column($porClave, 'bs'));
+        }
+
+        $totalBs = round(array_sum($totalPorNombre), 2);
         $pct = fn (float $valor) => $totalBs > 0 ? round(($valor / $totalBs) * 100, 1) : 0;
+
+        uksort($totalPorNombre, fn ($a, $b) => $totalPorNombre[$b] <=> $totalPorNombre[$a]);
+        $nombres = array_keys($totalPorNombre);
+
+        $paleta = ['#198754', '#fd7e14', '#0d6efd', '#dc3545', '#6f42c1', '#0dcaf0', '#d63384', '#ffc107'];
+        $colores = [];
+        foreach ($nombres as $i => $nombre) {
+            $colores[$nombre] = $paleta[$i % count($paleta)];
+        }
 
         $semanaLabels = array_map(
             fn ($clave) => $porDia ? Carbon::parse($clave)->format('d/m') : 'Sem '.Carbon::parse($clave)->format('d/m'),
             $claves
         );
 
-        $detalSeries = array_map(fn ($clave) => round($detal[$clave] ?? 0, 2), $claves);
-        $mayorSeries = array_map(fn ($clave) => round($mayor[$clave] ?? 0, 2), $claves);
-        $detalUnidadesSeries = array_map(fn ($clave) => $detalUnidades[$clave] ?? 0, $claves);
-        $mayorUnidadesSeries = array_map(fn ($clave) => $mayorUnidades[$clave] ?? 0, $claves);
+        $series = [];
+        $unidadesSeries = [];
+        $resumenes = [];
+
+        foreach ($nombres as $nombre) {
+            $series[$nombre] = array_map(fn ($clave) => round($acumulado[$nombre][$clave]['bs'] ?? 0, 2), $claves);
+            $unidadesSeries[$nombre] = array_map(fn ($clave) => $acumulado[$nombre][$clave]['unidades'] ?? 0, $claves);
+            $resumenes[$nombre] = [
+                'bs' => round($totalPorNombre[$nombre], 2),
+                'unidades' => array_sum(array_column($acumulado[$nombre] ?? [], 'unidades')),
+                'pct' => $pct($totalPorNombre[$nombre]),
+            ];
+        }
 
         return [
             $semanaLabels,
-            $detalSeries,
-            $mayorSeries,
-            ['bs' => round(array_sum($detal), 2), 'unidades' => array_sum($detalUnidades), 'pct' => $pct(array_sum($detal))],
-            ['bs' => round(array_sum($mayor), 2), 'unidades' => array_sum($mayorUnidades), 'pct' => $pct(array_sum($mayor))],
-            $detalUnidadesSeries,
-            $mayorUnidadesSeries,
+            $series,
+            $unidadesSeries,
+            $resumenes,
+            $colores,
             $porDia ? 'día' : 'semana',
         ];
     }

@@ -49,14 +49,14 @@
                     <thead>
                         <tr>
                             <th>Producto</th>
-                            <th>Existencia Total</th>
+                            <th>Existencia</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse ($productosStockBajo as $p)
                         <tr>
                             <td>{{ $p->nombre }}</td>
-                            <td><span class="badge bg-danger">{{ $p->stock_total }} uds</span></td>
+                            <td><span class="badge bg-danger">{{ number_format($p->stock_actual, 2, ',', '.') }} {{ $p->unidad_medida ?? 'unidad' }}</span></td>
                         </tr>
                         @empty
                         <tr><td colspan="2" class="text-center text-muted">Sin productos con existencia baja.</td></tr>

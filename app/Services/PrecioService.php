@@ -4,11 +4,19 @@ namespace App\Services;
 
 class PrecioService
 {
-    public static function preciosDesdeMargenes(float $costoUsd, float $margenDetal, float $margenMayor): array
+    /**
+     * Precio de una presentación: margen aplicado sobre el costo unitario
+     * (redondeado a 2 decimales) y multiplicado por el factor de conversión.
+     */
+    public static function precioPresentacion(float $costoUsd, float $margen, float $factor): float
     {
-        return [
-            'precio_unitario_usd' => round($costoUsd * (1 + $margenDetal / 100), 2),
-            'precio_mayor_usd' => round($costoUsd * (1 + $margenMayor / 100), 2),
-        ];
+        $precioUnidad = round($costoUsd * (1 + $margen / 100), 2);
+
+        return round($precioUnidad * $factor, 2);
+    }
+
+    public static function precioBase(float $costoUsd, float $margen): float
+    {
+        return round($costoUsd * (1 + $margen / 100), 2);
     }
 }

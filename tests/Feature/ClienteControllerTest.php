@@ -2,8 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use App\Models\Cliente;
+use App\Models\User;
+use Database\Seeders\PermisoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -16,7 +17,7 @@ class ClienteControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\PermisoSeeder::class);
+        $this->seed(PermisoSeeder::class);
         $this->user = User::factory()->create(['rol' => 'admin']);
     }
 

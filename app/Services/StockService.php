@@ -6,56 +6,43 @@ use App\Models\Producto;
 
 class StockService
 {
-    public static function totalUnidades(Producto $producto): int
+    public static function stockActual(Producto $producto): float
     {
-        return ($producto->stock_paquetes * $producto->unidades_por_paquete) + $producto->stock_unidades;
+        return (float) $producto->stock_actual;
     }
 
-    public static function descomponer(int $totalUnidades, int $unidadesPorPaquete): array
+    public static function descontar(Producto $producto, float $cantidadBase): void
     {
-        if ($unidadesPorPaquete <= 0) {
-            throw new \InvalidArgumentException('El producto debe tener al menos 1 unidad por paquete para ajustar inventario.');
-        }
-
-        return [
-            'stock_paquetes' => intdiv($totalUnidades, $unidadesPorPaquete),
-            'stock_unidades' => $totalUnidades % $unidadesPorPaquete,
-        ];
-    }
-
-    public static function agregar(Producto $producto, int $cantidad): void
-    {
-        $total = self::totalUnidades($producto) + $cantidad;
-
-        $producto->update(self::descomponer($total, $producto->unidades_por_paquete));
-    }
-
-    public static function descontar(Producto $producto, int $cantidad): void
-    {
-        $restantes = $cantidad;
-
-        if ($producto->stock_unidades >= $restantes) {
-            $producto->decrement('stock_unidades', $restantes);
-
+        if ($cantidadBase <= 0) {
             return;
         }
 
-        $restantes -= $producto->stock_unidades;
-        $producto->update(['stock_unidades' => 0]);
-
-        $paquetesNecesarios = (int) ceil($restantes / $producto->unidades_por_paquete);
-
-        if ($producto->stock_paquetes < $paquetesNecesarios) {
-            throw new \RuntimeException("Stock insuficiente para {$producto->nombre}");
+        if (! $producto->controla_inventario) {
+            return;
         }
 
-        $producto->decrement('stock_paquetes', $paquetesNecesarios);
-
-        $unidadesGeneradas = $paquetesNecesarios * $producto->unidades_por_paquete;
-        $sobrantes = $unidadesGeneradas - $restantes;
-
-        if ($sobrantes > 0) {
-            $producto->increment('stock_unidades', $sobrantes);
+        if (self::stockActual($producto) < $cantidadBase) {
+            throw new \RuntimeException(sprintf(
+                'Stock insuficiente para %s. Disponible: %s %s.',
+                $producto->nombre,
+                rtrim(rtrim(number_format(self::stockActual($producto), 4, '.', ''), '0'), '.'),
+                $producto->unidad_medida
+            ));
         }
+
+        $producto->decrement('stock_actual', $cantidadBase);
+    }
+
+    public static function agregar(Producto $producto, float $cantidadBase): void
+    {
+        if ($cantidadBase <= 0) {
+            return;
+        }
+
+        if (! $producto->controla_inventario) {
+            return;
+        }
+
+        $producto->increment('stock_actual', $cantidadBase);
     }
 }

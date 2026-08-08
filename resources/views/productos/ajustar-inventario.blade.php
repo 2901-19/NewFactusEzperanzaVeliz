@@ -22,18 +22,25 @@
                 </thead>
                 <tbody>
                     @foreach ($productos as $p)
-                    <tr x-data="inventarioRow({{ $p->id }}, {{ $p->stock_paquetes }}, {{ $p->stock_unidades }}, {{ $p->unidades_por_paquete }})">
+                    <tr x-data="inventarioRow({{ $p->id }}, {{ $p->stock_actual }}, {{ $p->controla_inventario ? 'true' : 'false' }})">
                         <td class="text-start">{{ $p->nombre }}</td>
                         <td>{{ $p->categoria->nombre ?? '-' }}</td>
-                        <td><span x-text="stockPaq + ' lot / ' + stockUnd + ' und'"></span></td>
                         <td>
-                            <input type="number" min="1" class="form-control form-control-sm" x-model="cantidad" placeholder="0">
+                            <template x-if="controlaInventario">
+                                <span class="fw-bold" x-text="stockActual + ' {{ $p->unidad_medida ?? 'unidad' }}'"></span>
+                            </template>
+                            <template x-if="!controlaInventario">
+                                <span class="badge bg-secondary">No lleva inventario</span>
+                            </template>
                         </td>
                         <td>
-                            <button class="btn btn-sm btn-success me-1" @click="ajustar('+')" :disabled="cargando || !cantidad">
+                            <input type="number" min="0.01" step="0.001" class="form-control form-control-sm" x-model="cantidad" placeholder="0" :disabled="!controlaInventario">
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-success me-1" @click="ajustar('+')" :disabled="cargando || !cantidad || !controlaInventario">
                                 <i class="bi bi-plus-lg"></i>
                             </button>
-                            <button class="btn btn-sm btn-danger" @click="ajustar('-')" :disabled="cargando || !cantidad">
+                            <button class="btn btn-sm btn-danger" @click="ajustar('-')" :disabled="cargando || !cantidad || !controlaInventario">
                                 <i class="bi bi-dash-lg"></i>
                             </button>
                             <span x-show="cargando" class="spinner-border spinner-border-sm ms-1"></span>
@@ -48,15 +55,14 @@
 @endsection
 @push('scripts')
 <script>
-function inventarioRow(id, paq, und, upp) {
+function inventarioRow(id, stock, controla) {
     return {
-        stockPaq: paq,
-        stockUnd: und,
-        unidadesPorPaquete: upp,
+        stockActual: stock,
+        controlaInventario: !!controla,
         cantidad: null,
         cargando: false,
         ajustar(operacion) {
-            if (!this.cantidad || this.cantidad < 1) return;
+            if (!this.cantidad || this.cantidad < 0.01) return;
             this.cargando = true;
             fetch('/productos/' + id + '/ajustar-inventario', {
                 method: 'POST',
@@ -67,8 +73,7 @@ function inventarioRow(id, paq, und, upp) {
             .then(data => {
                 this.cargando = false;
                 if (data.success) {
-                    this.stockPaq = data.stock_paquetes;
-                    this.stockUnd = data.stock_unidades;
+                    this.stockActual = data.stock_actual;
                     this.cantidad = null;
                     Swal.fire({ icon: 'success', title: 'Actualizado', text: data.message, timer: 2000, showConfirmButton: false });
                 } else {

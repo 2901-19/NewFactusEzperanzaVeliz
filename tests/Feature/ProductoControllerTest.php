@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
-use App\Models\Producto;
 use App\Models\Categoria;
+use App\Models\Producto;
+use App\Models\ProductoPresentacion;
 use App\Models\TasaCambio;
+use App\Models\User;
+use Database\Seeders\PermisoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -18,7 +20,7 @@ class ProductoControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\PermisoSeeder::class);
+        $this->seed(PermisoSeeder::class);
         foreach (['promedio', 'dolar', 'bcv'] as $tipo) {
             TasaCambio::create([
                 'tipo' => $tipo,
@@ -58,20 +60,22 @@ class ProductoControllerTest extends TestCase
         $response = $this->post('/productos', [
             'nombre' => 'Nuevo Producto',
             'categoria_id' => $categoria->id,
-            'unidades_por_paquete' => 12,
-            'stock_paquetes' => 5,
-            'stock_unidades' => 3,
             'costo_usd' => 10.00,
-            'margen_detal' => 25,
-            'margen_mayor' => 15,
+            'controla_inventario' => true,
+            'unidad_medida' => 'unidad',
+            'stock_actual' => 5,
             'tiene_iva' => true,
             'fuente_tasa' => 'promedio',
             'estado' => 'disponible',
+            'presentaciones' => [
+                ['nombre' => 'Unidad', 'factor_conversion' => 1, 'margen' => 25, 'activa' => true],
+            ],
         ]);
 
         $response->assertRedirect('/productos');
         $response->assertSessionHas('success');
         $this->assertDatabaseHas('productos', ['nombre' => 'Nuevo Producto']);
+        $this->assertDatabaseHas('producto_presentaciones', ['nombre' => 'Unidad', 'precio_usd' => 12.50]);
     }
 
     public function test_store_valida_campos_requeridos()
@@ -80,7 +84,7 @@ class ProductoControllerTest extends TestCase
 
         $response = $this->post('/productos', []);
 
-        $response->assertSessionHasErrors(['nombre', 'unidades_por_paquete', 'stock_paquetes', 'stock_unidades', 'costo_usd', 'margen_detal', 'margen_mayor', 'fuente_tasa', 'estado']);
+        $response->assertSessionHasErrors(['nombre', 'costo_usd', 'unidad_medida', 'presentaciones', 'fuente_tasa', 'estado']);
     }
 
     public function test_edit_muestra_formulario()
@@ -97,20 +101,29 @@ class ProductoControllerTest extends TestCase
     public function test_update_actualiza_producto()
     {
         $producto = Producto::factory()->create(['nombre' => 'Original']);
+        ProductoPresentacion::factory()->create([
+            'producto_id' => $producto->id,
+            'nombre' => 'Unidad',
+            'factor_conversion' => 1,
+            'margen' => 25,
+            'precio_usd' => 12.50,
+            'activa' => true,
+        ]);
         $this->actingAs($this->user);
 
         $response = $this->put("/productos/{$producto->id}", [
             'nombre' => 'Actualizado',
             'categoria_id' => $producto->categoria_id,
-            'unidades_por_paquete' => $producto->unidades_por_paquete,
-            'stock_paquetes' => $producto->stock_paquetes,
-            'stock_unidades' => $producto->stock_unidades,
             'costo_usd' => $producto->costo_usd,
-            'margen_detal' => $producto->margen_detal,
-            'margen_mayor' => $producto->margen_mayor,
+            'controla_inventario' => $producto->controla_inventario,
+            'unidad_medida' => 'unidad',
+            'stock_actual' => $producto->stock_actual,
             'tiene_iva' => $producto->tiene_iva,
             'fuente_tasa' => $producto->fuente_tasa,
             'estado' => $producto->estado,
+            'presentaciones' => [
+                ['nombre' => 'Unidad', 'factor_conversion' => 1, 'margen' => 25, 'activa' => true],
+            ],
         ]);
 
         $response->assertRedirect('/productos');

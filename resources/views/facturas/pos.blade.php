@@ -14,21 +14,13 @@
                         <tr>
                             <th class="text-start">Nombre</th>
                             <th>Ref.</th>
-                            <th>Precio Detal</th>
-                            <th>Precio Mayor</th>
+                            <th>Precios</th>
                             <th style="width:60px"></th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach ($productos as $p)
-                        @php
-                            $tasaValorPos = $tasas[$p->fuente_tasa]->monto ?? 1;
-                            $tasaRefPos = $tasas[$tasaReferenciaTipo]->monto ?? 1;
-                            $puBsPos = $p->precio_unitario_usd * $tasaValorPos;
-                            $pmBsPos = $p->precio_mayor_usd * $tasaValorPos;
-                            $puUsdRef = $puBsPos / $tasaRefPos;
-                            $pmUsdRef = $pmBsPos / $tasaRefPos;
-                        @endphp
+                        @php $tasaValorPos = $tasas[$p->fuente_tasa]->monto ?? 1; @endphp
                         <tr>
                             <td class="text-start">{{ $p->nombre }}</td>
                             <td>
@@ -38,8 +30,16 @@
                                     <span class="text-muted sin-ref">Sin referencia</span>
                                 @endif
                             </td>
-                            <td>Bs {{ number_format($puBsPos, 2) }} <small class="text-muted">(${{ number_format($puUsdRef, 2) }})</small></td>
-                            <td>Bs {{ number_format($pmBsPos, 2) }} <small class="text-muted">(${{ number_format($pmUsdRef, 2) }})</small></td>
+                            <td>
+                                @forelse ($p->presentaciones as $pr)
+                                <div class="small text-nowrap">
+                                    {{ $pr['nombre'] }}:
+                                    <strong>Bs {{ number_format($pr['precio_usd'] * $tasaValorPos, 2) }}</strong>
+                                </div>
+                                @empty
+                                <span class="text-muted">Sin precios</span>
+                                @endforelse
+                            </td>
                             <td class="text-center">
                                 <button class="btn btn-sm btn-outline-primary agregar-producto" data-id="{{ $p->id }}" title="Agregar al carrito">
                                     <i class="bi bi-cart-plus"></i>
@@ -72,15 +72,17 @@
                             <button class="btn btn-sm btn-outline-danger py-0" @click="carrito.splice(index, 1)">&times;</button>
                         </div>
                         <div class="d-flex align-items-center gap-2 mt-1">
-                            <button class="btn btn-sm btn-outline-secondary" @click="item.cantidad > 1 && item.cantidad--">-</button>
-                            <input type="number" x-model="item.cantidad" @blur="item.cantidad = Math.max(1, parseInt(item.cantidad) || 1)" class="form-control form-control-sm text-center" style="width: 60px;" min="1">
-                            <button class="btn btn-sm btn-outline-secondary" @click="item.cantidad++">+</button>
-                            <button class="btn btn-sm" :class="item.tipoVenta === 'mayor' ? 'btn-primary' : 'btn-outline-primary'" @click="item.tipoVenta = item.tipoVenta === 'mayor' ? 'unitario' : 'mayor'" title="Alternar precio Detal/Mayor">
-                                <span x-text="item.tipoVenta === 'mayor' ? 'Mayor' : 'Detal'"></span>
-                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" @click="item.cantidad > (item.controla_inventario ? 1 : 0.001) && (item.cantidad = Math.max(0.001, item.cantidad - 1))">-</button>
+                            <input type="number" :step="item.controla_inventario ? 1 : 0.001" :min="item.controla_inventario ? 1 : 0.001" x-model.number="item.cantidad" @blur="item.cantidad = Math.max(item.controla_inventario ? 1 : 0.001, parseFloat(item.cantidad) || 1)" class="form-control form-control-sm text-center" style="width: 70px;">
+                            <button class="btn btn-sm btn-outline-secondary" @click="item.cantidad = (parseFloat(item.cantidad) || 0) + (item.controla_inventario ? 1 : 0.001)">+</button>
+                            <select class="form-select form-select-sm" style="max-width:150px" x-model="item.presentacion_id" @change="item.presentacion_nombre = presNombre(index)">
+                                <template x-for="pr in item.presentaciones" :key="pr.id">
+                                    <option :value="pr.id" x-text="pr.nombre"></option>
+                                </template>
+                            </select>
                             <span class="ms-auto small" x-text="'Bs ' + getBsPriceTotal(index).toFixed(2)"></span>
                         </div>
-                        <div class="text-muted small" x-text="'Precio: Bs ' + getBsPrice(index).toFixed(2) + (item.tipoVenta === 'mayor' ? ' (Mayor)' : ' (Detal)')"></div>
+                        <div class="text-muted small" x-text="'Precio: Bs ' + getBsPrice(index).toFixed(2) + ' (' + presNombre(index) + ')'"></div>
                     </div>
                 </template>
                 <div class="text-center text-muted small py-3" x-show="carrito.length === 0">
@@ -161,18 +163,6 @@
                     <span>IVA ({{ $ivaPorcentaje }}%):</span>
                     <span x-text="ivaBs.toFixed(2)"></span>
                 </div>
-                <template x-if="hayAmbosTipos">
-                    <div>
-                        <div class="d-flex justify-content-between small text-muted">
-                            <span>Subtotal Detal:</span>
-                            <span x-text="'Bs ' + subtotalDetalBs.toFixed(2)"></span>
-                        </div>
-                        <div class="d-flex justify-content-between small text-muted">
-                            <span>Subtotal Mayor:</span>
-                            <span x-text="'Bs ' + subtotalMayorBs.toFixed(2)"></span>
-                        </div>
-                    </div>
-                </template>
                 <div class="d-flex justify-content-between fw-bold">
                     <span>Total Bs:</span>
                     <span x-text="totalBs.toFixed(2)"></span>
@@ -202,68 +192,18 @@
                         </div>
                         <hr class="sep">
 
-                        <template x-if="hayAmbosTipos">
-                            <div>
-                                <div class="ticket-seccion">DETAL</div>
-                                <div class="row-item row-head" x-show="carrito.length > 0">
-                                    <span class="t-cant">CANT</span>
-                                    <span class="desc">DESC</span>
-                                    <span class="t-precio-u">PREC U</span>
-                                    <span class="monto">PREC T</span>
-                                </div>
-                                <template x-for="(item, index) in carrito" :key="index">
-                                    <template x-if="item.tipoVenta === 'unitario'">
-                                        <div class="row-item ticket-item">
-                                            <span class="t-cant" x-text="item.cantidad"></span>
-                                            <span class="desc" x-text="item.nombre"></span>
-                                            <span class="t-precio-u" x-text="(tipoFactura === 'credito' ? getUsdPrice(index) : getBsPrice(index)).toFixed(2)"></span>
-                                            <span class="monto" x-text="(tipoFactura === 'credito' ? getUsdPriceTotal(index) : getBsPriceTotal(index)).toFixed(2)"></span>
-                                        </div>
-                                    </template>
-                                </template>
-                                <div class="row-item">
-                                    <span>Subtotal Detal:</span>
-                                    <span x-text="(tipoFactura === 'credito' ? subtotalDetalUsd : subtotalDetalBs).toFixed(2)"></span>
-                                </div>
-                                <div class="ticket-seccion">MAYOR</div>
-                                <div class="row-item row-head" x-show="carrito.length > 0">
-                                    <span class="t-cant">CANT</span>
-                                    <span class="desc">DESC</span>
-                                    <span class="t-precio-u">PREC U</span>
-                                    <span class="monto">PREC T</span>
-                                </div>
-                                <template x-for="(item, index) in carrito" :key="index">
-                                    <template x-if="item.tipoVenta === 'mayor'">
-                                        <div class="row-item ticket-item">
-                                            <span class="t-cant" x-text="item.cantidad"></span>
-                                            <span class="desc" x-text="item.nombre"></span>
-                                            <span class="t-precio-u" x-text="(tipoFactura === 'credito' ? getUsdPrice(index) : getBsPrice(index)).toFixed(2)"></span>
-                                            <span class="monto" x-text="(tipoFactura === 'credito' ? getUsdPriceTotal(index) : getBsPriceTotal(index)).toFixed(2)"></span>
-                                        </div>
-                                    </template>
-                                </template>
-                                <div class="row-item">
-                                    <span>Subtotal Mayor:</span>
-                                    <span x-text="(tipoFactura === 'credito' ? subtotalMayorUsd : subtotalMayorBs).toFixed(2)"></span>
-                                </div>
-                            </div>
-                        </template>
-                        <template x-if="!hayAmbosTipos">
-                            <div>
-                                <div class="row-item row-head" x-show="carrito.length > 0">
-                                    <span class="t-cant">CANT</span>
-                                    <span class="desc">DESC</span>
-                                    <span class="t-precio-u">PREC U</span>
-                                    <span class="monto">PREC T</span>
-                                </div>
-                                <template x-for="(item, index) in carrito" :key="index">
-                                    <div class="row-item ticket-item">
-                                        <span class="t-cant" x-text="item.cantidad"></span>
-                                        <span class="desc" x-text="item.nombre"></span>
-                                        <span class="t-precio-u" x-text="(tipoFactura === 'credito' ? getUsdPrice(index) : getBsPrice(index)).toFixed(2)"></span>
-                                        <span class="monto" x-text="(tipoFactura === 'credito' ? getUsdPriceTotal(index) : getBsPriceTotal(index)).toFixed(2)"></span>
-                                    </div>
-                                </template>
+                        <div class="row-item row-head" x-show="carrito.length > 0">
+                            <span class="t-cant">CANT</span>
+                            <span class="desc">DESC</span>
+                            <span class="t-precio-u">PREC U</span>
+                            <span class="monto">PREC T</span>
+                        </div>
+                        <template x-for="(item, index) in carrito" :key="index">
+                            <div class="row-item ticket-item">
+                                <span class="t-cant" x-text="item.cantidad"></span>
+                                <span class="desc" x-text="item.nombre + (presNombre(index) ? ' (' + presNombre(index) + ')' : '')"></span>
+                                <span class="t-precio-u" x-text="(tipoFactura === 'credito' ? getUsdPrice(index) : getBsPrice(index)).toFixed(2)"></span>
+                                <span class="monto" x-text="(tipoFactura === 'credito' ? getUsdPriceTotal(index) : getBsPriceTotal(index)).toFixed(2)"></span>
                             </div>
                         </template>
 
@@ -365,8 +305,6 @@
             </div>
         </div>
     </div>
-
-    {{-- SweetAlert se usa en mostrarExito / mostrarError --}}
 </div>
 
 @push('scripts')
@@ -396,7 +334,7 @@ document.addEventListener('alpine:init', () => {
                     lengthMenu: [10, 15, 25, 50],
                     order: [[0, 'asc']],
                     columnDefs: [
-                        { targets: 4, orderable: false },
+                        { targets: 3, orderable: false },
                     ],
                 });
 
@@ -421,7 +359,13 @@ document.addEventListener('alpine:init', () => {
         },
 
         agregar(p) {
-            const existente = this.carrito.find(i => i.id === p.id);
+            const presentaciones = p.presentaciones || [];
+            if (!presentaciones.length) {
+                this.mostrarError('Este producto no tiene presentaciones activas.');
+                return;
+            }
+            const presId = presentaciones[0].id;
+            const existente = this.carrito.find(i => i.id === p.id && i.presentacion_id === presId);
             if (existente) {
                 existente.cantidad++;
             } else {
@@ -429,36 +373,44 @@ document.addEventListener('alpine:init', () => {
                     id: p.id,
                     nombre: p.nombre,
                     cantidad: 1,
-                    tipoVenta: 'unitario',
-                    precio_unitario_usd: parseFloat(p.precio_unitario_usd),
-                    precio_mayor_usd: parseFloat(p.precio_mayor_usd),
+                    controla_inventario: !!p.controla_inventario,
+                    presentaciones,
+                    presentacion_id: presId,
                     tiene_iva: p.tiene_iva,
                     fuente_tasa: p.fuente_tasa,
-                    get precioUnitario() {
-                        return this.tipoVenta === 'mayor'
-                            ? this.precio_mayor_usd
-                            : this.precio_unitario_usd;
-                    }
                 });
             }
         },
 
+        precioUsdItem(index) {
+            const it = this.carrito[index];
+            if (!it) return 0;
+            const pr = (it.presentaciones || []).find(pr => pr.id === it.presentacion_id);
+            return pr ? parseFloat(pr.precio_usd) || 0 : 0;
+        },
+
+        presNombre(index) {
+            const it = this.carrito[index];
+            const pr = (it.presentaciones || []).find(pr => pr.id === it.presentacion_id);
+            return pr ? pr.nombre : '';
+        },
+
         get subtotalBs() {
-            return this.carrito.reduce((sum, i) => {
+            return this.carrito.reduce((sum, i, idx) => {
                 const tasa = this.tasas[i.fuente_tasa]
                     ? parseFloat(this.tasas[i.fuente_tasa].monto)
                     : 1;
-                return sum + (i.precioUnitario * i.cantidad * tasa);
+                return sum + (this.precioUsdItem(idx) * i.cantidad * tasa);
             }, 0);
         },
 
         get ivaBs() {
-            return this.carrito.reduce((sum, i) => {
+            return this.carrito.reduce((sum, i, idx) => {
                 if (!i.tiene_iva) return sum;
                 const tasa = this.tasas[i.fuente_tasa]
                     ? parseFloat(this.tasas[i.fuente_tasa].monto)
                     : 1;
-                return sum + (i.precioUnitario * i.cantidad * tasa * (this.ivaPorcentaje / 100));
+                return sum + (this.precioUsdItem(idx) * i.cantidad * tasa * (this.ivaPorcentaje / 100));
             }, 0);
         },
 
@@ -503,39 +455,6 @@ document.addEventListener('alpine:init', () => {
                 && Math.abs(this.diferenciaPagos) <= 0.01;
         },
 
-        get subtotalDetalBs() {
-            return this.carrito.reduce((sum, i) => {
-                if (i.tipoVenta !== 'unitario') return sum;
-                const tasa = this.tasas[i.fuente_tasa]
-                    ? parseFloat(this.tasas[i.fuente_tasa].monto)
-                    : 1;
-                return sum + (i.precio_unitario_usd * i.cantidad * tasa);
-            }, 0);
-        },
-
-        get subtotalMayorBs() {
-            return this.carrito.reduce((sum, i) => {
-                if (i.tipoVenta !== 'mayor') return sum;
-                const tasa = this.tasas[i.fuente_tasa]
-                    ? parseFloat(this.tasas[i.fuente_tasa].monto)
-                    : 1;
-                return sum + (i.precio_mayor_usd * i.cantidad * tasa);
-            }, 0);
-        },
-
-        get subtotalDetalUsd() {
-            return this.subtotalDetalBs / this.tasaRef;
-        },
-
-        get subtotalMayorUsd() {
-            return this.subtotalMayorBs / this.tasaRef;
-        },
-
-        get hayAmbosTipos() {
-            return this.carrito.some(i => i.tipoVenta === 'unitario')
-                && this.carrito.some(i => i.tipoVenta === 'mayor');
-        },
-
         nombreMetodo(m) {
             const nombres = {
                 efectivo: 'Efectivo',
@@ -550,21 +469,18 @@ document.addEventListener('alpine:init', () => {
         },
 
         getBsPrice(index) {
-            const i = this.carrito[index];
-            if (!i) return 0;
-            const tasa = this.tasas[i.fuente_tasa]
-                ? parseFloat(this.tasas[i.fuente_tasa].monto)
+            const it = this.carrito[index];
+            if (!it) return 0;
+            const tasa = this.tasas[it.fuente_tasa]
+                ? parseFloat(this.tasas[it.fuente_tasa].monto)
                 : 1;
-            return i.precioUnitario * tasa;
+            return this.precioUsdItem(index) * tasa;
         },
 
         getBsPriceTotal(index) {
-            const i = this.carrito[index];
-            if (!i) return 0;
-            const tasa = this.tasas[i.fuente_tasa]
-                ? parseFloat(this.tasas[i.fuente_tasa].monto)
-                : 1;
-            return i.precioUnitario * i.cantidad * tasa;
+            const it = this.carrito[index];
+            if (!it) return 0;
+            return this.getBsPrice(index) * it.cantidad;
         },
 
         getUsdPrice(index) {
@@ -639,8 +555,8 @@ document.addEventListener('alpine:init', () => {
 
             const items = this.carrito.map(i => ({
                 producto_id: i.id,
+                presentacion_id: i.presentacion_id,
                 cantidad: i.cantidad,
-                tipo_venta: i.tipoVenta,
             }));
 
             try {

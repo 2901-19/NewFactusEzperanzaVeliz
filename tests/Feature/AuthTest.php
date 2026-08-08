@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use Database\Seeders\PermisoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -75,7 +76,7 @@ class AuthTest extends TestCase
 
     public function test_usuario_autenticado_puede_ver_dashboard()
     {
-        $this->seed(\Database\Seeders\PermisoSeeder::class);
+        $this->seed(PermisoSeeder::class);
         $user = User::factory()->create(['rol' => 'admin']);
         $this->actingAs($user);
 

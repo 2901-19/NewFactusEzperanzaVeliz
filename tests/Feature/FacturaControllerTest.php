@@ -8,6 +8,7 @@ use App\Models\Configuracion;
 use App\Models\Factura;
 use App\Models\Impuesto;
 use App\Models\Producto;
+use App\Models\ProductoPresentacion;
 use App\Models\TasaCambio;
 use App\Models\User;
 use Database\Seeders\PermisoSeeder;
@@ -24,6 +25,10 @@ class FacturaControllerTest extends TestCase
 
     private Producto $producto;
 
+    private ProductoPresentacion $presentacionUnidad;
+
+    private ProductoPresentacion $presentacionMayor;
+
     private TasaCambio $tasa;
 
     private Impuesto $iva;
@@ -38,17 +43,29 @@ class FacturaControllerTest extends TestCase
         $this->producto = Producto::factory()->create([
             'categoria_id' => $categoria->id,
             'nombre' => 'Producto Test',
-            'unidades_por_paquete' => 12,
-            'stock_paquetes' => 10,
-            'stock_unidades' => 5,
-            'precio_unitario_usd' => 10.00,
-            'precio_mayor_usd' => 8.00,
             'costo_usd' => 10.00,
-            'margen_detal' => 0,
-            'margen_mayor' => 0,
+            'stock_actual' => 125,
+            'controla_inventario' => true,
+            'unidad_medida' => 'unidad',
             'tiene_iva' => true,
             'fuente_tasa' => 'promedio',
             'estado' => 'disponible',
+        ]);
+        $this->presentacionUnidad = ProductoPresentacion::factory()->create([
+            'producto_id' => $this->producto->id,
+            'nombre' => 'Unidad',
+            'factor_conversion' => 1,
+            'margen' => 0,
+            'precio_usd' => 10.00,
+            'activa' => true,
+        ]);
+        $this->presentacionMayor = ProductoPresentacion::factory()->create([
+            'producto_id' => $this->producto->id,
+            'nombre' => 'Mayor',
+            'factor_conversion' => 12,
+            'margen' => 0,
+            'precio_usd' => 96.00,
+            'activa' => true,
         ]);
         $this->tasa = TasaCambio::factory()->create([
             'tipo' => 'promedio',
@@ -64,6 +81,15 @@ class FacturaControllerTest extends TestCase
             'porcentaje' => 16.00,
             'fecha' => '2026-07-04',
         ]);
+    }
+
+    private function crearItemData(array $datos = []): array
+    {
+        return array_merge([
+            'producto_id' => $this->producto->id,
+            'presentacion_id' => $this->presentacionUnidad->id,
+            'cantidad' => 1,
+        ], $datos);
     }
 
     public function test_index_muestra_facturas()
@@ -96,11 +122,7 @@ class FacturaControllerTest extends TestCase
             'metodo_pago' => 'efectivo',
             'estado' => 'contado',
             'items' => [
-                [
-                    'producto_id' => $this->producto->id,
-                    'cantidad' => 3,
-                    'tipo_venta' => 'unitario',
-                ],
+                $this->crearItemData(['cantidad' => 3]),
             ],
         ]);
 
@@ -117,12 +139,12 @@ class FacturaControllerTest extends TestCase
         $this->assertDatabaseHas('items_factura', [
             'factura_id' => $factura->id,
             'producto_id' => $this->producto->id,
+            'presentacion_id' => $this->presentacionUnidad->id,
             'cantidad' => 3,
-            'tipo_venta' => 'unitario',
         ]);
     }
 
-    public function test_store_aplica_precio_mayor_segun_tipo_venta()
+    public function test_store_usa_precio_de_presentacion_seleccionada()
     {
         $this->actingAs($this->cajero);
 
@@ -131,11 +153,10 @@ class FacturaControllerTest extends TestCase
             'metodo_pago' => 'efectivo',
             'estado' => 'contado',
             'items' => [
-                [
-                    'producto_id' => $this->producto->id,
+                $this->crearItemData([
+                    'presentacion_id' => $this->presentacionMayor->id,
                     'cantidad' => 1,
-                    'tipo_venta' => 'mayor',
-                ],
+                ]),
             ],
         ]);
 
@@ -143,8 +164,9 @@ class FacturaControllerTest extends TestCase
 
         $factura = Factura::first();
         $item = $factura->items->first();
-        $this->assertEquals('mayor', $item->tipo_venta);
-        $this->assertEquals(8.00, (float) $item->precio_unitario_usd);
+        $this->assertEquals($this->presentacionMayor->id, $item->presentacion_id);
+        $this->assertEquals('Mayor', $item->presentacion_nombre);
+        $this->assertEquals(96.00, (float) $item->precio_unitario_usd);
     }
 
     public function test_store_calcula_total_usd_y_tasa_a_tasa_bcv()
@@ -156,11 +178,7 @@ class FacturaControllerTest extends TestCase
             'metodo_pago' => 'efectivo',
             'estado' => 'contado',
             'items' => [
-                [
-                    'producto_id' => $this->producto->id,
-                    'cantidad' => 1,
-                    'tipo_venta' => 'unitario',
-                ],
+                $this->crearItemData(),
             ],
         ]);
 
@@ -185,11 +203,7 @@ class FacturaControllerTest extends TestCase
             'metodo_pago' => 'efectivo',
             'estado' => 'contado',
             'items' => [
-                [
-                    'producto_id' => $this->producto->id,
-                    'cantidad' => 1,
-                    'tipo_venta' => 'unitario',
-                ],
+                $this->crearItemData(),
             ],
         ]);
 
@@ -214,11 +228,7 @@ class FacturaControllerTest extends TestCase
             ],
             'estado' => 'contado',
             'items' => [
-                [
-                    'producto_id' => $this->producto->id,
-                    'cantidad' => 1,
-                    'tipo_venta' => 'unitario',
-                ],
+                $this->crearItemData(),
             ],
         ]);
 
@@ -247,11 +257,7 @@ class FacturaControllerTest extends TestCase
             ],
             'estado' => 'contado',
             'items' => [
-                [
-                    'producto_id' => $this->producto->id,
-                    'cantidad' => 1,
-                    'tipo_venta' => 'unitario',
-                ],
+                $this->crearItemData(),
             ],
         ]);
 
@@ -268,11 +274,7 @@ class FacturaControllerTest extends TestCase
             'metodo_pago' => 'mixto',
             'estado' => 'contado',
             'items' => [
-                [
-                    'producto_id' => $this->producto->id,
-                    'cantidad' => 1,
-                    'tipo_venta' => 'unitario',
-                ],
+                $this->crearItemData(),
             ],
         ]);
 
@@ -280,7 +282,7 @@ class FacturaControllerTest extends TestCase
         $response->assertJsonValidationErrors(['pagos']);
     }
 
-    public function test_store_descuenta_stock_paquetes()
+    public function test_store_descuenta_stock_actual()
     {
         $this->actingAs($this->cajero);
 
@@ -289,17 +291,32 @@ class FacturaControllerTest extends TestCase
             'metodo_pago' => 'efectivo',
             'estado' => 'contado',
             'items' => [
-                [
-                    'producto_id' => $this->producto->id,
-                    'cantidad' => 14,
-                    'tipo_venta' => 'unitario',
-                ],
+                $this->crearItemData(['cantidad' => 14]),
             ],
         ]);
 
         $this->producto->refresh();
-        $this->assertEquals(9, $this->producto->stock_paquetes);
-        $this->assertEquals(3, $this->producto->stock_unidades);
+        $this->assertEquals(111, (float) $this->producto->stock_actual);
+    }
+
+    public function test_store_descuenta_stock_segun_factor_de_presentacion()
+    {
+        $this->actingAs($this->cajero);
+
+        $this->postJson('/facturas', [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'efectivo',
+            'estado' => 'contado',
+            'items' => [
+                $this->crearItemData([
+                    'presentacion_id' => $this->presentacionMayor->id,
+                    'cantidad' => 2,
+                ]),
+            ],
+        ]);
+
+        $this->producto->refresh();
+        $this->assertEquals(101, (float) $this->producto->stock_actual);
     }
 
     public function test_store_crea_factura_credito()
@@ -311,11 +328,7 @@ class FacturaControllerTest extends TestCase
             'metodo_pago' => 'credito',
             'estado' => 'credito',
             'items' => [
-                [
-                    'producto_id' => $this->producto->id,
-                    'cantidad' => 2,
-                    'tipo_venta' => 'unitario',
-                ],
+                $this->crearItemData(['cantidad' => 2]),
             ],
         ]);
 
@@ -337,11 +350,7 @@ class FacturaControllerTest extends TestCase
             'metodo_pago' => 'efectivo',
             'estado' => 'contado',
             'items' => [
-                [
-                    'producto_id' => $this->producto->id,
-                    'cantidad' => 12,
-                    'tipo_venta' => 'mayor',
-                ],
+                $this->crearItemData(['cantidad' => 12]),
             ],
         ]);
 
@@ -358,7 +367,7 @@ class FacturaControllerTest extends TestCase
         ]);
 
         $this->producto->refresh();
-        $this->assertEquals(125, $this->producto->stock_total);
+        $this->assertEquals(125, (float) $this->producto->stock_actual);
     }
 
     public function test_pagar_credito_marca_como_cancelado()
@@ -370,11 +379,7 @@ class FacturaControllerTest extends TestCase
             'metodo_pago' => 'credito',
             'estado' => 'credito',
             'items' => [
-                [
-                    'producto_id' => $this->producto->id,
-                    'cantidad' => 5,
-                    'tipo_venta' => 'unitario',
-                ],
+                $this->crearItemData(['cantidad' => 5]),
             ],
         ]);
 
@@ -404,11 +409,7 @@ class FacturaControllerTest extends TestCase
             'metodo_pago' => 'credito',
             'estado' => 'credito',
             'items' => [
-                [
-                    'producto_id' => $this->producto->id,
-                    'cantidad' => 5,
-                    'tipo_venta' => 'unitario',
-                ],
+                $this->crearItemData(['cantidad' => 5]),
             ],
         ]);
 
@@ -441,11 +442,7 @@ class FacturaControllerTest extends TestCase
             'metodo_pago' => 'credito',
             'estado' => 'credito',
             'items' => [
-                [
-                    'producto_id' => $this->producto->id,
-                    'cantidad' => 3,
-                    'tipo_venta' => 'unitario',
-                ],
+                $this->crearItemData(['cantidad' => 3]),
             ],
         ]);
 
@@ -486,11 +483,7 @@ class FacturaControllerTest extends TestCase
             'metodo_pago' => 'efectivo',
             'estado' => 'contado',
             'items' => [
-                [
-                    'producto_id' => $this->producto->id,
-                    'cantidad' => 9999,
-                    'tipo_venta' => 'unitario',
-                ],
+                $this->crearItemData(['cantidad' => 9999]),
             ],
         ]);
 
@@ -505,11 +498,7 @@ class FacturaControllerTest extends TestCase
             'metodo_pago' => 'credito',
             'estado' => 'credito',
             'items' => [
-                [
-                    'producto_id' => $this->producto->id,
-                    'cantidad' => 2,
-                    'tipo_venta' => 'unitario',
-                ],
+                $this->crearItemData(['cantidad' => 2]),
             ],
         ]);
 
@@ -549,11 +538,7 @@ class FacturaControllerTest extends TestCase
             'metodo_pago' => 'efectivo',
             'estado' => 'contado',
             'items' => [
-                [
-                    'producto_id' => $this->producto->id,
-                    'cantidad' => 1,
-                    'tipo_venta' => 'unitario',
-                ],
+                $this->crearItemData(),
             ],
         ]);
 
@@ -562,12 +547,12 @@ class FacturaControllerTest extends TestCase
         $this->assertDatabaseCount('facturas', 0);
 
         $this->producto->refresh();
-        $this->assertEquals(125, $this->producto->stock_total);
+        $this->assertEquals(125, (float) $this->producto->stock_actual);
     }
 
     public function test_store_rechaza_producto_sin_precio()
     {
-        $this->producto->update(['precio_unitario_usd' => 0, 'precio_mayor_usd' => 0]);
+        $this->presentacionUnidad->update(['precio_usd' => 0]);
         $this->actingAs($this->cajero);
 
         $response = $this->postJson('/facturas', [
@@ -575,15 +560,29 @@ class FacturaControllerTest extends TestCase
             'metodo_pago' => 'efectivo',
             'estado' => 'contado',
             'items' => [
-                [
-                    'producto_id' => $this->producto->id,
-                    'cantidad' => 1,
-                    'tipo_venta' => 'unitario',
-                ],
+                $this->crearItemData(),
             ],
         ]);
 
         $response->assertStatus(422);
+        $response->assertJson(['success' => false]);
+        $this->assertDatabaseCount('facturas', 0);
+    }
+
+    public function test_store_rechaza_presentacion_no_activa()
+    {
+        $this->presentacionUnidad->update(['activa' => false]);
+        $this->actingAs($this->cajero);
+
+        $response = $this->postJson('/facturas', [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'efectivo',
+            'estado' => 'contado',
+            'items' => [
+                $this->crearItemData(),
+            ],
+        ]);
+
         $response->assertJson(['success' => false]);
         $this->assertDatabaseCount('facturas', 0);
     }
@@ -597,11 +596,7 @@ class FacturaControllerTest extends TestCase
             'metodo_pago' => 'credito',
             'estado' => 'credito',
             'items' => [
-                [
-                    'producto_id' => $this->producto->id,
-                    'cantidad' => 2,
-                    'tipo_venta' => 'unitario',
-                ],
+                $this->crearItemData(['cantidad' => 2]),
             ],
         ]);
 
@@ -631,11 +626,7 @@ class FacturaControllerTest extends TestCase
             'metodo_pago' => 'efectivo',
             'estado' => 'contado',
             'items' => [
-                [
-                    'producto_id' => $this->producto->id,
-                    'cantidad' => 10,
-                    'tipo_venta' => 'unitario',
-                ],
+                $this->crearItemData(['cantidad' => 10]),
             ],
         ]);
 
@@ -648,12 +639,12 @@ class FacturaControllerTest extends TestCase
         $response->assertSessionHas('success');
 
         $this->producto->refresh();
-        $this->assertEquals(125, $this->producto->stock_total);
+        $this->assertEquals(125, (float) $this->producto->stock_actual);
     }
 
     public function test_store_redondea_subtotal_iva_y_total()
     {
-        $this->producto->update(['precio_unitario_usd' => 10.3333, 'precio_mayor_usd' => 8.0]);
+        $this->presentacionUnidad->update(['precio_usd' => 10.3333]);
         $this->actingAs($this->cajero);
 
         $response = $this->postJson('/facturas', [
@@ -661,11 +652,7 @@ class FacturaControllerTest extends TestCase
             'metodo_pago' => 'efectivo',
             'estado' => 'contado',
             'items' => [
-                [
-                    'producto_id' => $this->producto->id,
-                    'cantidad' => 3,
-                    'tipo_venta' => 'unitario',
-                ],
+                $this->crearItemData(['cantidad' => 3]),
             ],
         ]);
 

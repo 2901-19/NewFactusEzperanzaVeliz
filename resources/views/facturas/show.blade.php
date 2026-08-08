@@ -23,13 +23,8 @@
     </div>
     @endif
     @php
-        $detalItems = $factura->items->where('tipo_venta', 'unitario');
-        $mayorItems = $factura->items->where('tipo_venta', 'mayor');
-        $subtotalDetal = $detalItems->sum('subtotal');
-        $subtotalMayor = $mayorItems->sum('subtotal');
-        $hayAmbos = $subtotalDetal > 0 && $subtotalMayor > 0;
         $esCredito = $factura->estado === 'credito';
-        $tasaCambio = (float) $factura->tasa_cambio;
+        $tasaCambio = (float) $factura->tasa_cambio ?: 1;
         $nombresMetodo = [
             'efectivo' => 'Efectivo',
             'punto' => 'Punto de Venta',
@@ -42,60 +37,6 @@
         ];
     @endphp
 
-    @if ($hayAmbos)
-    <div class="ticket-seccion">DETAL</div>
-    <div class="row-item row-head">
-        <span class="t-cant">CANT</span>
-        <span class="desc">DESC</span>
-        <span class="t-precio-u">PREC U</span>
-        @if (!$esCredito)<span class="t-precio-usd">USD</span>@endif
-        <span class="monto">PREC T</span>
-    </div>
-    @foreach ($detalItems as $item)
-    <div class="row-item ticket-item">
-        <span class="t-cant">{{ $item->cantidad }}</span>
-        <span class="desc">{{ $item->producto->nombre ?? 'Producto' }}</span>
-        @if ($esCredito)
-        <span class="t-precio-u">$ {{ number_format($item->precio_unitario_bs / $tasaCambio, 2) }}</span>
-        <span class="monto">$ {{ number_format($item->subtotal / $tasaCambio, 2) }}</span>
-        @else
-        <span class="t-precio-u">{{ number_format($item->precio_unitario_bs, 2) }}</span>
-        <span class="t-precio-usd">{{ number_format($item->precio_unitario_bs / $tasaCambio, 2) }}</span>
-        <span class="monto">{{ number_format($item->subtotal, 2) }}</span>
-        @endif
-    </div>
-    @endforeach
-    <div class="row-item">
-        <span>Subtotal Detal:</span>
-        <span>{{ $esCredito ? '$ ' . number_format($subtotalDetal / $tasaCambio, 2) : 'Bs ' . number_format($subtotalDetal, 2) }}</span>
-    </div>
-    <div class="ticket-seccion">MAYOR</div>
-    <div class="row-item row-head">
-        <span class="t-cant">CANT</span>
-        <span class="desc">DESC</span>
-        <span class="t-precio-u">PREC U</span>
-        @if (!$esCredito)<span class="t-precio-usd">USD</span>@endif
-        <span class="monto">PREC T</span>
-    </div>
-    @foreach ($mayorItems as $item)
-    <div class="row-item ticket-item">
-        <span class="t-cant">{{ $item->cantidad }}</span>
-        <span class="desc">{{ $item->producto->nombre ?? 'Producto' }}</span>
-        @if ($esCredito)
-        <span class="t-precio-u">$ {{ number_format($item->precio_unitario_bs / $tasaCambio, 2) }}</span>
-        <span class="monto">$ {{ number_format($item->subtotal / $tasaCambio, 2) }}</span>
-        @else
-        <span class="t-precio-u">{{ number_format($item->precio_unitario_bs, 2) }}</span>
-        <span class="t-precio-usd">{{ number_format($item->precio_unitario_bs / $tasaCambio, 2) }}</span>
-        <span class="monto">{{ number_format($item->subtotal, 2) }}</span>
-        @endif
-    </div>
-    @endforeach
-    <div class="row-item">
-        <span>Subtotal Mayor:</span>
-        <span>{{ $esCredito ? '$ ' . number_format($subtotalMayor / $tasaCambio, 2) : 'Bs ' . number_format($subtotalMayor, 2) }}</span>
-    </div>
-    @else
     <div class="row-item row-head">
         <span class="t-cant">CANT</span>
         <span class="desc">DESC</span>
@@ -106,7 +47,10 @@
     @foreach ($factura->items as $item)
     <div class="row-item ticket-item">
         <span class="t-cant">{{ $item->cantidad }}</span>
-        <span class="desc">{{ $item->producto->nombre ?? 'Producto' }}</span>
+        <span class="desc">
+            {{ $item->producto->nombre ?? 'Producto' }}
+            @if ($item->presentacion_nombre)<small> ({{ $item->presentacion_nombre }})</small>@endif
+        </span>
         @if ($esCredito)
         <span class="t-precio-u">$ {{ number_format($item->precio_unitario_bs / $tasaCambio, 2) }}</span>
         <span class="monto">$ {{ number_format($item->subtotal / $tasaCambio, 2) }}</span>
@@ -117,7 +61,6 @@
         @endif
     </div>
     @endforeach
-    @endif
 
     <hr class="sep">
     <div class="totales">

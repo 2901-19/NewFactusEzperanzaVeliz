@@ -61,25 +61,15 @@ class PrinterService
                 $this->printer->feed();
             }
 
-            $detalItems = array_values(array_filter($productos, fn ($i) => ($i['tipo_venta'] ?? 'unitario') !== 'mayor'));
-            $mayorItems = array_values(array_filter($productos, fn ($i) => ($i['tipo_venta'] ?? 'unitario') === 'mayor'));
-
             $esCredito = $factura->estado === 'credito';
             $tasaCambio = (float) $factura->tasa_cambio ?: 1;
             $moneda = $esCredito ? '$' : 'Bs';
 
             if ($esCredito) {
-                $detalItems = $this->convertirAUsd($detalItems, $tasaCambio);
-                $mayorItems = $this->convertirAUsd($mayorItems, $tasaCambio);
                 $productos = $this->convertirAUsd($productos, $tasaCambio);
             }
 
-            if (count($detalItems) > 0 && count($mayorItems) > 0) {
-                $this->printItemsSection('DETAL', $detalItems, $moneda);
-                $this->printItemsSection('MAYOR', $mayorItems, $moneda);
-            } else {
-                $this->printItemsSection(null, $productos, $moneda);
-            }
+            $this->printItemsSection(null, $productos, $moneda);
 
             $this->printer->setBold(true);
             $this->printer->setTextSize(2, 2);

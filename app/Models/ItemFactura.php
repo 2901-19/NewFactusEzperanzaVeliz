@@ -11,8 +11,10 @@ class ItemFactura extends Model
     protected $fillable = [
         'factura_id',
         'producto_id',
+        'presentacion_id',
+        'presentacion_nombre',
+        'factor_conversion',
         'cantidad',
-        'tipo_venta',
         'precio_unitario_usd',
         'precio_unitario_bs',
         'subtotal',
@@ -26,5 +28,21 @@ class ItemFactura extends Model
     public function producto()
     {
         return $this->belongsTo(Producto::class);
+    }
+
+    public function presentacion()
+    {
+        return $this->belongsTo(ProductoPresentacion::class);
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'cantidad' => 'float',
+            'factor_conversion' => 'float',
+            'precio_unitario_usd' => 'float',
+            'precio_unitario_bs' => 'float',
+            'subtotal' => 'float',
+        ];
     }
 }

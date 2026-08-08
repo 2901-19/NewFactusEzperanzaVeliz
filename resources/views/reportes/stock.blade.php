@@ -14,20 +14,18 @@
         <thead class="table-dark">
             <tr>
                 <th class="text-start">Producto</th>
-                <th>Lotes</th>
-                <th>Unidades</th>
-                <th>Existencia Total</th>
+                <th>Unidad</th>
+                <th>Existencia</th>
             </tr>
         </thead>
         <tbody>
             @foreach ($productos as $p)
             <tr>
                 <td class="text-start">{{ $p->nombre }}</td>
-                <td>{{ $p->stock_paquetes }}</td>
-                <td>{{ $p->stock_unidades }}</td>
+                <td>{{ $p->unidad_medida ?? 'unidad' }}</td>
                 <td>
-                    <span class="badge bg-{{ $p->stock_total <= 5 ? 'danger' : 'warning text-dark' }}">
-                        {{ $p->stock_total }} uds
+                    <span class="badge bg-{{ $p->stock_actual <= 5 ? 'danger' : 'warning text-dark' }}">
+                        {{ number_format($p->stock_actual, 2, ',', '.') }}
                     </span>
                 </td>
             </tr>
@@ -41,7 +39,7 @@
 document.addEventListener('DOMContentLoaded', function () {
     $('#stockTable').DataTable({
         language: window.DataTableSpanish,
-        order: [[3, 'asc']],
+        order: [[2, 'asc']],
         pageLength: 25,
     });
 });

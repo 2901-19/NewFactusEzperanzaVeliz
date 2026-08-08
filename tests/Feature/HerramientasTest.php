@@ -135,12 +135,12 @@ class HerramientasTest extends TestCase
         $this->assertDatabaseHas('tasa_cambios', ['tipo' => 'promedio', 'monto' => 52.00, 'origen' => 'importado']);
     }
 
-    public function test_importar_inventario_normaliza_unidades_por_paquete()
+    public function test_importar_inventario_crea_producto_con_stock_actual()
     {
         $this->actingAs($this->admin);
 
         $json = json_encode(['inventario' => [
-            ['nombre' => 'Azúcar', 'unidades_por_paquete' => 0],
+            ['nombre' => 'Azúcar', 'controla_inventario' => true, 'unidad_medida' => 'kilo', 'stock_actual' => 25.5],
         ]]);
         $archivo = UploadedFile::fake()->createWithContent('datos.json', $json);
 
@@ -149,7 +149,12 @@ class HerramientasTest extends TestCase
         ]);
 
         $response->assertSessionHas('success');
-        $this->assertDatabaseHas('productos', ['nombre' => 'Azúcar', 'unidades_por_paquete' => 1]);
+        $this->assertDatabaseHas('productos', [
+            'nombre' => 'Azúcar',
+            'controla_inventario' => true,
+            'unidad_medida' => 'kilo',
+            'stock_actual' => 25.5,
+        ]);
     }
 
     public function test_importar_precios_cero_marca_producto_no_disponible()
@@ -157,7 +162,9 @@ class HerramientasTest extends TestCase
         $this->actingAs($this->admin);
 
         $json = json_encode(['precios' => [
-            ['nombre' => 'Harina', 'costo_usd' => 0, 'margen_detal' => 0, 'margen_mayor' => 0, 'tiene_iva' => true, 'fuente_tasa' => 'promedio'],
+            ['nombre' => 'Harina', 'costo_usd' => 0, 'tiene_iva' => true, 'fuente_tasa' => 'promedio', 'presentaciones' => [
+                ['nombre' => 'Unidad', 'factor_conversion' => 1, 'margen' => 0, 'activa' => true],
+            ]],
         ]]);
         $archivo = UploadedFile::fake()->createWithContent('datos.json', $json);
 

@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Producto;
 use App\Models\TasaCambio;
 use App\Services\PrecioService;
-use App\Services\StockService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -13,7 +12,7 @@ class AjusteController extends Controller
 {
     public function editarPrecios()
     {
-        $productos = Producto::whereNull('deleted_at')->with('categoria')->get();
+        $productos = Producto::whereNull('deleted_at')->with(['categoria', 'presentaciones'])->get();
         $tasas = TasaCambio::mapaMontos();
 
         return view('productos.ajustar-precios', compact('productos', 'tasas'));
@@ -24,19 +23,33 @@ class AjusteController extends Controller
         try {
             $validated = $request->validate([
                 'costo_usd' => 'required|numeric|min:0',
-                'margen_detal' => 'required|numeric|min:0',
-                'margen_mayor' => 'required|numeric|min:0',
+                'presentaciones' => 'required|array|min:1',
+                'presentaciones.*.id' => 'required|exists:producto_presentaciones,id',
+                'presentaciones.*.margen' => 'required|numeric|min:0',
             ]);
 
-            $precios = PrecioService::preciosDesdeMargenes($validated['costo_usd'], $validated['margen_detal'], $validated['margen_mayor']);
+            $producto->update(['costo_usd' => (float) $validated['costo_usd']]);
 
-            $producto->update($validated + $precios);
+            $resultados = [];
+            foreach ($validated['presentaciones'] as $pres) {
+                $margen = (float) $pres['margen'];
+                $precio = PrecioService::precioPresentacion((float) $validated['costo_usd'], $margen, (float) $this->factorDe($producto, $pres['id']));
+
+                $producto->presentaciones()->whereKey($pres['id'])->update([
+                    'margen' => $margen,
+                    'precio_usd' => $precio,
+                ]);
+
+                $resultados[] = ['id' => $pres['id'], 'margen' => $margen, 'precio_usd' => $precio];
+            }
+
+            $producto->load('presentaciones');
 
             return response()->json([
                 'success' => true,
-                'message' => 'Precio actualizado correctamente',
-                'precio_unitario_usd' => $precios['precio_unitario_usd'],
-                'precio_mayor_usd' => $precios['precio_mayor_usd'],
+                'message' => 'Precios actualizados correctamente',
+                'presentaciones' => $resultados,
+                'precio_base_usd' => $producto->precio_base,
             ]);
         } catch (ValidationException $e) {
             return response()->json([
@@ -44,6 +57,11 @@ class AjusteController extends Controller
                 'message' => collect($e->errors())->first()[0],
             ], 422);
         }
+    }
+
+    private function factorDe(Producto $producto, $id): float
+    {
+        return (float) ($producto->presentaciones()->whereKey($id)->value('factor_conversion') ?? 1);
     }
 
     public function editarInventario()
@@ -57,41 +75,38 @@ class AjusteController extends Controller
     {
         try {
             $validated = $request->validate([
-                'cantidad' => 'required|integer|min:1',
+                'cantidad' => 'required|numeric|min:0.01',
                 'operacion' => 'required|in:+,-',
             ]);
 
-            $totalActual = StockService::totalUnidades($producto);
-            $upp = $producto->unidades_por_paquete;
-
-            if ($upp <= 0) {
+            if (! $producto->controla_inventario) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'El producto debe tener al menos 1 unidad por paquete para ajustar inventario',
+                    'message' => 'Este producto no lleva control de inventario',
                 ], 422);
             }
 
+            $totalActual = (float) $producto->stock_actual;
+            $cantidad = (float) $validated['cantidad'];
+
             if ($validated['operacion'] === '+') {
-                $nuevoTotal = $totalActual + $validated['cantidad'];
+                $nuevoTotal = $totalActual + $cantidad;
             } else {
-                $nuevoTotal = $totalActual - $validated['cantidad'];
+                $nuevoTotal = $totalActual - $cantidad;
                 if ($nuevoTotal < 0) {
                     return response()->json([
                         'success' => false,
-                        'message' => 'No puedes restar más unidades de las que hay en stock',
+                        'message' => 'No puedes restar más de lo que hay en stock',
                     ], 422);
                 }
             }
 
-            $componentes = StockService::descomponer($nuevoTotal, $upp);
-
-            $producto->update($componentes);
+            $producto->update(['stock_actual' => $nuevoTotal]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Inventario actualizado correctamente',
-                'stock_paquetes' => $componentes['stock_paquetes'],
-                'stock_unidades' => $componentes['stock_unidades'],
+                'stock_actual' => $nuevoTotal,
             ]);
         } catch (ValidationException $e) {
             return response()->json([
