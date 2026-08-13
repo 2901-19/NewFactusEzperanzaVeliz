@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Categoria;
+use App\Models\Impuesto;
 use App\Models\Producto;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -19,7 +20,7 @@ class ProductoFactory extends Factory
             'stock_actual' => fake()->randomFloat(3, 0, 100),
             'controla_inventario' => true,
             'unidad_medida' => 'unidad',
-            'tiene_iva' => true,
+            'impuesto_id' => Impuesto::factory(),
             'fuente_tasa' => fake()->randomElement(['promedio', 'dolar', 'bcv']),
             'estado' => 'disponible',
         ];

@@ -38,10 +38,10 @@ class HerramientasController extends Controller
         $data = ['exportado_en' => now()->toDateTimeString()];
 
         if (in_array('precios', $tipos)) {
-            $data['precios'] = Producto::with('presentaciones')->get()->map(fn ($p) => [
+            $data['precios'] = Producto::with(['presentaciones', 'impuesto'])->get()->map(fn ($p) => [
                 'nombre' => $p->nombre,
                 'costo_usd' => $p->costo_usd,
-                'tiene_iva' => $p->tiene_iva,
+                'impuesto' => $p->impuesto?->nombre,
                 'fuente_tasa' => $p->fuente_tasa,
                 'presentaciones' => $p->presentaciones->map(fn ($pr) => [
                     'nombre' => $pr->nombre,
@@ -158,10 +158,12 @@ class HerramientasController extends Controller
 
                             $estadoImportado = collect($datosPresentaciones)->contains(fn ($pr) => $pr['precio_usd'] > 0) ? 'disponible' : 'no_disponible';
 
+                            $impuestoId = $this->impuestoIdDesdeItem($item, $producto?->impuesto_id);
+
                             if ($producto) {
                                 $producto->update([
                                     'costo_usd' => $costoUsd,
-                                    'tiene_iva' => $item['tiene_iva'] ?? $producto->tiene_iva,
+                                    'impuesto_id' => $impuestoId,
                                     'fuente_tasa' => $item['fuente_tasa'] ?? $producto->fuente_tasa,
                                     'estado' => $estadoImportado,
                                 ]);
@@ -171,7 +173,7 @@ class HerramientasController extends Controller
                                 $producto = Producto::create([
                                     'nombre' => $item['nombre'],
                                     'costo_usd' => $costoUsd,
-                                    'tiene_iva' => $item['tiene_iva'] ?? true,
+                                    'impuesto_id' => $impuestoId,
                                     'fuente_tasa' => $item['fuente_tasa'] ?? 'promedio',
                                     'estado' => $estadoImportado,
                                 ]);
@@ -195,7 +197,7 @@ class HerramientasController extends Controller
                                     'stock_actual' => (float) ($item['stock_actual'] ?? 0),
                                     'estado' => 'no_disponible',
                                     'costo_usd' => 0,
-                                    'tiene_iva' => true,
+                                    'impuesto_id' => null,
                                     'fuente_tasa' => 'promedio',
                                 ]);
                                 $contadores['inventario']++;
@@ -421,7 +423,7 @@ class HerramientasController extends Controller
     {
         $productos = Producto::whereNull('deleted_at')
             ->where('estado', 'disponible')
-            ->with('presentaciones')
+            ->with(['presentaciones', 'impuesto'])
             ->orderBy('nombre')
             ->get();
 
@@ -431,7 +433,7 @@ class HerramientasController extends Controller
             $data = $productos->map(fn ($p) => [
                 'nombre' => $p->nombre,
                 'costo_usd' => $p->costo_usd,
-                'tiene_iva' => $p->tiene_iva,
+                'impuesto' => $p->impuesto?->nombre,
                 'fuente_tasa' => $p->fuente_tasa,
                 'presentaciones' => $p->presentaciones->map(fn ($pr) => [
                     'nombre' => $pr->nombre,
@@ -453,7 +455,7 @@ class HerramientasController extends Controller
     {
         $productos = Producto::whereNull('deleted_at')
             ->where('estado', 'disponible')
-            ->with('presentaciones')
+            ->with(['presentaciones', 'impuesto'])
             ->orderBy('nombre')
             ->get();
 
@@ -492,5 +494,25 @@ class HerramientasController extends Controller
         }
 
         return back()->with('success', 'Configuración guardada correctamente.');
+    }
+
+    private function impuestoIdDesdeItem(array $item, ?int $actual = null): ?int
+    {
+        if (array_key_exists('impuesto_id', $item)) {
+            $id = (int) ($item['impuesto_id'] ?? 0);
+
+            return $id ?: null;
+        }
+
+        $nombre = $item['impuesto'] ?? null;
+        if ($nombre === null && array_key_exists('tiene_iva', $item)) {
+            $nombre = $item['tiene_iva'] ? 'IVA' : null;
+        }
+
+        if ($nombre === null) {
+            return $actual;
+        }
+
+        return Impuesto::where('nombre', $nombre)->value('id') ?? $actual;
     }
 }

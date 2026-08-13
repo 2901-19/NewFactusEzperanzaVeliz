@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Impuesto;
 use App\Models\Producto;
 use App\Models\TasaCambio;
 use App\Services\PrecioService;
@@ -32,8 +33,9 @@ class ProductoController extends Controller
     public function create()
     {
         ['mapaTasas' => $mapaTasas, 'opcionesTasa' => $opcionesTasa] = $this->tasasParaVista();
+        $impuestos = Impuesto::orderBy('nombre')->get();
 
-        return view('productos.create', compact('mapaTasas', 'opcionesTasa'));
+        return view('productos.create', compact('mapaTasas', 'opcionesTasa', 'impuestos'));
     }
 
     public function store(Request $request)
@@ -62,8 +64,9 @@ class ProductoController extends Controller
             $opcionesTasa->put($producto->fuente_tasa, $mapaTasas[$producto->fuente_tasa].' (inactiva)');
         }
         $producto->load('presentaciones');
+        $impuestos = Impuesto::orderBy('nombre')->get();
 
-        return view('productos.edit', compact('producto', 'mapaTasas', 'opcionesTasa'));
+        return view('productos.edit', compact('producto', 'mapaTasas', 'opcionesTasa', 'impuestos'));
     }
 
     public function update(Request $request, Producto $producto)
@@ -110,7 +113,6 @@ class ProductoController extends Controller
         return $request->validate([
             'nombre' => 'required|string|max:255',
             'categoria_id' => 'nullable|exists:categorias,id',
-            'descripcion' => 'nullable|string',
             'imagen' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'costo_usd' => 'required|numeric|min:0',
             'controla_inventario' => 'boolean',
@@ -121,7 +123,7 @@ class ProductoController extends Controller
             'presentaciones.*.factor_conversion' => 'required|numeric|min:0.0001',
             'presentaciones.*.margen' => 'required|numeric|min:0',
             'presentaciones.*.activa' => 'boolean',
-            'tiene_iva' => 'boolean',
+            'impuesto_id' => 'nullable|exists:impuestos,id',
             'fuente_tasa' => ['required', Rule::exists('tasa_cambios', 'tipo')],
             'estado' => 'required|in:disponible,no_disponible',
         ]);

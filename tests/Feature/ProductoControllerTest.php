@@ -64,7 +64,7 @@ class ProductoControllerTest extends TestCase
             'controla_inventario' => true,
             'unidad_medida' => 'unidad',
             'stock_actual' => 5,
-            'tiene_iva' => true,
+            'impuesto_id' => null,
             'fuente_tasa' => 'promedio',
             'estado' => 'disponible',
             'presentaciones' => [
@@ -118,7 +118,7 @@ class ProductoControllerTest extends TestCase
             'controla_inventario' => $producto->controla_inventario,
             'unidad_medida' => 'unidad',
             'stock_actual' => $producto->stock_actual,
-            'tiene_iva' => $producto->tiene_iva,
+            'impuesto_id' => $producto->impuesto_id,
             'fuente_tasa' => $producto->fuente_tasa,
             'estado' => $producto->estado,
             'presentaciones' => [

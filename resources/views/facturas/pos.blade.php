@@ -14,13 +14,15 @@
                         <tr>
                             <th class="text-start">Nombre</th>
                             <th>Ref.</th>
-                            <th>Precios</th>
+                            <th>Presentación</th>
+                            <th>Precio</th>
                             <th style="width:60px"></th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach ($productos as $p)
                         @php $tasaValorPos = $tasas[$p->fuente_tasa]->monto ?? 1; @endphp
+                        @forelse ($p->presentaciones as $pr)
                         <tr>
                             <td class="text-start">{{ $p->nombre }}</td>
                             <td>
@@ -30,22 +32,30 @@
                                     <span class="text-muted sin-ref">Sin referencia</span>
                                 @endif
                             </td>
-                            <td>
-                                @forelse ($p->presentaciones as $pr)
-                                <div class="small text-nowrap">
-                                    {{ $pr['nombre'] }}:
-                                    <strong>Bs {{ number_format($pr['precio_usd'] * $tasaValorPos, 2) }}</strong>
-                                </div>
-                                @empty
-                                <span class="text-muted">Sin precios</span>
-                                @endforelse
+                            <td class="text-start">{{ $pr['nombre'] }}</td>
+                            <td class="small text-nowrap">
+                                <strong>Bs {{ number_format($pr['precio_usd'] * $tasaValorPos, 2) }}</strong>
+                                <small class="text-muted">(${{ number_format($pr['precio_usd'], 2) }})</small>
                             </td>
                             <td class="text-center">
-                                <button class="btn btn-sm btn-outline-primary agregar-producto" data-id="{{ $p->id }}" title="Agregar al carrito">
+                                <button class="btn btn-sm btn-outline-primary agregar-producto" data-id="{{ $p->id }}" data-presentacion="{{ $pr['id'] }}" title="Agregar al carrito">
                                     <i class="bi bi-cart-plus"></i>
                                 </button>
                             </td>
                         </tr>
+                        @empty
+                        <tr>
+                            <td class="text-start">{{ $p->nombre }}</td>
+                            <td>
+                                @if ($p->imagen_url)
+                                    <img src="{{ $p->imagen_url }}" alt="{{ $p->nombre }}" class="thumb">
+                                @else
+                                    <span class="text-muted sin-ref">Sin referencia</span>
+                                @endif
+                            </td>
+                            <td colspan="3" class="text-muted">Sin presentaciones activas</td>
+                        </tr>
+                        @endforelse
                         @endforeach
                     </tbody>
                 </table>
@@ -73,16 +83,18 @@
                         </div>
                         <div class="d-flex align-items-center gap-2 mt-1">
                             <button class="btn btn-sm btn-outline-secondary" @click="item.cantidad > (item.controla_inventario ? 1 : 0.001) && (item.cantidad = Math.max(0.001, item.cantidad - 1))">-</button>
-                            <input type="number" :step="item.controla_inventario ? 1 : 0.001" :min="item.controla_inventario ? 1 : 0.001" x-model.number="item.cantidad" @blur="item.cantidad = Math.max(item.controla_inventario ? 1 : 0.001, parseFloat(item.cantidad) || 1)" class="form-control form-control-sm text-center" style="width: 70px;">
-                            <button class="btn btn-sm btn-outline-secondary" @click="item.cantidad = (parseFloat(item.cantidad) || 0) + (item.controla_inventario ? 1 : 0.001)">+</button>
-                            <select class="form-select form-select-sm" style="max-width:150px" x-model="item.presentacion_id" @change="item.presentacion_nombre = presNombre(index)">
-                                <template x-for="pr in item.presentaciones" :key="pr.id">
-                                    <option :value="pr.id" x-text="pr.nombre"></option>
-                                </template>
-                            </select>
+                            <input type="number" :step="item.controla_inventario ? 1 : 0.001" :min="item.controla_inventario ? 1 : 0.001" :max="maxPresentaciones(index)" x-model.number="item.cantidad" @blur="item.cantidad = Math.max(item.controla_inventario ? 1 : 0.001, Math.min(parseFloat(item.cantidad) || (item.controla_inventario ? 1 : 0.001), maxPresentaciones(index)))" class="form-control form-control-sm text-center" style="width: 70px;">
+                            <button class="btn btn-sm btn-outline-secondary" @click="item.cantidad = Math.min((parseFloat(item.cantidad) || 0) + (item.controla_inventario ? 1 : 0.001), maxPresentaciones(index))" :disabled="item.controla_inventario && item.cantidad >= maxPresentaciones(index)">+</button>
                             <span class="ms-auto small" x-text="'Bs ' + getBsPriceTotal(index).toFixed(2)"></span>
                         </div>
-                        <div class="text-muted small" x-text="'Precio: Bs ' + getBsPrice(index).toFixed(2) + ' (' + presNombre(index) + ')'"></div>
+                        <div class="text-muted small" x-text="precioUnitarioTexto(index)"></div>
+                        <div class="text-muted small" x-show="factorDe(item) !== 1 && factorDe(item) > 0" x-text="equivalenciaTexto(index)"></div>
+                        <div class="small" x-show="item.controla_inventario" :class="disponiblesExtra(index) <= 0 ? 'text-danger' : 'text-muted'">
+                            <span x-text="'Disponible: ' + disponiblesExtra(index)"></span>
+                            <template x-if="disponiblesExtra(index) > 0 && factorDe(item) !== 1 && factorDe(item) > 0">
+                                <span class="text-muted"> (c/u equivale a <span x-text="factorDe(item)"></span> <span x-text="unidadLabel(item, factorDe(item))"></span>)</span>
+                            </template>
+                        </div>
                     </div>
                 </template>
                 <div class="text-center text-muted small py-3" x-show="carrito.length === 0">
@@ -159,9 +171,19 @@
                     <span>Subtotal Bs:</span>
                     <span x-text="subtotalBs.toFixed(2)"></span>
                 </div>
-                <div class="d-flex justify-content-between small">
-                    <span>IVA ({{ $ivaPorcentaje }}%):</span>
+                <div class="d-flex justify-content-between small fw-bold">
+                    <span>Total Impuesto:</span>
                     <span x-text="ivaBs.toFixed(2)"></span>
+                </div>
+                <template x-for="f in impuestosDesglose" :key="f.id">
+                    <div class="d-flex justify-content-between small text-muted" style="padding-left:1rem">
+                        <span x-text="f.nombre + ' (' + f.porcentaje + '%):'"></span>
+                        <span x-text="f.bs.toFixed(2)"></span>
+                    </div>
+                </template>
+                <div class="d-flex justify-content-between small text-muted" style="padding-left:1rem" x-show="exentoBs > 0.004">
+                    <span>Exento:</span>
+                    <span x-text="exentoBs.toFixed(2)"></span>
                 </div>
                 <div class="d-flex justify-content-between fw-bold">
                     <span>Total Bs:</span>
@@ -219,8 +241,18 @@
                                 <span x-text="(tipoFactura === 'credito' ? subtotalBs / tasaRef : subtotalBs).toFixed(2)"></span>
                             </div>
                             <div class="row-item">
-                                <span>IVA ({{ $ivaPorcentaje }}%):</span>
+                                <span>Total Impuesto:</span>
                                 <span x-text="(tipoFactura === 'credito' ? ivaUsd : ivaBs).toFixed(2)"></span>
+                            </div>
+                            <template x-for="f in impuestosDesglose" :key="f.id">
+                                <div class="row-item small text-muted" style="padding-left:1rem">
+                                    <span x-text="f.nombre + ' (' + f.porcentaje + '%):'"></span>
+                                    <span x-text="(tipoFactura === 'credito' ? f.bs / tasaRef : f.bs).toFixed(2)"></span>
+                                </div>
+                            </template>
+                            <div class="row-item small text-muted" style="padding-left:1rem" x-show="exentoBs > 0.004">
+                                <span>Exento:</span>
+                                <span x-text="(tipoFactura === 'credito' ? exentoBs / tasaRef : exentoBs).toFixed(2)"></span>
                             </div>
                             <hr class="sep-double">
                             <div class="row-item total-final">
@@ -315,7 +347,6 @@ document.addEventListener('alpine:init', () => {
         clientes: @json($clientes),
         tasas: @json($tasas),
         tasaReferencia: '{{ $tasaReferenciaTipo }}',
-        ivaPorcentaje: {{ $ivaPorcentaje }},
         carrito: [],
         metodoPago: 'efectivo',
         tipoFactura: 'contado',
@@ -334,14 +365,15 @@ document.addEventListener('alpine:init', () => {
                     lengthMenu: [10, 15, 25, 50],
                     order: [[0, 'asc']],
                     columnDefs: [
-                        { targets: 3, orderable: false },
+                        { targets: 4, orderable: false },
                     ],
                 });
 
                 $('#productosTable tbody').on('click', '.agregar-producto', (e) => {
                     const id = parseInt($(e.currentTarget).data('id'));
+                    const presId = parseInt($(e.currentTarget).data('presentacion'));
                     const producto = this.productos.find(p => p.id === id);
-                    if (producto) this.agregar(producto);
+                    if (producto) this.agregar(producto, presId);
                 });
             }
 
@@ -358,13 +390,23 @@ document.addEventListener('alpine:init', () => {
             });
         },
 
-        agregar(p) {
+        agregar(p, presId) {
             const presentaciones = p.presentaciones || [];
             if (!presentaciones.length) {
                 this.mostrarError('Este producto no tiene presentaciones activas.');
                 return;
             }
-            const presId = presentaciones[0].id;
+            if (!presentaciones.some(pr => pr.id === presId)) {
+                presId = presentaciones[0].id;
+            }
+            if (!this.hayStockPara(p, presId)) {
+                const pr = presentaciones.find(pr => pr.id === presId);
+                const nombrePres = pr ? pr.nombre : '';
+                const stock = parseFloat(p.stock_actual) || 0;
+                const unidad = p.unidad_medida || 'unidad';
+                this.mostrarError('Stock insuficiente para ' + p.nombre + (nombrePres ? ' (' + nombrePres + ')' : '') + '. Disponible: ' + stock + ' ' + unidad + '.');
+                return;
+            }
             const existente = this.carrito.find(i => i.id === p.id && i.presentacion_id === presId);
             if (existente) {
                 existente.cantidad++;
@@ -376,10 +418,80 @@ document.addEventListener('alpine:init', () => {
                     controla_inventario: !!p.controla_inventario,
                     presentaciones,
                     presentacion_id: presId,
-                    tiene_iva: p.tiene_iva,
+                    impuesto: p.impuesto || null,
                     fuente_tasa: p.fuente_tasa,
                 });
             }
+        },
+
+        factorDe(item) {
+            const pr = (item.presentaciones || []).find(pr => pr.id === item.presentacion_id);
+            return pr ? parseFloat(pr.factor_conversion) || 0 : 0;
+        },
+
+        unidadesOcupadas(productoId) {
+            let total = 0;
+            this.carrito.forEach(it => {
+                if (it.id !== productoId) return;
+                const pr = (it.presentaciones || []).find(pr => pr.id === it.presentacion_id);
+                total += (parseFloat(it.cantidad) || 0) * (pr ? parseFloat(pr.factor_conversion) || 0 : 0);
+            });
+            return total;
+        },
+
+        maxPresentaciones(index) {
+            const it = this.carrito[index];
+            if (!it || !it.controla_inventario) return Infinity;
+            const p = this.productos.find(x => x.id === it.id);
+            if (!p) return Infinity;
+            const factor = this.factorDe(it);
+            if (!(factor > 0)) return Infinity;
+            const ocupado = this.unidadesOcupadas(it.id) - ((parseFloat(it.cantidad) || 0) * factor);
+            const restante = (parseFloat(p.stock_actual) || 0) - ocupado;
+            return Math.max(0, Math.floor(restante / factor));
+        },
+
+        disponiblesExtra(index) {
+            const it = this.carrito[index];
+            if (!it || !it.controla_inventario) return Infinity;
+            return Math.max(0, this.maxPresentaciones(index) - (parseFloat(it.cantidad) || 0));
+        },
+
+        hayStockPara(p, presId) {
+            if (!p.controla_inventario) return true;
+            const pr = (p.presentaciones || []).find(pr => pr.id === presId);
+            if (!pr) return true;
+            const stock = parseFloat(p.stock_actual) || 0;
+            const ocupado = this.unidadesOcupadas(p.id);
+            return (ocupado + (parseFloat(pr.factor_conversion) || 0)) <= stock + 1e-9;
+        },
+
+        unidadDe(item) {
+            const p = this.productos.find(x => x.id === item.id);
+            return p ? (p.unidad_medida || 'unidad') : 'unidad';
+        },
+
+        unidadLabel(item, cantidad) {
+            let unidad = this.unidadDe(item);
+            const n = parseFloat(cantidad) || 0;
+            if (unidad === 'unidad') unidad = n === 1 ? 'unidad' : 'unidades';
+            return unidad;
+        },
+
+        equivalenciaTexto(index) {
+            const it = this.carrito[index];
+            if (!it) return '';
+            const factor = this.factorDe(it);
+            if (!(factor > 0) || factor === 1) return '';
+            const cantidad = parseFloat(it.cantidad) || 0;
+            const unidades = Math.round(cantidad * factor * 100) / 100;
+            return cantidad + ' ' + this.presNombre(index) + ' = ' + unidades + ' ' + this.unidadLabel(it, unidades);
+        },
+
+        precioUnitarioTexto(index) {
+            const it = this.carrito[index];
+            if (!it) return '';
+            return 'Precio: Bs ' + this.getBsPrice(index).toFixed(2) + ' — ' + this.presNombre(index);
         },
 
         precioUsdItem(index) {
@@ -404,14 +516,38 @@ document.addEventListener('alpine:init', () => {
             }, 0);
         },
 
-        get ivaBs() {
-            return this.carrito.reduce((sum, i, idx) => {
-                if (!i.tiene_iva) return sum;
+        get impuestosDesglose() {
+            const filas = new Map();
+            this.carrito.forEach((i, idx) => {
+                const imp = i.impuesto;
+                if (!imp) return;
+                const porcentaje = parseFloat(imp.porcentaje) || 0;
+                if (!(porcentaje > 0)) return;
                 const tasa = this.tasas[i.fuente_tasa]
                     ? parseFloat(this.tasas[i.fuente_tasa].monto)
                     : 1;
-                return sum + (this.precioUsdItem(idx) * i.cantidad * tasa * (this.ivaPorcentaje / 100));
+                const impuestoBs = this.precioUsdItem(idx) * i.cantidad * tasa * (porcentaje / 100);
+                const key = String(imp.id);
+                if (!filas.has(key)) {
+                    filas.set(key, { id: imp.id, nombre: imp.nombre, porcentaje, bs: 0 });
+                }
+                filas.get(key).bs += impuestoBs;
+            });
+            return Array.from(filas.values()).map(f => ({ ...f, bs: Math.round(f.bs * 100) / 100 }));
+        },
+
+        get exentoBs() {
+            return this.carrito.reduce((sum, i, idx) => {
+                if (i.impuesto) return sum;
+                const tasa = this.tasas[i.fuente_tasa]
+                    ? parseFloat(this.tasas[i.fuente_tasa].monto)
+                    : 1;
+                return sum + (this.precioUsdItem(idx) * i.cantidad * tasa);
             }, 0);
+        },
+
+        get ivaBs() {
+            return this.impuestosDesglose.reduce((sum, f) => sum + f.bs, 0);
         },
 
         get totalBs() {

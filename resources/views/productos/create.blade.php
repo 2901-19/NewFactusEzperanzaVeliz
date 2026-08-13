@@ -10,16 +10,6 @@
 @endsection
 @push('scripts')
 <script>
-function costoCalc(costoUsd, tasas, fuenteTasa) {
-    return {
-        costoUsd: costoUsd || 0,
-        tasas: tasas || {},
-        fuenteTasa: fuenteTasa || Object.keys(tasas || {})[0] || '',
-        get tasa() { return parseFloat(this.tasas[this.fuenteTasa]) || 0; },
-        get costoBs() { return this.costoUsd * this.tasa; },
-    };
-}
-
 function inventarioControl(controla, unidadMedida, stockActual) {
     return {
         controla: !!controla,
@@ -28,14 +18,14 @@ function inventarioControl(controla, unidadMedida, stockActual) {
     };
 }
 
-function presentacionesEditor(costoUsd, presentaciones, tasas) {
+function presentacionesEditor(costoUsd, presentaciones, tasas, fuenteTasa) {
     return {
         costoUsd: costoUsd || 0,
         tasas: tasas || {},
+        fuenteTasa: fuenteTasa || Object.keys(tasas || {})[0] || '',
         presentaciones: (presentaciones && presentaciones.length ? presentaciones : [{ nombre: 'Unidad', factor_conversion: 1, margen: 0, activa: true }]),
         tasaActual() {
-            const sel = document.querySelector('[name="fuente_tasa"]');
-            return parseFloat((sel && this.tasas[sel.value]) || 0) || 0;
+            return parseFloat(this.tasas[this.fuenteTasa] || 0) || 0;
         },
         agregar() {
             this.presentaciones.push({ nombre: '', factor_conversion: 1, margen: 0, activa: true });

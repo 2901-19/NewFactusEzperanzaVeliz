@@ -69,7 +69,7 @@
             <span>{{ $esCredito ? '$ ' . number_format($factura->subtotal_bs / $tasaCambio, 2) : 'Bs ' . number_format($factura->subtotal_bs, 2) }}</span>
         </div>
         <div class="row-item">
-            <span>IVA (16%):</span>
+            <span>IVA:</span>
             <span>{{ $esCredito ? '$ ' . number_format($factura->iva_bs / $tasaCambio, 2) : 'Bs ' . number_format($factura->iva_bs, 2) }}</span>
         </div>
         <hr class="sep-double">

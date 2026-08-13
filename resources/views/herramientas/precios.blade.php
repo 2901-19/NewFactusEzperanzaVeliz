@@ -20,7 +20,7 @@
                 <th>Presentación</th>
                 <th>Precio Bs</th>
                 <th>Precio USD</th>
-                <th>IVA</th>
+                <th>Impuesto</th>
             </tr>
         </thead>
         <tbody>
@@ -35,7 +35,7 @@
                 <td>{{ $pr->nombre }}</td>
                 <td>Bs {{ number_format($precioBs, 2) }}</td>
                 <td>${{ number_format($pr->precio_usd, 2) }}</td>
-                <td>{{ $p->tiene_iva ? 'Sí' : 'No' }}</td>
+                <td>{{ $p->impuesto?->nombre ?? 'No' }}</td>
             </tr>
             @endforeach
             @endforeach

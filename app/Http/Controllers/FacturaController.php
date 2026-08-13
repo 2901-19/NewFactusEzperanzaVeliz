@@ -54,7 +54,7 @@ class FacturaController extends Controller
 
     public function pos()
     {
-        $productos = Producto::where('estado', 'disponible')->whereNull('deleted_at')->with('presentaciones')->get();
+        $productos = Producto::where('estado', 'disponible')->whereNull('deleted_at')->with(['presentaciones', 'impuesto'])->get();
 
         $productos->each(function ($producto) {
             $producto->setAttribute('presentaciones', $producto->presentaciones
@@ -72,10 +72,9 @@ class FacturaController extends Controller
         $clientes = Cliente::all();
         $tasas = TasaCambio::ultimasPorTipo();
 
-        $ivaPorcentaje = ImpuestoService::porcentajeVigente();
         $tasaReferenciaTipo = Configuracion::obtener('tasa_referencia', 'bcv');
 
-        return view('facturas.pos', compact('productos', 'clientes', 'tasas', 'ivaPorcentaje', 'tasaReferenciaTipo'));
+        return view('facturas.pos', compact('productos', 'clientes', 'tasas', 'tasaReferenciaTipo'));
     }
 
     public function store(Request $request)
@@ -99,8 +98,6 @@ class FacturaController extends Controller
 
         $correlativo = $this->generarCorrelativo();
 
-        $ivaPorcentaje = ImpuestoService::porcentajeVigente();
-
         $itemsData = [];
         $subtotalBs = 0;
         $ivaBs = 0;
@@ -108,6 +105,7 @@ class FacturaController extends Controller
         DB::beginTransaction();
         try {
             $productos = Producto::whereIn('id', collect($request->items)->pluck('producto_id'))
+                ->with('impuesto')
                 ->lockForUpdate()
                 ->get()
                 ->keyBy('id');
@@ -161,8 +159,9 @@ class FacturaController extends Controller
 
                 $subtotalBs = round($subtotalBs + $subtotalItemBs, 2);
 
-                if ($producto->tiene_iva) {
-                    $ivaBs = round($ivaBs + $subtotalItemBs * ($ivaPorcentaje / 100), 2);
+                $porcentajeIva = ImpuestoService::porcentajeDe($producto->impuesto);
+                if ($porcentajeIva > 0) {
+                    $ivaBs = round($ivaBs + $subtotalItemBs * ($porcentajeIva / 100), 2);
                 }
             }
 

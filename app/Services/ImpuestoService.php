@@ -6,10 +6,8 @@ use App\Models\Impuesto;
 
 class ImpuestoService
 {
-    public static function porcentajeVigente(): float
+    public static function porcentajeDe(?Impuesto $impuesto): float
     {
-        $impuesto = Impuesto::latest('fecha')->first();
-
-        return $impuesto ? (float) $impuesto->porcentaje : 16;
+        return $impuesto ? (float) $impuesto->porcentaje : 0;
     }
 }

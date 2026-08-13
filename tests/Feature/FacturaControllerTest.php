@@ -40,6 +40,10 @@ class FacturaControllerTest extends TestCase
         $this->cajero = User::factory()->create(['rol' => 'cajero']);
         $this->cliente = Cliente::factory()->create();
         $categoria = Categoria::factory()->create();
+        $this->iva = Impuesto::factory()->create([
+            'porcentaje' => 16.00,
+            'fecha' => '2026-07-04',
+        ]);
         $this->producto = Producto::factory()->create([
             'categoria_id' => $categoria->id,
             'nombre' => 'Producto Test',
@@ -47,7 +51,7 @@ class FacturaControllerTest extends TestCase
             'stock_actual' => 125,
             'controla_inventario' => true,
             'unidad_medida' => 'unidad',
-            'tiene_iva' => true,
+            'impuesto_id' => $this->iva->id,
             'fuente_tasa' => 'promedio',
             'estado' => 'disponible',
         ]);
@@ -75,10 +79,6 @@ class FacturaControllerTest extends TestCase
         TasaCambio::factory()->create([
             'tipo' => 'bcv',
             'monto' => 45.00,
-            'fecha' => '2026-07-04',
-        ]);
-        $this->iva = Impuesto::factory()->create([
-            'porcentaje' => 16.00,
             'fecha' => '2026-07-04',
         ]);
     }
@@ -111,6 +111,18 @@ class FacturaControllerTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertViewHas(['productos', 'clientes']);
+    }
+
+    public function test_pos_muestra_una_fila_por_presentacion()
+    {
+        $this->actingAs($this->cajero);
+
+        $response = $this->get('/pos');
+
+        $response->assertStatus(200);
+        $response->assertSee('Presentación');
+        $response->assertSee('data-presentacion="'.$this->presentacionUnidad->id.'"', false);
+        $response->assertSee('data-presentacion="'.$this->presentacionMayor->id.'"', false);
     }
 
     public function test_store_crea_factura_contado()

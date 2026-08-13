@@ -20,7 +20,7 @@ class Producto extends Model
         'stock_actual',
         'controla_inventario',
         'unidad_medida',
-        'tiene_iva',
+        'impuesto_id',
         'fuente_tasa',
         'estado',
     ];
@@ -55,7 +55,6 @@ class Producto extends Model
     protected function casts(): array
     {
         return [
-            'tiene_iva' => 'boolean',
             'controla_inventario' => 'boolean',
             'costo_usd' => 'float',
             'stock_actual' => 'float',
@@ -70,6 +69,11 @@ class Producto extends Model
     public function categoria()
     {
         return $this->belongsTo(Categoria::class);
+    }
+
+    public function impuesto()
+    {
+        return $this->belongsTo(Impuesto::class);
     }
 
     public function presentaciones()

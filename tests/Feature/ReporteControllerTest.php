@@ -43,7 +43,7 @@ class ReporteControllerTest extends TestCase
             'stock_actual' => 125,
             'controla_inventario' => true,
             'unidad_medida' => 'unidad',
-            'tiene_iva' => true,
+            'impuesto_id' => null,
             'fuente_tasa' => 'promedio',
             'estado' => 'disponible',
         ]);
