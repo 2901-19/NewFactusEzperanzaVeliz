@@ -1,74 +1,308 @@
 @extends('layouts.app')
 @section('titulo', 'Inicio')
 @section('contenido')
+@php
+    use App\Services\CatalogoService;
+    $esAnulada = fn ($f) => $f->estado === 'anulada';
+    $esCredito = fn ($f) => $f->estado === 'credito';
+    $tienePermiso = fn ($slug) => Auth::user()->hasPermiso($slug);
+@endphp
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <div>
+        <h3 class="mb-0">Hola, {{ Auth::user()->name }}</h3>
+        <div class="text-muted">
+            {{ $nombreNegocio }} &middot; {{ now()->translatedFormat('l, d \d\e F Y') }}
+        </div>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        @if ($tienePermiso('usar-pos'))
+            <a href="{{ route('facturas.pos') }}" class="btn btn-primary">
+                <i class="bi bi-cart3"></i> Punto de Venta
+            </a>
+        @endif
+        @if ($tienePermiso('gestionar-creditos'))
+            <a href="{{ route('facturas.creditos') }}" class="btn btn-warning">
+                <i class="bi bi-credit-card"></i> Cobrar Créditos
+            </a>
+        @endif
+        @if ($tienePermiso('ver-facturas'))
+            <a href="{{ route('facturas.index') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-list-ul"></i> Facturas
+            </a>
+        @endif
+    </div>
+</div>
+
 <div class="row g-3 mb-4">
     <div class="col-md-3">
-        <div class="card bg-primary text-white">
+        <div class="card h-100 shadow-sm">
             <div class="card-body">
-                <h6>Ventas Hoy</h6>
-                <h3>{{ $ventasHoy }}</h3>
-                <small>Bs {{ number_format($totalHoyBs, 2) }} / ${{ number_format($totalHoyUsd, 2) }}</small>
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="text-muted small text-uppercase fw-semibold">Ventas Hoy</div>
+                        <div class="fs-3 fw-bold">{{ $ventasHoy }}</div>
+                        <div class="small text-muted">
+                            Bs {{ number_format($totalHoyBs, 2) }} &middot; ${{ number_format($totalHoyUsd, 2) }}
+                        </div>
+                    </div>
+                    <div class="rounded-circle bg-primary bg-opacity-10 p-3">
+                        <i class="bi bi-cart3 fs-5 text-primary"></i>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    @if ($variacionHoy !== null)
+                        <span class="badge {{ $variacionHoy >= 0 ? 'bg-success' : 'bg-danger' }}">
+                            <i class="bi {{ $variacionHoy >= 0 ? 'bi-arrow-up' : 'bi-arrow-down' }}"></i>
+                            {{ number_format(abs($variacionHoy), 1) }}% vs ayer
+                        </span>
+                    @else
+                        <span class="small text-muted">Sin ventas ayer</span>
+                    @endif
+                </div>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card bg-success text-white">
+        <div class="card h-100 shadow-sm">
             <div class="card-body">
-                <h6>Ventas del Mes</h6>
-                <h3>{{ $ventasMes }}</h3>
-                <small>Bs {{ number_format($totalMesBs, 2) }} / ${{ number_format($totalMesUsd, 2) }}</small>
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="text-muted small text-uppercase fw-semibold">Ventas del Mes</div>
+                        <div class="fs-3 fw-bold">{{ $ventasMes }}</div>
+                        <div class="small text-muted">
+                            Bs {{ number_format($totalMesBs, 2) }} &middot; ${{ number_format($totalMesUsd, 2) }}
+                        </div>
+                    </div>
+                    <div class="rounded-circle bg-success bg-opacity-10 p-3">
+                        <i class="bi bi-graph-up-arrow fs-5 text-success"></i>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    @if ($variacionMes !== null)
+                        <span class="badge {{ $variacionMes >= 0 ? 'bg-success' : 'bg-danger' }}">
+                            <i class="bi {{ $variacionMes >= 0 ? 'bi-arrow-up' : 'bi-arrow-down' }}"></i>
+                            {{ number_format(abs($variacionMes), 1) }}% vs mes anterior
+                        </span>
+                    @else
+                        <span class="small text-muted">Sin ventas en el mes anterior</span>
+                    @endif
+                </div>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card bg-warning text-dark">
+        <div class="card h-100 shadow-sm">
             <div class="card-body">
-                <h6>Créditos Pendientes</h6>
-                <h3>{{ $creditosPendientes }}</h3>
-                <small>Bs {{ number_format($totalCreditosPendientesBs, 2) }}</small>
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="text-muted small text-uppercase fw-semibold">Créditos Pendientes</div>
+                        <div class="fs-3 fw-bold">{{ $creditosPendientes }}</div>
+                        <div class="small text-muted">Bs {{ number_format($totalCreditosPendientesBs, 2) }}</div>
+                    </div>
+                    <div class="rounded-circle bg-warning bg-opacity-10 p-3">
+                        <i class="bi bi-credit-card fs-5 text-warning"></i>
+                    </div>
+                </div>
+                @if ($tienePermiso('gestionar-creditos') && $creditosPendientes > 0)
+                    <a href="{{ route('facturas.creditos') }}" class="small text-decoration-none mt-2 d-inline-block">Cobrar ahora</a>
+                @endif
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card bg-info text-white">
+        <div class="card h-100 shadow-sm">
             <div class="card-body">
-                <h6>Inventario</h6>
-                <h3>{{ $totalProductos }}</h3>
-                <small>{{ $totalClientes }} clientes</small>
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="text-muted small text-uppercase fw-semibold">Productos</div>
+                        <div class="fs-3 fw-bold">{{ $totalProductos }}</div>
+                        <div class="small text-muted">{{ $totalClientes }} clientes</div>
+                    </div>
+                    <div class="rounded-circle bg-info bg-opacity-10 p-3">
+                        <i class="bi bi-box fs-5 text-info"></i>
+                    </div>
+                </div>
+                @if ($tienePermiso('ver-stock-bajo'))
+                    <a href="{{ route('reportes.stock') }}" class="small text-decoration-none mt-2 d-inline-block">
+                        {{ $productosStockBajo->count() }} con existencia baja
+                    </a>
+                @endif
             </div>
         </div>
     </div>
 </div>
 
-<div class="row g-3">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">Productos con Existencia Baja (10 uds o menos)</div>
+@if ($tasasVigentes->isNotEmpty())
+    <div class="card shadow-sm mb-4">
+        <div class="card-body py-2 d-flex flex-wrap align-items-center gap-2">
+            <span class="small text-muted fw-semibold me-1"><i class="bi bi-currency-exchange"></i> Tasas vigentes:</span>
+            @foreach ($tasasVigentes as $tasa)
+                <span class="badge rounded-pill bg-light text-dark border">
+                    {{ $tasa->nombre ?: ucfirst($tasa->tipo) }}: <strong>{{ number_format($tasa->monto, 2) }}</strong>
+                </span>
+            @endforeach
+        </div>
+    </div>
+@endif
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-7">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header"><i class="bi bi-graph-up"></i> Ventas de los últimos 7 días</div>
+            <div class="card-body">
+                @if ($totalSemanaBs > 0)
+                    <canvas id="chart7dias"></canvas>
+                @else
+                    <div class="text-center text-muted py-4">Sin ventas en los últimos 7 días.</div>
+                @endif
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header"><i class="bi bi-pie-chart"></i> Métodos de pago de hoy</div>
+            <div class="card-body">
+                @if (array_sum($metodosHoy) > 0)
+                    <canvas id="chartMetodosHoy"></canvas>
+                @else
+                    <div class="text-center text-muted py-4">Sin ventas registradas hoy.</div>
+                @endif
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-receipt"></i> Últimas facturas</span>
+                @if ($tienePermiso('ver-facturas'))
+                    <a href="{{ route('facturas.index') }}" class="btn btn-sm btn-outline-secondary">Ver todas</a>
+                @endif
+            </div>
             <div class="card-body p-0">
-                <table class="table table-sm mb-0">
+                <table class="table table-sm mb-0 align-middle">
                     <thead>
                         <tr>
-                            <th>Producto</th>
-                            <th>Existencia</th>
+                            <th>Correlativo</th>
+                            <th class="text-start">Cliente</th>
+                            <th>Total</th>
+                            <th>Estado</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse ($productosStockBajo as $p)
-                        <tr>
-                            <td>{{ $p->nombre }}</td>
-                            <td><span class="badge bg-danger">{{ number_format($p->stock_actual, 2, ',', '.') }} {{ $p->unidad_medida ?? 'unidad' }}</span></td>
-                        </tr>
+                        @forelse ($ultimasFacturas as $f)
+                            <tr>
+                                <td>{{ $f->correlativo }}</td>
+                                <td class="text-start">{{ $f->cliente->nombre ?? 'Contado' }}</td>
+                                <td>Bs {{ number_format($f->total_bs, 2) }}</td>
+                                <td>
+                                    @if ($esAnulada($f))
+                                        <span class="badge bg-danger">Anulada</span>
+                                    @elseif ($esCredito($f))
+                                        <span class="badge bg-warning text-dark">
+                                            Crédito {{ $f->estado_credito === 'cancelado' ? '(Cancelado)' : '(Pendiente)' }}
+                                        </span>
+                                    @else
+                                        <span class="badge bg-success">Contado</span>
+                                    @endif
+                                </td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-info btn-ver-factura" data-url="{{ route('facturas.recibo', $f->id) }}" title="Ver recibo">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
                         @empty
-                        <tr><td colspan="2" class="text-center text-muted">Sin productos con existencia baja.</td></tr>
+                            <tr><td colspan="5" class="text-center text-muted py-3">Sin facturas registradas.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">Productos Más Vendidos</div>
+    @if ($tienePermiso('gestionar-creditos'))
+        <div class="col-lg-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-clock-history"></i> Créditos por cobrar</span>
+                    <a href="{{ route('facturas.creditos') }}" class="btn btn-sm btn-outline-secondary">Cobrar</a>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th>Correlativo</th>
+                                <th class="text-start">Cliente</th>
+                                <th>Deuda</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($creditosPendientesLista as $c)
+                                <tr>
+                                    <td>{{ $c->correlativo }}</td>
+                                    <td class="text-start">{{ $c->cliente->nombre ?? 'Sin dato' }}</td>
+                                    <td>${{ number_format($c->total_usd, 2) }}</td>
+                                    <td class="text-center">
+                                        <a href="{{ route('facturas.creditos') }}" class="btn btn-sm btn-success" title="Cobrar">
+                                            <i class="bi bi-check-lg"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="4" class="text-center text-muted py-3">No hay créditos pendientes.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+                @if ($creditosPendientes > 0)
+                    <div class="card-footer bg-transparent small text-muted">
+                        Total pendiente: Bs {{ number_format($totalCreditosPendientesBs, 2) }} en {{ $creditosPendientes }} factura(s)
+                    </div>
+                @endif
+            </div>
+        </div>
+    @endif
+</div>
+
+<div class="row g-3">
+    @if ($tienePermiso('ver-stock-bajo'))
+        <div class="col-lg-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-exclamation-triangle"></i> Existencia baja ({{ CatalogoService::UMBRAL_STOCK_BAJO }} o menos)</span>
+                    <a href="{{ route('reportes.stock') }}" class="btn btn-sm btn-outline-secondary">Ver reporte</a>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Existencia</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($productosStockBajo as $p)
+                                <tr>
+                                    <td>{{ $p->nombre }}</td>
+                                    <td><span class="badge bg-danger">{{ number_format($p->stock_actual, 2, ',', '.') }} {{ $p->unidad_medida ?? 'unidad' }}</span></td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="2" class="text-center text-muted">Sin productos con existencia baja.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    @endif
+    <div class="col-lg-6">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header"><i class="bi bi-trophy"></i> Más vendidos (últimos 30 días)</div>
             <div class="card-body p-0">
                 <table class="table table-sm mb-0">
                     <thead>
@@ -79,12 +313,12 @@
                     </thead>
                     <tbody>
                         @forelse ($masVendidos as $p)
-                        <tr>
-                            <td>{{ $p->nombre }}</td>
-                            <td>{{ $p->total }} uds</td>
-                        </tr>
+                            <tr>
+                                <td>{{ $p->nombre }}</td>
+                                <td>{{ $p->total }} uds</td>
+                            </tr>
                         @empty
-                        <tr><td colspan="2" class="text-center text-muted">Sin ventas aún.</td></tr>
+                            <tr><td colspan="2" class="text-center text-muted">Sin ventas aún.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -92,4 +326,55 @@
         </div>
     </div>
 </div>
+
+@include('facturas.partials.ver-modal')
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    @if ($totalSemanaBs > 0)
+    const porDia7 = @json($porDia7);
+    new Chart(document.getElementById('chart7dias'), {
+        type: 'line',
+        data: {
+            labels: Object.keys(porDia7),
+            datasets: [{
+                label: 'Ventas Bs',
+                data: Object.values(porDia7),
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13, 110, 253, 0.12)',
+                fill: true,
+                tension: 0.3,
+            }],
+        },
+        options: {
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { ticks: { callback: (v) => 'Bs ' + Number(v).toLocaleString('es-VE') } },
+            },
+        },
+    });
+    @endif
+
+    @if (array_sum($metodosHoy) > 0)
+    const metodosHoy = @json($metodosHoy);
+    const nombresMetodo = @json($metodosPago);
+    const filas = Object.entries(metodosHoy).filter(([, v]) => v > 0);
+    new Chart(document.getElementById('chartMetodosHoy'), {
+        type: 'doughnut',
+        data: {
+            labels: filas.map(([k]) => nombresMetodo[k] || k),
+            datasets: [{ data: filas.map(([, v]) => v), borderWidth: 1 }],
+        },
+        options: {
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: { callbacks: { label: (ctx) => ' Bs ' + Number(ctx.parsed).toLocaleString('es-VE') } },
+            },
+        },
+    });
+    @endif
+});
+</script>
+@endpush

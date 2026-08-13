@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Categoria;
 use App\Models\Cliente;
+use App\Models\Factura;
 use App\Models\Producto;
 use App\Models\TasaCambio;
 use App\Models\User;
@@ -42,7 +43,11 @@ class DashboardTest extends TestCase
         $response = $this->get('/dashboard');
 
         $response->assertStatus(200);
-        $response->assertViewHas(['totalProductos', 'totalClientes', 'ventasHoy', 'totalHoyBs', 'totalHoyUsd', 'creditosPendientes']);
+        $response->assertViewHas([
+            'totalProductos', 'totalClientes', 'ventasHoy', 'totalHoyBs', 'totalHoyUsd',
+            'creditosPendientes', 'variacionHoy', 'variacionMes', 'porDia7', 'metodosHoy',
+            'ultimasFacturas', 'creditosPendientesLista', 'tasasVigentes', 'masVendidos',
+        ]);
     }
 
     public function test_dashboard_muestra_ceros_sin_datos()
@@ -55,5 +60,40 @@ class DashboardTest extends TestCase
         $response->assertViewHas('totalProductos', function ($value) {
             return $value == 0;
         });
+    }
+
+    public function test_dashboard_muestra_facturas_tasas_y_metodos()
+    {
+        $cliente = Cliente::factory()->create();
+        Factura::factory()->count(2)->create([
+            'cliente_id' => $cliente->id,
+            'user_id' => $this->user->id,
+            'fecha_venta' => now()->format('Y-m-d'),
+            'metodo_pago' => 'efectivo',
+            'total_bs' => 5000,
+            'estado' => 'contado',
+        ]);
+        Factura::factory()->credito()->create([
+            'cliente_id' => $cliente->id,
+            'user_id' => $this->user->id,
+            'fecha_venta' => now()->subDays(2)->format('Y-m-d'),
+            'total_usd' => 100,
+            'total_bs' => 5000,
+        ]);
+
+        $this->actingAs($this->user);
+
+        $response = $this->get('/dashboard');
+
+        $response->assertStatus(200);
+        $response->assertViewHas('ventasHoy', 2);
+        $response->assertViewHas('totalHoyBs', 10000);
+        $response->assertViewHas('creditosPendientes', 1);
+        $response->assertViewHas('ultimasFacturas', fn ($c) => $c->count() === 3);
+        $response->assertViewHas('creditosPendientesLista', fn ($c) => $c->count() === 1);
+        $response->assertViewHas('tasasVigentes', fn ($t) => $t->has('promedio'));
+        $response->assertViewHas('metodosHoy', fn ($m) => $m['efectivo'] == 10000);
+        $response->assertSee('Promedio:');
+        $response->assertSee('$100.00');
     }
 }
