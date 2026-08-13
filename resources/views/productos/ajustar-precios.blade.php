@@ -22,9 +22,14 @@
                 </thead>
                 <tbody>
                     @foreach ($productos as $p)
-                    @php $tasaAjuste = $tasas[$p->fuente_tasa] ?? 1; @endphp
+                    @php $tasaAjuste = $tasas->has($p->fuente_tasa) ? (float) $tasas[$p->fuente_tasa] : 0; @endphp
                     <tr x-data="precioRow({{ $p->id }}, {{ $p->costo_usd }}, {{ $tasaAjuste }}, (window.__preciosProductos[{{ $p->id }}] || []))">
-                        <td class="text-start">{{ $p->nombre }}</td>
+                        <td class="text-start">
+                            {{ $p->nombre }}
+                            @if (! $tasas->has($p->fuente_tasa))
+                                <span class="badge bg-danger" title="Configure la tasa '{{ $p->fuente_tasa }}' en Tasas de Cambio">Sin tasa</span>
+                            @endif
+                        </td>
                         <td>{{ $p->categoria->nombre ?? '-' }}</td>
                         <td>
                             <input type="number" step="0.01" min="0" class="form-control form-control-sm" x-model.number="costo_usd">
@@ -35,7 +40,7 @@
                                     <span class="small text-nowrap" style="min-width:110px" x-text="pres.nombre"></span>
                                     <input type="number" step="0.01" min="0" class="form-control form-control-sm text-center" style="width:90px" x-model.number="pres.margen">
                                     <span class="small text-muted text-nowrap">factor: <span x-text="pres.factor_conversion"></span></span>
-                                    <span class="small fw-bold text-nowrap" x-text="'$' + precioPres(i).toFixed(2) + ' / Bs ' + (precioPres(i) * tasa).toFixed(2)"></span>
+                                    <span class="small fw-bold text-nowrap" x-text="tasa > 0 ? '$' + precioPres(i).toFixed(2) + ' / Bs ' + (precioPres(i) * tasa).toFixed(2) : '$' + precioPres(i).toFixed(2) + ' / Bs sin tasa'"></span>
                                 </div>
                             </template>
                         </td>

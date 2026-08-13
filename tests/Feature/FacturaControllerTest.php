@@ -125,6 +125,36 @@ class FacturaControllerTest extends TestCase
         $response->assertSee('data-presentacion="'.$this->presentacionMayor->id.'"', false);
     }
 
+    public function test_pos_marca_producto_sin_tasa_configurada()
+    {
+        $productoSinTasa = Producto::factory()->create([
+            'nombre' => 'Producto Sin Tasa',
+            'costo_usd' => 5.00,
+            'stock_actual' => 10,
+            'controla_inventario' => true,
+            'unidad_medida' => 'unidad',
+            'fuente_tasa' => 'paralelo',
+            'estado' => 'disponible',
+        ]);
+        ProductoPresentacion::factory()->create([
+            'producto_id' => $productoSinTasa->id,
+            'nombre' => 'Unidad',
+            'factor_conversion' => 1,
+            'margen' => 0,
+            'precio_usd' => 5.00,
+            'activa' => true,
+        ]);
+        $this->actingAs($this->cajero);
+
+        $response = $this->get('/pos');
+
+        $response->assertStatus(200);
+        $response->assertSee('Producto Sin Tasa');
+        $response->assertSee('Sin tasa');
+        $response->assertDontSee('Bs 5.00');
+        $response->assertSee('"tasa_ok":false', false);
+    }
+
     public function test_store_crea_factura_contado()
     {
         $this->actingAs($this->cajero);

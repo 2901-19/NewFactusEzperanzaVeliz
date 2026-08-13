@@ -39,9 +39,9 @@
                     @endif
                 </td>
                 <td>
-                    <a href="{{ route('facturas.show', $f->id) }}" class="btn btn-sm btn-info">
+                    <button class="btn btn-sm btn-info btn-ver-factura" data-url="{{ route('facturas.recibo', $f->id) }}">
                         <i class="bi bi-eye"></i>
-                    </a>
+                    </button>
                     @if ($f->estado !== 'anulada')
                         <button class="btn btn-sm btn-danger btn-anular" data-url="{{ route('facturas.anular', $f->id) }}" data-correlativo="{{ $f->correlativo }}">
                             <i class="bi bi-x-circle"></i>
@@ -53,6 +53,7 @@
         </tbody>
     </table>
 </div>
+@include('facturas.partials.ver-modal')
 @endsection
 @push('scripts')
 <script>

@@ -24,7 +24,7 @@
                 <td class="text-start">{{ $p->nombre }}</td>
                 <td>{{ $p->unidad_medida ?? 'unidad' }}</td>
                 <td>
-                    <span class="badge bg-{{ $p->stock_actual <= 5 ? 'danger' : 'warning text-dark' }}">
+                    <span class="badge bg-danger">
                         {{ number_format($p->stock_actual, 2, ',', '.') }}
                     </span>
                 </td>

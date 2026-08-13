@@ -31,14 +31,17 @@
         <tbody>
             @foreach ($productos as $p)
             @foreach ($p->presentaciones->where('activa', true) as $pr)
-            @php
-                $tasaValorPdf = $tasas[$p->fuente_tasa] ?? 1;
-                $precioBsPdf = $pr->precio_usd * $tasaValorPdf;
-            @endphp
+            @php $tasaDisponiblePdf = $tasas->has($p->fuente_tasa); @endphp
             <tr>
                 <td>{{ $p->nombre }}</td>
                 <td>{{ $pr->nombre }}</td>
-                <td class="moneda">Bs {{ number_format($precioBsPdf, 2) }}</td>
+                <td class="moneda">
+                    @if ($tasaDisponiblePdf)
+                        Bs {{ number_format($pr->precio_usd * $tasas[$p->fuente_tasa], 2) }}
+                    @else
+                        Sin tasa
+                    @endif
+                </td>
                 <td class="moneda">${{ number_format($pr->precio_usd, 2) }}</td>
                 <td class="iva">{{ $p->impuesto?->nombre ?? 'No' }}</td>
             </tr>

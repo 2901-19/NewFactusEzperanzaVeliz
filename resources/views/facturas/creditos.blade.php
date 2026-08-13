@@ -43,9 +43,9 @@
                     @endif
                 </td>
                 <td>
-                    <a href="{{ route('facturas.show', $f->id) }}" class="btn btn-sm btn-info">
+                    <button class="btn btn-sm btn-info btn-ver-factura" data-url="{{ route('facturas.recibo', $f->id) }}">
                         <i class="bi bi-eye"></i>
-                    </a>
+                    </button>
                     @if ($f->estado_credito === 'pendiente')
                         <button class="btn btn-sm btn-success btn-abrir-cobro" data-id="{{ $f->id }}" data-url="{{ route('facturas.pagar-credito', $f->id) }}" data-correlativo="{{ $f->correlativo }}" data-usd="{{ number_format($f->total_usd, 2) }}" data-bs="{{ $tasaVigente ? number_format($f->total_usd * $tasaVigente, 2) : '' }}">
                             <i class="bi bi-check-lg"></i> Cobrar
@@ -58,6 +58,7 @@
     </table>
 </div>
 <div class="text-muted small">Total: {{ $facturas->count() }} facturas</div>
+@include('facturas.partials.ver-modal')
 @endsection
 
 {{-- Modal de cobro --}}

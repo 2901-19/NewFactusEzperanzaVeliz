@@ -55,8 +55,12 @@ class FacturaController extends Controller
     public function pos()
     {
         $productos = Producto::where('estado', 'disponible')->whereNull('deleted_at')->with(['presentaciones', 'impuesto'])->get();
+        $tasas = TasaCambio::ultimasPorTipo();
 
-        $productos->each(function ($producto) {
+        $productos->each(function ($producto) use ($tasas) {
+            $producto->setAttribute('tasa_ok', $tasas->has($producto->fuente_tasa)
+                && (float) $tasas[$producto->fuente_tasa]->monto > 0);
+
             $producto->setAttribute('presentaciones', $producto->presentaciones
                 ->filter(fn ($pr) => $pr->activa)
                 ->values()
@@ -70,7 +74,6 @@ class FacturaController extends Controller
         });
 
         $clientes = Cliente::all();
-        $tasas = TasaCambio::ultimasPorTipo();
 
         $tasaReferenciaTipo = Configuracion::obtener('tasa_referencia', 'bcv');
 
@@ -238,7 +241,7 @@ class FacturaController extends Controller
     {
         $factura->load('cliente', 'items.producto');
 
-        return view('facturas.show', compact('factura'));
+        return view('facturas.partials.recibo', compact('factura'));
     }
 
     public function pagarCredito(Request $request, Factura $factura)

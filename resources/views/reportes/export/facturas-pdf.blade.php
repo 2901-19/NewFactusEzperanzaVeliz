@@ -31,7 +31,7 @@
         <tr>
             <td class="titulo">Ingresos Bs</td>
             <td class="titulo">Ingresos USD</td>
-            <td class="titulo">IVA</td>
+            <td class="titulo">Impuesto</td>
             <td class="titulo">Facturas</td>
             <td class="titulo">Ticket promedio</td>
         </tr>

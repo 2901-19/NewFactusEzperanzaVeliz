@@ -102,7 +102,7 @@
                 <th class="text-start">Método</th>
                 <th class="text-start">Vendedor</th>
                 <th>Total Bs</th>
-                <th>IVA</th>
+                <th>Impuesto</th>
                 <th>Total USD</th>
                 <th>Fecha</th>
                 <th>Tipo</th>
@@ -111,7 +111,7 @@
         <tbody>
             @forelse ($facturas as $f)
             <tr>
-                <td><a href="{{ route('facturas.show', $f->id) }}">{{ $f->correlativo }}</a></td>
+                <td><a href="#" class="btn-ver-factura" data-url="{{ route('facturas.recibo', $f->id) }}">{{ $f->correlativo }}</a></td>
                 <td class="text-start">{{ $f->cliente->nombre ?? 'Contado' }}</td>
                 <td class="text-start">{{ $nombresMetodo[$f->metodo_pago] ?? $f->metodo_pago }}</td>
                 <td class="text-start">{{ $f->user->name ?? '—' }}</td>
@@ -145,6 +145,7 @@
     </table>
 </div>
 @endsection
+@include('facturas.partials.ver-modal')
 @push('scripts')
 @include('reportes.partials.filtro-fechas')
 <script>

@@ -175,4 +175,108 @@ class HerramientasTest extends TestCase
         $response->assertSessionHas('success');
         $this->assertDatabaseHas('productos', ['nombre' => 'Harina', 'estado' => 'no_disponible']);
     }
+
+    public function test_importar_productos_formato_antiguo_crea_presentaciones()
+    {
+        $this->actingAs($this->admin);
+
+        $json = json_encode(['productos' => [
+            [
+                'nombre' => 'Leche',
+                'costo_usd' => 2.00,
+                'margen_detal' => 25,
+                'precio_unitario_usd' => 2.50,
+                'margen_mayor' => 12.5,
+                'precio_mayor_usd' => 4.50,
+                'unidades_por_paquete' => 2,
+            ],
+        ]]);
+        $archivo = UploadedFile::fake()->createWithContent('datos.json', $json);
+
+        $response = $this->from('/herramientas/datos')->post('/herramientas/importar', [
+            'archivo' => $archivo,
+        ]);
+
+        $response->assertSessionHas('success');
+        $this->assertDatabaseHas('productos', ['nombre' => 'Leche', 'estado' => 'disponible', 'costo_usd' => 2.00]);
+        $this->assertDatabaseHas('producto_presentaciones', [
+            'nombre' => 'Unidad',
+            'factor_conversion' => 1,
+            'margen' => 25.00,
+            'precio_usd' => 2.50,
+            'activa' => true,
+        ]);
+        $this->assertDatabaseHas('producto_presentaciones', [
+            'nombre' => 'Mayor',
+            'factor_conversion' => 1,
+            'precio_usd' => 4.50,
+            'activa' => true,
+        ]);
+    }
+
+    public function test_importar_inventario_crea_presentacion_unidad()
+    {
+        $this->actingAs($this->admin);
+
+        $json = json_encode(['inventario' => [
+            ['nombre' => 'Aceite', 'controla_inventario' => true, 'unidad_medida' => 'botella', 'stock_actual' => 12],
+        ]]);
+        $archivo = UploadedFile::fake()->createWithContent('datos.json', $json);
+
+        $this->from('/herramientas/datos')->post('/herramientas/importar', [
+            'archivo' => $archivo,
+        ])->assertSessionHas('success');
+
+        $this->assertDatabaseHas('producto_presentaciones', [
+            'nombre' => 'Unidad',
+            'factor_conversion' => 1,
+            'precio_usd' => 0,
+            'activa' => true,
+        ]);
+    }
+
+    public function test_importar_precios_formato_antiguo_conserva_presentacion_mayor()
+    {
+        $this->actingAs($this->admin);
+
+        $json = json_encode(['precios' => [
+            [
+                'nombre' => 'Arroz',
+                'costo_usd' => 3.00,
+                'margen_detal' => 20,
+                'precio_unitario_usd' => 3.60,
+                'margen_mayor' => 26.67,
+                'precio_mayor_usd' => 3.80,
+            ],
+        ]]);
+        $archivo = UploadedFile::fake()->createWithContent('datos.json', $json);
+
+        $this->from('/herramientas/datos')->post('/herramientas/importar', [
+            'archivo' => $archivo,
+        ])->assertSessionHas('success');
+
+        $this->assertDatabaseHas('producto_presentaciones', ['nombre' => 'Unidad', 'margen' => 20.00, 'precio_usd' => 3.60]);
+        $this->assertDatabaseHas('producto_presentaciones', ['nombre' => 'Mayor', 'precio_usd' => 3.80]);
+    }
+
+    public function test_importar_tasas_respeta_activo_del_archivo()
+    {
+        $this->actingAs($this->admin);
+
+        $json = json_encode(['tasas_cambio' => [
+            ['tipo' => 'promedio', 'monto' => 50.00, 'fecha' => '2026-08-01', 'activo' => false],
+        ]]);
+        $archivo = UploadedFile::fake()->createWithContent('datos.json', $json);
+
+        $this->from('/herramientas/datos')->post('/herramientas/importar', [
+            'archivo' => $archivo,
+        ])->assertSessionHas('success');
+
+        $this->assertDatabaseHas('tasa_cambios', [
+            'tipo' => 'promedio',
+            'monto' => 50.00,
+            'activo' => false,
+            'origen' => 'importado',
+        ]);
+    }
 }

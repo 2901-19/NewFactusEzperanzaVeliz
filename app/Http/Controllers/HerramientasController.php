@@ -135,13 +135,7 @@ class HerramientasController extends Controller
 
                             $presentaciones = $item['presentaciones'] ?? [];
                             if (empty($presentaciones)) {
-                                // Formato antiguo: margen_detal se aplica a la presentación Unidad
-                                $margenDetal = $item['margen_detal'] ?? null;
-                                if ($margenDetal === null) {
-                                    $pu = $item['precio_unitario_usd'] ?? null;
-                                    $margenDetal = ($pu !== null && $costoUsd > 0) ? round((($pu / $costoUsd) - 1) * 100, 2) : 0;
-                                }
-                                $presentaciones[] = ['nombre' => 'Unidad', 'factor_conversion' => 1, 'margen' => $margenDetal, 'activa' => true];
+                                $presentaciones = $this->presentacionesDesdeLegacy($item, $costoUsd);
                             }
 
                             $datosPresentaciones = collect($presentaciones)->map(fn ($pr) => [
@@ -187,7 +181,7 @@ class HerramientasController extends Controller
                         foreach ($data['inventario'] as $item) {
                             $existe = Producto::where('nombre', $item['nombre'])->exists();
                             if (! $existe) {
-                                Producto::create([
+                                $producto = Producto::create([
                                     'nombre' => $item['nombre'],
                                     'categoria_id' => $item['categoria_id'] ?? null,
                                     'descripcion' => $item['descripcion'] ?? '',
@@ -199,6 +193,13 @@ class HerramientasController extends Controller
                                     'costo_usd' => 0,
                                     'impuesto_id' => null,
                                     'fuente_tasa' => 'promedio',
+                                ]);
+                                $producto->presentaciones()->create([
+                                    'nombre' => 'Unidad',
+                                    'factor_conversion' => 1,
+                                    'margen' => 0,
+                                    'precio_usd' => 0,
+                                    'activa' => true,
                                 ]);
                                 $contadores['inventario']++;
                             }
@@ -243,7 +244,7 @@ class HerramientasController extends Controller
                                 'nombre' => $item['nombre'] ?? $vigente->nombre ?? null,
                                 'monto' => $item['monto'],
                                 'fecha' => $item['fecha'],
-                                'activo' => $vigente ? $vigente->activo : true,
+                                'activo' => $item['activo'] ?? ($vigente ? $vigente->activo : true),
                                 'user_id' => auth()->id(),
                                 'origen' => 'importado',
                             ]);
@@ -267,10 +268,28 @@ class HerramientasController extends Controller
                         // Compatibilidad con formato antiguo
                     case 'productos':
                         foreach ($data['productos'] as $item) {
-                            $fillable = (new Producto)->getFillable();
-                            $item = array_intersect_key($item, array_flip($fillable));
-                            unset($item['id']);
-                            Producto::create($item);
+                            if (empty($item['nombre'])) {
+                                continue;
+                            }
+
+                            $costoUsd = (float) ($item['costo_usd'] ?? 0);
+                            $presentaciones = $this->presentacionesDesdeLegacy($item, $costoUsd);
+                            $estadoImportado = collect($presentaciones)->contains(fn ($pr) => $pr['precio_usd'] > 0) ? 'disponible' : 'no_disponible';
+
+                            $producto = Producto::create([
+                                'nombre' => $item['nombre'],
+                                'categoria_id' => $item['categoria_id'] ?? null,
+                                'descripcion' => $item['descripcion'] ?? '',
+                                'imagen' => $item['imagen'] ?? null,
+                                'costo_usd' => $costoUsd,
+                                'stock_actual' => (float) ($item['stock_actual'] ?? 0),
+                                'controla_inventario' => (bool) ($item['controla_inventario'] ?? true),
+                                'unidad_medida' => $item['unidad_medida'] ?? 'unidad',
+                                'impuesto_id' => $item['impuesto_id'] ?? null,
+                                'fuente_tasa' => $item['fuente_tasa'] ?? 'promedio',
+                                'estado' => $estadoImportado,
+                            ]);
+                            $producto->presentaciones()->createMany($presentaciones);
                             $contadores['precios']++;
                         }
                         break;
@@ -514,5 +533,40 @@ class HerramientasController extends Controller
         }
 
         return Impuesto::where('nombre', $nombre)->value('id') ?? $actual;
+    }
+
+    /**
+     * Construye presentaciones a partir del formato antiguo de productos
+     * (margen_detal/mayor, precio_unitario_usd/precio_mayor_usd). Coherente
+     * con la conversión hecha en las migraciones 2026_08_08_*.
+     */
+    private function presentacionesDesdeLegacy(array $item, float $costoUsd): array
+    {
+        $margenDetal = $item['margen_detal'] ?? null;
+        if ($margenDetal === null) {
+            $pu = $item['precio_unitario_usd'] ?? null;
+            $margenDetal = ($pu !== null && $costoUsd > 0) ? round((($pu / $costoUsd) - 1) * 100, 2) : 0;
+        }
+
+        $presentaciones = [[
+            'nombre' => 'Unidad',
+            'factor_conversion' => 1,
+            'margen' => (float) $margenDetal,
+            'precio_usd' => PrecioService::precioPresentacion($costoUsd, (float) $margenDetal, 1),
+            'activa' => true,
+        ]];
+
+        $precioMayor = (float) ($item['precio_mayor_usd'] ?? 0);
+        if ($precioMayor > 0) {
+            $presentaciones[] = [
+                'nombre' => 'Mayor',
+                'factor_conversion' => 1,
+                'margen' => (float) ($item['margen_mayor'] ?? 0),
+                'precio_usd' => $precioMayor,
+                'activa' => true,
+            ];
+        }
+
+        return $presentaciones;
     }
 }

@@ -58,7 +58,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/facturas', [FacturaController::class, 'store'])->name('facturas.store')->middleware('permiso:crear-facturas');
     Route::get('/facturas', [FacturaController::class, 'index'])->name('facturas.index')->middleware('permiso:ver-facturas');
     Route::get('/creditos', [FacturaController::class, 'creditos'])->name('facturas.creditos')->middleware('permiso:gestionar-creditos');
-    Route::get('/facturas/{factura}', [FacturaController::class, 'show'])->name('facturas.show')->middleware('permiso:ver-facturas');
+    Route::get('/facturas/{factura}', [FacturaController::class, 'show'])->name('facturas.recibo')->middleware('permiso:ver-facturas');
     Route::post('/facturas/{factura}/pagar-credito', [FacturaController::class, 'pagarCredito'])->name('facturas.pagar-credito')->middleware('permiso:gestionar-creditos');
     Route::post('/facturas/{factura}/anular', [FacturaController::class, 'anular'])->name('facturas.anular')->middleware('permiso:anular-facturas');
 
