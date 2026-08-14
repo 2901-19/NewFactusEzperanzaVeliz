@@ -8,25 +8,18 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('permisos', function (Blueprint $table) {
+        Schema::create('roles', function (Blueprint $table) {
             $table->id();
             $table->string('nombre');
             $table->string('slug')->unique();
             $table->text('descripcion')->nullable();
+            $table->boolean('protegido')->default(false);
             $table->timestamps();
-        });
-
-        Schema::create('permiso_rol', function (Blueprint $table) {
-            $table->string('rol');
-            $table->foreignId('permiso_id')->constrained('permisos')->cascadeOnDelete();
-            $table->timestamps();
-            $table->primary(['rol', 'permiso_id']);
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('permiso_rol');
-        Schema::dropIfExists('permisos');
+        Schema::dropIfExists('roles');
     }
 };

@@ -25,10 +25,10 @@
                 <td>{{ $u->usuario }}</td>
                 <td>{{ $u->email ?? '-' }}</td>
                 <td>
-                    @if ($u->rol === 'admin')
-                        <span class="badge bg-danger">Admin</span>
+                    @if ($u->role?->protegido)
+                        <span class="badge bg-danger">{{ $u->role->nombre }}</span>
                     @else
-                        <span class="badge bg-secondary">Cajero</span>
+                        <span class="badge bg-secondary">{{ $u->role?->nombre ?? ucfirst($u->rol) }}</span>
                     @endif
                 </td>
                 <td>

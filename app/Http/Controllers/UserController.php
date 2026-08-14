@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Permiso;
+use App\Models\Rol;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -11,18 +11,16 @@ class UserController extends Controller
 {
     public function index()
     {
-        $users = User::orderBy('name')->get();
+        $users = User::with('role')->orderBy('name')->get();
+
         return view('usuarios.index', compact('users'));
     }
 
     public function create()
     {
-        $permisos = Permiso::orderBy('nombre')->get();
-        $permisosDelRol = \DB::table('permiso_rol')
-            ->where('rol', 'cajero')
-            ->pluck('permiso_id')
-            ->toArray();
-        return view('usuarios.create', compact('permisos', 'permisosDelRol'));
+        $roles = Rol::orderBy('nombre')->get();
+
+        return view('usuarios.create', compact('roles'));
     }
 
     public function store(Request $request)
@@ -32,31 +30,21 @@ class UserController extends Controller
             'usuario' => 'required|string|max:255|unique:users',
             'email' => 'nullable|email|max:255|unique:users',
             'password' => 'required|string|min:6|confirmed',
-            'rol' => 'required|in:admin,cajero',
-            'permisos' => 'nullable|array',
-            'permisos.*' => 'exists:permisos,id',
+            'rol' => 'required|exists:roles,slug',
         ]);
 
         $data['password'] = bcrypt($data['password']);
 
-        $usuario = User::create($data);
-
-        if ($request->filled('permisos')) {
-            $usuario->permisosDirectos()->sync($request->permisos);
-        }
+        User::create($data);
 
         return redirect()->route('usuarios.index')->with('success', 'Usuario creado correctamente.');
     }
 
     public function edit(User $usuario)
     {
-        $permisos = Permiso::orderBy('nombre')->get();
-        $usuario->load('permisosDirectos');
-        $permisosDelRol = \DB::table('permiso_rol')
-            ->where('rol', $usuario->rol)
-            ->pluck('permiso_id')
-            ->toArray();
-        return view('usuarios.edit', compact('usuario', 'permisos', 'permisosDelRol'));
+        $roles = Rol::orderBy('nombre')->get();
+
+        return view('usuarios.edit', compact('usuario', 'roles'));
     }
 
     public function update(Request $request, User $usuario)
@@ -66,9 +54,7 @@ class UserController extends Controller
             'usuario' => ['required', 'string', 'max:255', Rule::unique('users')->ignore($usuario->id)],
             'email' => ['nullable', 'email', 'max:255', Rule::unique('users')->ignore($usuario->id)],
             'password' => 'nullable|string|min:6|confirmed',
-            'rol' => 'required|in:admin,cajero',
-            'permisos' => 'nullable|array',
-            'permisos.*' => 'exists:permisos,id',
+            'rol' => 'required|exists:roles,slug',
         ]);
 
         if ($data['password']) {
@@ -78,12 +64,6 @@ class UserController extends Controller
         }
 
         $usuario->update($data);
-
-        if ($request->has('permisos')) {
-            $usuario->permisosDirectos()->sync($request->permisos);
-        } else {
-            $usuario->permisosDirectos()->detach();
-        }
 
         return redirect()->route('usuarios.index')->with('success', 'Usuario actualizado correctamente.');
     }

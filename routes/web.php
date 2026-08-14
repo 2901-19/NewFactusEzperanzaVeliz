@@ -1,17 +1,18 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\ProductoController;
-use App\Http\Controllers\ClienteController;
-use App\Http\Controllers\ImpuestoController;
-use App\Http\Controllers\TasaCambioController;
-use App\Http\Controllers\FacturaController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\ReporteController;
-use App\Http\Controllers\HerramientasController;
-use App\Http\Controllers\CategoriaController;
-use App\Http\Controllers\UserController;
 use App\Http\Controllers\AjusteController;
+use App\Http\Controllers\CategoriaController;
+use App\Http\Controllers\ClienteController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FacturaController;
+use App\Http\Controllers\HerramientasController;
+use App\Http\Controllers\ImpuestoController;
+use App\Http\Controllers\ProductoController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReporteController;
+use App\Http\Controllers\RolController;
+use App\Http\Controllers\TasaCambioController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -83,6 +84,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/herramientas/configuracion', [HerramientasController::class, 'configuracionGuardar'])->name('herramientas.configuracion.guardar')->middleware('permiso:configuracion');
 
     Route::resource('usuarios', UserController::class)->except('show')->middleware('permiso:gestionar-usuarios');
+    Route::resource('roles', RolController::class)->except('show')->parameters(['roles' => 'rol'])->middleware('permiso:gestionar-usuarios');
 });
 
 require __DIR__.'/auth.php';

@@ -5,7 +5,7 @@
         </button>
         <span class="navbar-text ms-auto">
             <i class="bi bi-person"></i> {{ Auth::user()->name }}
-            <span class="badge bg-info ms-2">{{ Auth::user()->rol }}</span>
+            <span class="badge bg-info ms-2">{{ Auth::user()->role?->nombre ?? ucfirst(Auth::user()->rol) }}</span>
         </span>
     </div>
 </nav>

@@ -17,14 +17,5 @@ class UserSeeder extends Seeder
                 'rol' => 'admin',
             ]
         );
-
-        User::firstOrCreate(
-            ['usuario' => 'cajero'],
-            [
-                'name' => 'Cajero',
-                'password' => bcrypt('cajero123'),
-                'rol' => 'cajero',
-            ]
-        );
     }
 }

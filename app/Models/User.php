@@ -12,6 +12,7 @@ use Illuminate\Support\Collection;
 class User extends Authenticatable
 {
     private ?Collection $permisosCache = null;
+
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
@@ -61,9 +62,9 @@ class User extends Authenticatable
         return $this->hasMany(Factura::class);
     }
 
-    public function permisosDirectos()
+    public function role()
     {
-        return $this->belongsToMany(Permiso::class);
+        return $this->belongsTo(Rol::class, 'rol', 'slug');
     }
 
     public function permisos(): Collection
@@ -72,13 +73,10 @@ class User extends Authenticatable
             return $this->permisosCache;
         }
 
-        $permisosRol = Permiso::whereIn('id', function ($q) {
+        $this->permisosCache = Permiso::whereIn('id', function ($q) {
             $q->select('permiso_id')->from('permiso_rol')->where('rol', $this->rol);
         })->pluck('slug');
 
-        $permisosUser = $this->permisosDirectos->pluck('slug');
-
-        $this->permisosCache = $permisosRol->merge($permisosUser)->unique();
         return $this->permisosCache;
     }
 

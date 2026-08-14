@@ -19,8 +19,10 @@ Laravel 12 + PHP 8.2 POS app (FACTUS — Esperanza Veliz). PostgreSQL in dev, Bo
 
 - Login is by `usuario` field, **not email** (`User::username()` returns `'usuario'`, see `app/Http/Requests/Auth/LoginRequest.php`).
 - Custom middleware aliases `rol` (CheckRole) and `permiso` (CheckPermiso) are registered in `bootstrap/app.php`. CheckPermiso calls `User::hasPermiso($slug)` and aborts 403.
-- Permissions live in `permiso_rol` pivot keyed by the user's `rol` string (`admin`/`cajero`). Route examples in `routes/web.php:22-81`.
-- Seeded credentials: `admin`/`admin123`, `cajero`/`cajero123`.
+- **Roles are dynamic** (`roles` table): the admin manages them from `/roles` (RolController + `resources/views/roles/*`). A user's permissions come **only from its role** — there is no per-user grant (no `permiso_user` table in the rebuilt schema). `users.rol` is a plain string holding `roles.slug` (convention + `exists:roles,slug` validation, no DB FK); display name via `User::role()` (belongsTo Rol, FK `rol`, owner key `slug`).
+- **Only the `admin` role is preloaded** (`PermisoSeeder`): slug `admin`, `protegido = true`, always synced with all permissions. Protected roles cannot be edited or deleted. Other roles are created by the admin; `store()` auto-generates `slug` from `nombre` via `Str::slug` (with `_2` suffix on collision, same pattern as `tasa_cambios.tipo`); `slug` is immutable. `permiso_rol` is keyed by the `rol` slug string; `Rol::permisos()` = `belongsToMany(Permiso::class, 'permiso_rol', 'rol', 'permiso_id', 'slug', 'id')`. Deleting a role is blocked while users reference it.
+- `User::esAdmin()` returns `rol === 'admin'`; `HerramientasController::importar()` also checks the raw `rol` string. `CheckRole`/`rol` middleware is registered but unused.
+- Seeded credentials: `admin`/`admin123` (only).
 
 ## Tasas de cambio (tasa_cambios)
 

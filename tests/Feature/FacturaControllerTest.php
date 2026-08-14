@@ -7,8 +7,10 @@ use App\Models\Cliente;
 use App\Models\Configuracion;
 use App\Models\Factura;
 use App\Models\Impuesto;
+use App\Models\Permiso;
 use App\Models\Producto;
 use App\Models\ProductoPresentacion;
+use App\Models\Rol;
 use App\Models\TasaCambio;
 use App\Models\User;
 use Database\Seeders\PermisoSeeder;
@@ -37,6 +39,19 @@ class FacturaControllerTest extends TestCase
     {
         parent::setUp();
         $this->seed(PermisoSeeder::class);
+        $rolCajero = Rol::create(['nombre' => 'Cajero', 'slug' => 'cajero']);
+        $rolCajero->permisos()->sync(
+            Permiso::whereIn('slug', [
+                'ver-dashboard',
+                'usar-pos',
+                'gestionar-clientes',
+                'ver-facturas',
+                'crear-facturas',
+                'anular-facturas',
+                'gestionar-creditos',
+                'actualizar-inventarios',
+            ])->pluck('id')
+        );
         $this->cajero = User::factory()->create(['rol' => 'cajero']);
         $this->cliente = Cliente::factory()->create();
         $categoria = Categoria::factory()->create();

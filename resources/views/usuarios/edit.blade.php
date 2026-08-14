@@ -27,8 +27,10 @@
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Rol *</label>
                     <select name="rol" class="form-select @error('rol') is-invalid @enderror" required>
-                        <option value="cajero" {{ old('rol', $usuario->rol) == 'cajero' ? 'selected' : '' }}>Cajero</option>
-                        <option value="admin" {{ old('rol', $usuario->rol) == 'admin' ? 'selected' : '' }}>Admin</option>
+                        <option value="">Seleccione un rol...</option>
+                        @foreach ($roles as $rol)
+                        <option value="{{ $rol->slug }}" {{ old('rol', $usuario->rol) == $rol->slug ? 'selected' : '' }}>{{ $rol->nombre }}</option>
+                        @endforeach
                     </select>
                     @error('rol') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
@@ -43,36 +45,6 @@
                     <label class="form-label">Confirmar Contraseña</label>
                     <input type="password" name="password_confirmation" class="form-control">
                 </div>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label fw-bold">Permisos adicionales</label>
-                <div class="text-muted small mb-2">Los permisos marcados en <span class="badge bg-success">verde</span> los otorga el rol automáticamente. Marca permisos extra si necesitas que este usuario tenga acceso adicional.</div>
-                <div class="row">
-                    @foreach ($permisos as $permiso)
-                        @php
-                            $delRol = in_array($permiso->id, $permisosDelRol);
-                            $directo = $usuario->permisosDirectos->contains($permiso->id);
-                        @endphp
-                        <div class="col-md-4 mb-1">
-                            @if ($delRol)
-                                <span class="badge bg-success me-1" title="Otorgado por el rol">
-                                    <i class="bi bi-check-circle"></i> {{ $permiso->nombre }}
-                                </span>
-                            @else
-                                <div class="form-check form-check-inline">
-                                    <input type="checkbox" name="permisos[]" value="{{ $permiso->id }}"
-                                        class="form-check-input" id="permiso-{{ $permiso->id }}"
-                                        {{ $directo ? 'checked' : '' }}>
-                                    <label class="form-check-label small" for="permiso-{{ $permiso->id }}">
-                                        {{ $permiso->nombre }}
-                                    </label>
-                                </div>
-                            @endif
-                        </div>
-                    @endforeach
-                </div>
-                @error('permisos') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
             </div>
 
             <button type="submit" class="btn btn-primary">Actualizar</button>

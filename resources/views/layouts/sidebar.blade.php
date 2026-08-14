@@ -105,6 +105,11 @@
                     <i class="bi bi-people-fill"></i> Usuarios
                 </a>
             </li>
+            <li class="nav-item">
+                <a href="{{ route('roles.index') }}" class="nav-link {{ request()->routeIs('roles.*') ? 'active' : '' }}">
+                    <i class="bi bi-person-gear"></i> Roles
+                </a>
+            </li>
             @endif
             @if ($user->hasPermiso('exportar-datos'))
             <li class="nav-item">

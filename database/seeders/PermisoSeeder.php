@@ -3,8 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\Permiso;
+use App\Models\Rol;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
 class PermisoSeeder extends Seeder
 {
@@ -35,36 +35,24 @@ class PermisoSeeder extends Seeder
             ['nombre' => 'Actualizar Inventarios', 'slug' => 'actualizar-inventarios'],
         ];
 
-        $inserted = [];
+        $permisoIds = [];
         foreach ($permisos as $p) {
             $permiso = Permiso::firstOrCreate(
                 ['slug' => $p['slug']],
                 $p
             );
-            $inserted[$permiso->slug] = $permiso->id;
+            $permisoIds[] = $permiso->id;
         }
 
-        $adminPermisos = array_values($inserted);
-        $cajeroPermisos = array_intersect_key($inserted, array_flip([
-            'ver-dashboard',
-            'usar-pos',
-            'gestionar-clientes',
-            'ver-facturas',
-            'crear-facturas',
-            'anular-facturas',
-            'gestionar-creditos',
-            'actualizar-inventarios',
-        ]));
+        $admin = Rol::firstOrCreate(
+            ['slug' => 'admin'],
+            [
+                'nombre' => 'Administrador',
+                'descripcion' => 'Rol protegido con acceso total al sistema.',
+                'protegido' => true,
+            ]
+        );
 
-        $now = now();
-        $rows = [];
-        foreach ($adminPermisos as $permisoId) {
-            $rows[] = ['rol' => 'admin', 'permiso_id' => $permisoId, 'created_at' => $now, 'updated_at' => $now];
-        }
-        foreach ($cajeroPermisos as $permisoId) {
-            $rows[] = ['rol' => 'cajero', 'permiso_id' => $permisoId, 'created_at' => $now, 'updated_at' => $now];
-        }
-
-        DB::table('permiso_rol')->upsert($rows, ['rol', 'permiso_id'], ['updated_at']);
+        $admin->permisos()->sync($permisoIds);
     }
 }
