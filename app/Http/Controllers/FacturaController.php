@@ -76,8 +76,9 @@ class FacturaController extends Controller
         $clientes = Cliente::all();
 
         $tasaReferenciaTipo = Configuracion::obtener('tasa_referencia', 'bcv');
+        $tasaReferenciaMonto = $tasas->has($tasaReferenciaTipo) ? (float) $tasas[$tasaReferenciaTipo]->monto : null;
 
-        return view('facturas.pos', compact('productos', 'clientes', 'tasas', 'tasaReferenciaTipo'));
+        return view('facturas.pos', compact('productos', 'clientes', 'tasas', 'tasaReferenciaTipo', 'tasaReferenciaMonto'));
     }
 
     public function store(Request $request)

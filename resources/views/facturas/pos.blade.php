@@ -35,7 +35,13 @@
                             <td class="small text-nowrap">
                                 @if ($p->tasa_ok)
                                     <strong>Bs {{ number_format($pr['precio_usd'] * $tasas[$p->fuente_tasa]->monto, 2) }}</strong>
-                                    <small class="text-muted">(${{ number_format($pr['precio_usd'], 2) }})</small>
+                                    <small class="text-muted">
+                                        @if ($tasaReferenciaMonto)
+                                            (${{ number_format($pr['precio_usd'] * $tasas[$p->fuente_tasa]->monto / $tasaReferenciaMonto, 2) }})
+                                        @else
+                                            (${{ number_format($pr['precio_usd'], 2) }})
+                                        @endif
+                                    </small>
                                 @else
                                     <span class="badge bg-danger" title="Configure la tasa '{{ $p->fuente_tasa }}' en Tasas de Cambio para poder vender este producto">Sin tasa</span>
                                 @endif
@@ -298,6 +304,18 @@
                                     <span>Tipo</span>
                                     <span x-text="tipoFactura.charAt(0).toUpperCase() + tipoFactura.slice(1)"></span>
                                 </div>
+                                <template x-if="tasaReferenciaInfo">
+                                    <div class="fila-total">
+                                        <span>Tasa ref</span>
+                                        <span x-text="tasaReferenciaInfo.nombre + ' ' + tasaReferenciaInfo.monto.toFixed(2)"></span>
+                                    </div>
+                                </template>
+                                <template x-if="!tasaReferenciaInfo">
+                                    <div class="fila-total">
+                                        <span>Tasa ref</span>
+                                        <span>Sin tasa de referencia</span>
+                                    </div>
+                                </template>
                             </div>
                             <div class="recibo-sep"></div>
                             <div class="recibo-foot">
@@ -577,6 +595,14 @@ document.addEventListener('alpine:init', () => {
             return this.tasas[this.tasaReferencia]
                 ? parseFloat(this.tasas[this.tasaReferencia].monto) || 1
                 : 1;
+        },
+
+        get tasaReferenciaInfo() {
+            const t = this.tasas[this.tasaReferencia];
+            if (!t) return null;
+            const monto = parseFloat(t.monto) || 0;
+            if (!(monto > 0)) return null;
+            return { tipo: t.tipo, nombre: t.nombre || t.tipo, monto };
         },
 
         get totalUsdRef() {

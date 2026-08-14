@@ -45,6 +45,10 @@
                 <span class="recibo-meta-valor">{{ $factura->cliente->nombre }}</span>
             </div>
             @endif
+            <div class="d-flex justify-content-between">
+                <span class="recibo-meta-label">Tasa de cambio</span>
+                <span class="recibo-meta-valor">Bs {{ number_format($tasaCambio, 2) }}</span>
+            </div>
         </div>
 
         <div class="recibo-sep"></div>
