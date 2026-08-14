@@ -41,7 +41,7 @@
 <div class="row g-3">
     <div class="col-lg-7">
         <div class="card h-100">
-            <div class="card-header"><i class="bi bi-graph-up"></i> Ventas Bs por día</div>
+            <div class="card-header"><i class="bi bi-graph-up"></i> Ingresos Bs por día</div>
             <div class="card-body">
                 <canvas id="chartVentasDiarias" height="120"></canvas>
             </div>
@@ -59,7 +59,7 @@
     <div class="col-lg-6">
         <div class="card h-100">
             <div class="card-header">
-                <i class="bi bi-layers"></i> Ventas por presentación
+                <i class="bi bi-layers"></i> Ingresos por presentación
                 <div class="small text-muted fw-normal">
                     Ingresos según la presentación vendida (Unidad, Mayor, bultos...). Agrupado por {{ $agrupadoPor }} del período
                 </div>
@@ -84,7 +84,7 @@
                     @endforeach
                 </div>
                 @else
-                <div class="text-center text-muted py-4">Sin ventas en el período.</div>
+                <div class="text-center text-muted py-4">Sin ingresos en el período.</div>
                 @endif
             </div>
         </div>
@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', function () {
         data: {
             labels: Object.keys(porDia),
             datasets: [{
-                label: 'Ventas Bs',
+                label: 'Ingresos Bs',
                 data: Object.values(porDia),
                 borderColor: '#0d6efd',
                 backgroundColor: 'rgba(13, 110, 253, 0.12)',

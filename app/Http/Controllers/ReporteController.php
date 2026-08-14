@@ -28,7 +28,7 @@ class ReporteController extends Controller
         $kpis = $this->kpis($request, $desde, $hasta);
 
         $desglose = $this->desgloseMetodo(
-            $this->queryFacturas($request, $desde, $hasta, false)->get()
+            Factura::ingresosEn($desde, $hasta, $request->cliente_id)
         );
 
         if ($request->get('export') === 'pdf') {
@@ -56,17 +56,13 @@ class ReporteController extends Controller
 
         $kpis = $this->kpis($request, $desde, $hasta);
 
-        $facturas = Factura::with('cliente')
-            ->where('estado', '!=', 'anulada')
-            ->whereDate('fecha_venta', '>=', $desde)
-            ->whereDate('fecha_venta', '<=', $hasta)
-            ->get();
+        $facturas = Factura::ingresosEn($desde, $hasta);
 
         $porDia = $this->ventasPorDia($facturas, $desde, $hasta);
         $porMetodo = $this->desgloseMetodo($facturas);
 
-        [$semanaLabels, $seriesPresentaciones, $unidadesSeries, $resumenes, $colores, $agrupadoPor] = $this->ventasPorPresentacion($desde, $hasta);
-        $topProductos = $this->topProductos($desde, $hasta);
+        [$semanaLabels, $seriesPresentaciones, $unidadesSeries, $resumenes, $colores, $agrupadoPor] = $this->ventasPorPresentacion($desde, $hasta, $facturas);
+        $topProductos = $this->topProductos($facturas);
         $topClientes = $this->topClientes($facturas);
 
         $creditos = Factura::where('estado', 'credito')
@@ -89,19 +85,17 @@ class ReporteController extends Controller
     {
         $anio = (int) $request->get('anio', now()->year);
 
-        $facturas = Factura::where('estado', '!=', 'anulada')
-            ->whereYear('fecha_venta', $anio)
-            ->get(['fecha_venta', 'total_bs', 'total_usd']);
+        $facturas = Factura::ingresosEn("{$anio}-01-01", "{$anio}-12-31");
 
         $mensual = [];
         foreach ($facturas as $f) {
-            $mes = (int) $f->fecha_venta->format('n');
+            $mes = (int) Carbon::parse($f->fecha_ingreso)->format('n');
             if (! isset($mensual[$mes])) {
                 $mensual[$mes] = ['cantidad' => 0, 'total_bs' => 0.0, 'total_usd' => 0.0];
             }
             $mensual[$mes]['cantidad']++;
-            $mensual[$mes]['total_bs'] += (float) $f->total_bs;
-            $mensual[$mes]['total_usd'] += (float) $f->total_usd;
+            $mensual[$mes]['total_bs'] += (float) $f->ingreso_bs;
+            $mensual[$mes]['total_usd'] += (float) $f->ingreso_usd;
         }
         ksort($mensual);
 
@@ -169,18 +163,17 @@ class ReporteController extends Controller
 
     private function kpis(Request $request, string $desde, string $hasta): array
     {
-        $row = $this->queryFacturas($request, $desde, $hasta)
-            ->selectRaw('COUNT(*) as cantidad, COALESCE(SUM(total_bs), 0) as total_bs, COALESCE(SUM(total_usd), 0) as total_usd, COALESCE(SUM(iva_bs), 0) as iva_bs')
-            ->first();
+        $facturas = Factura::ingresosEn($desde, $hasta, $request->cliente_id, $request->metodo_pago);
 
-        $cantidad = (float) $row->cantidad;
-        $totalBs = (float) $row->total_bs;
+        $cantidad = $facturas->count();
+        $totalBs = round($facturas->sum('ingreso_bs'), 2);
+        $totalUsd = round($facturas->sum('ingreso_usd'), 2);
 
         return [
             'cantidad' => $cantidad,
-            'total_bs' => round($totalBs, 2),
-            'total_usd' => round((float) $row->total_usd, 2),
-            'iva_bs' => round((float) $row->iva_bs, 2),
+            'total_bs' => $totalBs,
+            'total_usd' => $totalUsd,
+            'iva_bs' => round($facturas->sum('iva_bs'), 2),
             'ticket_promedio' => $cantidad > 0 ? round($totalBs / $cantidad, 2) : 0,
         ];
     }
@@ -197,7 +190,7 @@ class ReporteController extends Controller
                     }
                 }
             } elseif (isset($desglose[$f->metodo_pago])) {
-                $desglose[$f->metodo_pago] += (float) $f->total_bs;
+                $desglose[$f->metodo_pago] += (float) $f->ingreso_bs;
             }
         }
 
@@ -219,9 +212,9 @@ class ReporteController extends Controller
         }
 
         foreach ($facturas as $f) {
-            $clave = $f->fecha_venta?->format('Y-m-d');
+            $clave = $f->fecha_ingreso ?? null;
             if ($clave && isset($porDia[$clave])) {
-                $porDia[$clave] += (float) $f->total_bs;
+                $porDia[$clave] += (float) $f->ingreso_bs;
             }
         }
 
@@ -232,13 +225,12 @@ class ReporteController extends Controller
         return $porDia;
     }
 
-    private function ventasPorPresentacion(string $desde, string $hasta): array
+    private function ventasPorPresentacion(string $desde, string $hasta, Collection $facturas): array
     {
+        $porId = $facturas->keyBy('id');
+
         $items = ItemFactura::with('factura')
-            ->whereHas('factura', fn ($q) => $q
-                ->where('estado', '!=', 'anulada')
-                ->whereDate('fecha_venta', '>=', $desde)
-                ->whereDate('fecha_venta', '<=', $hasta))
+            ->whereIn('factura_id', $porId->keys())
             ->get(['factura_id', 'cantidad', 'presentacion_nombre', 'subtotal']);
 
         $porDia = Carbon::parse($desde)->diffInDays(Carbon::parse($hasta)) <= 6;
@@ -246,11 +238,11 @@ class ReporteController extends Controller
         $acumulado = [];
 
         foreach ($items as $item) {
-            $fecha = $item->factura?->fecha_venta;
-            if (! $fecha) {
+            $factura = $porId[$item->factura_id] ?? null;
+            if (! $factura || ! $factura->fecha_ingreso) {
                 continue;
             }
-            $clave = $porDia ? $fecha->format('Y-m-d') : $fecha->startOfWeek()->format('Y-m-d');
+            $clave = $porDia ? $factura->fecha_ingreso : Carbon::parse($factura->fecha_ingreso)->startOfWeek()->format('Y-m-d');
             $nombre = $item->presentacion_nombre ?: 'Unidad';
             $acumulado[$nombre][$clave]['bs'] = ($acumulado[$nombre][$clave]['bs'] ?? 0) + (float) $item->subtotal;
             $acumulado[$nombre][$clave]['unidades'] = ($acumulado[$nombre][$clave]['unidades'] ?? 0) + (float) $item->cantidad;
@@ -319,12 +311,11 @@ class ReporteController extends Controller
         ];
     }
 
-    private function topProductos(string $desde, string $hasta): Collection
+    private function topProductos(Collection $facturas): Collection
     {
-        return ItemFactura::whereHas('factura', fn ($q) => $q
-            ->where('estado', '!=', 'anulada')
-            ->whereDate('fecha_venta', '>=', $desde)
-            ->whereDate('fecha_venta', '<=', $hasta))
+        $porId = $facturas->keyBy('id');
+
+        return ItemFactura::whereIn('factura_id', $porId->keys())
             ->join('productos', 'items_factura.producto_id', '=', 'productos.id')
             ->select(
                 'productos.nombre',
@@ -344,7 +335,7 @@ class ReporteController extends Controller
             ->map(fn ($grupo) => [
                 'nombre' => $grupo->first()->cliente?->nombre ?? '—',
                 'facturas' => $grupo->count(),
-                'total_bs' => round($grupo->sum('total_bs'), 2),
+                'total_bs' => round($grupo->sum('ingreso_bs'), 2),
             ])
             ->sortByDesc('total_bs')
             ->take(5)

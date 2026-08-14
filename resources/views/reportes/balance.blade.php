@@ -25,7 +25,7 @@
 </div>
 
 <div class="card mb-3">
-    <div class="card-header"><i class="bi bi-bar-chart"></i> Ventas Bs por mes ({{ $anio }})</div>
+    <div class="card-header"><i class="bi bi-bar-chart"></i> Ingresos Bs por mes ({{ $anio }})</div>
     <div class="card-body">
         <canvas id="chartBalance" height="80"></canvas>
     </div>
@@ -75,7 +75,7 @@ document.addEventListener('DOMContentLoaded', function () {
         type: 'bar',
         data: {
             labels: @json(array_values($meses)),
-            datasets: [{ label: 'Ventas Bs', data: @json($serieBs), backgroundColor: '#0d6efd' }],
+            datasets: [{ label: 'Ingresos Bs', data: @json($serieBs), backgroundColor: '#0d6efd' }],
         },
         options: {
             plugins: { legend: { display: false } },

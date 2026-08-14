@@ -20,35 +20,23 @@ class DashboardController extends Controller
         $inicioMesAnterior = now()->subMonthNoOverflow()->startOfMonth()->toDateString();
         $mismoDiaMesAnterior = now()->subMonthNoOverflow()->toDateString();
 
-        $hoyStats = Factura::whereDate('fecha_venta', $hoy)
-            ->selectRaw('COUNT(*) as ventas, COALESCE(SUM(total_bs), 0) as total_bs, COALESCE(SUM(total_usd), 0) as total_usd')
-            ->first();
-
-        $ayerStats = Factura::whereDate('fecha_venta', $ayer)
-            ->selectRaw('COALESCE(SUM(total_bs), 0) as total_bs')
-            ->first();
-
-        $mesStats = Factura::whereDate('fecha_venta', '>=', $inicioMes)
-            ->selectRaw('COUNT(*) as ventas, COALESCE(SUM(total_bs), 0) as total_bs, COALESCE(SUM(total_usd), 0) as total_usd')
-            ->first();
-
-        $mesAnteriorStats = Factura::whereDate('fecha_venta', '>=', $inicioMesAnterior)
-            ->whereDate('fecha_venta', '<=', $mismoDiaMesAnterior)
-            ->selectRaw('COALESCE(SUM(total_bs), 0) as total_bs')
-            ->first();
+        $hoyStats = Factura::ingresosEn($hoy, $hoy);
+        $ayerStats = Factura::ingresosEn($ayer, $ayer);
+        $mesStats = Factura::ingresosEn($inicioMes, $hoy);
+        $mesAnteriorStats = Factura::ingresosEn($inicioMesAnterior, $mismoDiaMesAnterior);
 
         $creditosStats = Factura::where('estado', 'credito')
             ->where('estado_credito', 'pendiente')
             ->selectRaw('COUNT(*) as total, COALESCE(SUM(total_bs), 0) as total_bs')
             ->first();
 
-        $ventasHoy = $hoyStats->ventas;
-        $totalHoyBs = $hoyStats->total_bs;
-        $totalHoyUsd = $hoyStats->total_usd;
+        $ventasHoy = $hoyStats->count();
+        $totalHoyBs = round($hoyStats->sum('ingreso_bs'), 2);
+        $totalHoyUsd = round($hoyStats->sum('ingreso_usd'), 2);
 
-        $ventasMes = $mesStats->ventas;
-        $totalMesBs = $mesStats->total_bs;
-        $totalMesUsd = $mesStats->total_usd;
+        $ventasMes = $mesStats->count();
+        $totalMesBs = round($mesStats->sum('ingreso_bs'), 2);
+        $totalMesUsd = round($mesStats->sum('ingreso_usd'), 2);
 
         $creditosPendientes = $creditosStats->total;
         $totalCreditosPendientesBs = $creditosStats->total_bs;
@@ -63,8 +51,8 @@ class DashboardController extends Controller
         $totalProductos = Producto::whereNull('deleted_at')->count();
         $totalClientes = Cliente::count();
 
-        $variacionHoy = $this->variacion((float) $totalHoyBs, (float) $ayerStats->total_bs);
-        $variacionMes = $this->variacion((float) $totalMesBs, (float) $mesAnteriorStats->total_bs);
+        $variacionHoy = $this->variacion((float) $totalHoyBs, (float) round($ayerStats->sum('ingreso_bs'), 2));
+        $variacionMes = $this->variacion((float) $totalMesBs, (float) round($mesAnteriorStats->sum('ingreso_bs'), 2));
 
         $porDia7 = $this->porDia7();
         $totalSemanaBs = array_sum($porDia7);
@@ -125,18 +113,17 @@ class DashboardController extends Controller
 
     private function porDia7(): array
     {
-        $desde = now()->subDays(6)->startOfDay();
+        $hoy = now()->toDateString();
+        $desde = now()->subDays(6)->toDateString();
         $dias = [];
         for ($i = 0; $i < 7; $i++) {
-            $dias[$desde->copy()->addDays($i)->format('Y-m-d')] = 0.0;
+            $dias[now()->subDays(6)->addDays($i)->format('Y-m-d')] = 0.0;
         }
 
-        Factura::whereDate('fecha_venta', '>=', now()->subDays(6)->toDateString())
-            ->get(['fecha_venta', 'total_bs'])
+        Factura::ingresosEn($desde, $hoy)
             ->each(function ($f) use (&$dias) {
-                $clave = $f->fecha_venta->format('Y-m-d');
-                if (array_key_exists($clave, $dias)) {
-                    $dias[$clave] += (float) $f->total_bs;
+                if (isset($dias[$f->fecha_ingreso])) {
+                    $dias[$f->fecha_ingreso] += (float) $f->ingreso_bs;
                 }
             });
 
@@ -147,8 +134,7 @@ class DashboardController extends Controller
     {
         $metodosHoy = array_fill_keys(array_keys($metodosPago), 0.0);
 
-        Factura::whereDate('fecha_venta', now()->toDateString())
-            ->get(['metodo_pago', 'detalle_pago', 'total_bs'])
+        Factura::ingresosEn(now()->toDateString(), now()->toDateString())
             ->each(function ($f) use (&$metodosHoy) {
                 if ($f->metodo_pago === 'mixto') {
                     foreach ($f->detalle_pago ?? [] as $pago) {
@@ -157,7 +143,7 @@ class DashboardController extends Controller
                         }
                     }
                 } elseif (isset($metodosHoy[$f->metodo_pago])) {
-                    $metodosHoy[$f->metodo_pago] += (float) $f->total_bs;
+                    $metodosHoy[$f->metodo_pago] += (float) $f->ingreso_bs;
                 }
             });
 

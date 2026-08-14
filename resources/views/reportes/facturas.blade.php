@@ -87,7 +87,7 @@
                 @endif
             @endforeach
             @if ($totalDesglose == 0)
-                <div class="text-muted small">Sin ventas en el período.</div>
+                <div class="text-muted small">Sin ingresos en el período.</div>
             @endif
         </div>
     </div>

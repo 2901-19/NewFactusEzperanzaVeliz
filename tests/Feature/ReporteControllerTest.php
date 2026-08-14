@@ -265,6 +265,82 @@ class ReporteControllerTest extends TestCase
         $this->assertEquals(580.0, $serieBs[6]);
     }
 
+    public function test_kpis_excluyen_credito_pendiente()
+    {
+        $this->actingAs($this->cajero);
+
+        $this->crearFactura(['fecha_venta' => '2026-07-10']);
+        Factura::factory()->credito()->create([
+            'user_id' => $this->cajero->id,
+            'cliente_id' => $this->cliente->id,
+            'fecha_venta' => '2026-07-12',
+            'total_bs' => 9000,
+            'total_usd' => 200,
+        ]);
+
+        $response = $this->get('/reportes/facturas?desde=2026-07-01&hasta=2026-07-31');
+
+        $kpis = $response->viewData('kpis');
+        $this->assertEquals(1, $kpis['cantidad']);
+        $this->assertEquals(580.0, $kpis['total_bs']);
+
+        $desglose = $response->viewData('desglose');
+        $this->assertEquals(580.0, $desglose['efectivo']);
+    }
+
+    public function test_credito_cobrado_cuenta_como_ingreso_en_fecha_del_cobro()
+    {
+        $this->actingAs($this->cajero);
+
+        $this->crearFactura(['fecha_venta' => '2026-07-10']);
+        Factura::factory()->credito()->create([
+            'user_id' => $this->cajero->id,
+            'cliente_id' => $this->cliente->id,
+            'fecha_venta' => '2026-07-08',
+            'fecha_pago' => '2026-07-12',
+            'estado_credito' => 'cancelado',
+            'metodo_pago' => 'punto',
+            'total_bs' => 4000,
+            'total_usd' => 80,
+            'pago_bs' => 7000,
+        ]);
+
+        $response = $this->get('/reportes/facturas?desde=2026-07-01&hasta=2026-07-31');
+
+        $kpis = $response->viewData('kpis');
+        $this->assertEquals(2, $kpis['cantidad']);
+        $this->assertEquals(7580.0, $kpis['total_bs']);
+        $this->assertEquals(92.89, $kpis['total_usd']);
+
+        $desglose = $response->viewData('desglose');
+        $this->assertEquals(7000.0, $desglose['punto']);
+        $this->assertEquals(580.0, $desglose['efectivo']);
+    }
+
+    public function test_balance_credito_cobrado_cuenta_en_mes_del_cobro()
+    {
+        $this->actingAs($this->cajero);
+
+        Factura::factory()->credito()->create([
+            'user_id' => $this->cajero->id,
+            'cliente_id' => $this->cliente->id,
+            'fecha_venta' => '2026-06-20',
+            'fecha_pago' => '2026-07-05',
+            'estado_credito' => 'cancelado',
+            'metodo_pago' => 'efectivo',
+            'total_bs' => 1000,
+            'total_usd' => 20,
+            'pago_bs' => 1500,
+        ]);
+
+        $response = $this->get('/reportes/balance?anio=2026');
+
+        $mensual = $response->viewData('mensual');
+        $this->assertEquals(0, $mensual[6]['total_bs'] ?? 0);
+        $this->assertEquals(1500.0, $mensual[7]['total_bs']);
+        $this->assertEquals(1, $mensual[7]['cantidad']);
+    }
+
     public function test_balance_export_pdf()
     {
         $this->actingAs($this->cajero);

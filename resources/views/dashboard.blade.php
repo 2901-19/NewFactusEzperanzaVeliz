@@ -40,7 +40,7 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <div class="text-muted small text-uppercase fw-semibold">Ventas Hoy</div>
+                        <div class="text-muted small text-uppercase fw-semibold">Ingresos Hoy</div>
                         <div class="fs-3 fw-bold">{{ $ventasHoy }}</div>
                         <div class="small text-muted">
                             Bs {{ number_format($totalHoyBs, 2) }} &middot; ${{ number_format($totalHoyUsd, 2) }}
@@ -68,7 +68,7 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <div class="text-muted small text-uppercase fw-semibold">Ventas del Mes</div>
+                        <div class="text-muted small text-uppercase fw-semibold">Ingresos del Mes</div>
                         <div class="fs-3 fw-bold">{{ $ventasMes }}</div>
                         <div class="small text-muted">
                             Bs {{ number_format($totalMesBs, 2) }} &middot; ${{ number_format($totalMesUsd, 2) }}
@@ -149,24 +149,24 @@
 <div class="row g-3 mb-4">
     <div class="col-lg-7">
         <div class="card h-100 shadow-sm">
-            <div class="card-header"><i class="bi bi-graph-up"></i> Ventas de los últimos 7 días</div>
+            <div class="card-header"><i class="bi bi-graph-up"></i> Ingresos de los últimos 7 días</div>
             <div class="card-body">
                 @if ($totalSemanaBs > 0)
                     <canvas id="chart7dias"></canvas>
                 @else
-                    <div class="text-center text-muted py-4">Sin ventas en los últimos 7 días.</div>
+                    <div class="text-center text-muted py-4">Sin ingresos en los últimos 7 días.</div>
                 @endif
             </div>
         </div>
     </div>
     <div class="col-lg-5">
         <div class="card h-100 shadow-sm">
-            <div class="card-header"><i class="bi bi-pie-chart"></i> Métodos de pago de hoy</div>
+            <div class="card-header"><i class="bi bi-pie-chart"></i> Métodos de pago (ingresos hoy)</div>
             <div class="card-body">
                 @if (array_sum($metodosHoy) > 0)
                     <canvas id="chartMetodosHoy"></canvas>
                 @else
-                    <div class="text-center text-muted py-4">Sin ventas registradas hoy.</div>
+                    <div class="text-center text-muted py-4">Sin ingresos registrados hoy.</div>
                 @endif
             </div>
         </div>
