@@ -61,7 +61,6 @@ class HerramientasController extends Controller
                 'imagen' => $p->imagen,
                 'controla_inventario' => $p->controla_inventario,
                 'unidad_medida' => $p->unidad_medida,
-                'stock_actual' => $p->stock_actual,
                 'estado' => $p->estado,
             ]);
         }

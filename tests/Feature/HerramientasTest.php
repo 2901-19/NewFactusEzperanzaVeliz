@@ -61,6 +61,19 @@ class HerramientasTest extends TestCase
         $response->assertStatus(200);
     }
 
+    public function test_exportar_inventario_no_incluye_stock()
+    {
+        $this->actingAs($this->admin);
+        Producto::factory()->create(['nombre' => 'Azúcar', 'stock_actual' => 99.5]);
+
+        $response = $this->get('/herramientas/exportar?tipos[]=inventario');
+        $data = json_decode($response->getContent(), true);
+
+        $producto = collect($data['inventario'])->firstWhere('nombre', 'Azúcar');
+        $this->assertNotNull($producto);
+        $this->assertArrayNotHasKey('stock_actual', $producto);
+    }
+
     public function test_importar_con_archivo_valido()
     {
         $this->actingAs($this->admin);
