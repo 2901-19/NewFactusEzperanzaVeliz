@@ -56,7 +56,7 @@ Laravel 12 + PHP 8.2 POS app (FACTUS — Esperanza Veliz). PostgreSQL in dev, Bo
 - Config en `launcher/config.json`: `port`, `phpPath`, `appPath`, `browser` (`auto` = Edge → Chrome → Brave, o `edge`/`chrome`/`brave`). Estado en `%LOCALAPPDATA%\FACTUS\` (`php.pid`, `token.txt`, perfil del navegador).
 - **Cierre de sesión**: la tabla `lanzador_sesiones` (token → `session_id`) y el middleware `RegistrarLanzador` registran el token por petición. `LanzadorController@cerrarSesion` (`POST /lanzador/cerrar-sesion`, exento de CSRF) destruye solo la sesión vinculada. El middleware corre **antes que `auth`** (se registra en `prependToPriorityList(AuthenticatesRequests, ...)` en `bootstrap/app.php`) para capturar peticiones de invitados.
 - Tests: `tests/Feature/LanzadorControllerTest.php` (solo el de token desconocido → 204; el flujo completo se probó manualmente).
-- La app empaquetada escribe su `php.ini` portable en `%APPDATA%\FACTUS\factus-php.ini` y lo pasa vía `PHPRC`.
+- Instalación de cero en un equipo (PHP + PostgreSQL + despliegue en la PC del cliente sin Node/Composer/Git): ver `docs/INSTALACION.md`.
 
 ## Misc
 
