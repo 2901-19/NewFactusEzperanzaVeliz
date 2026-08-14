@@ -46,10 +46,10 @@ class ProductoController extends Controller
             $data['imagen'] = $request->file('imagen')->store('productos', 'public');
         }
 
-        $data['controla_inventario'] = $request->boolean('controla_inventario');
-        $data['stock_actual'] = $data['controla_inventario'] ? (float) ($data['stock_actual'] ?? 0) : 0;
+        $data['unidad_medida'] = $request->input('unidad_medida');
+        $data['stock_actual'] = $this->esPesable($data['unidad_medida']) ? 0 : (float) ($data['stock_actual'] ?? 0);
 
-        $presentaciones = $this->prepararPresentaciones($request, $data['costo_usd'], $request->input('presentaciones', []));
+        $presentaciones = $this->prepararPresentaciones($request, $data['costo_usd'], $request->input('presentaciones', []), $data['unidad_medida']);
 
         $producto = Producto::create(collect($data)->except('presentaciones')->toArray());
         $producto->presentaciones()->createMany($presentaciones);
@@ -80,15 +80,15 @@ class ProductoController extends Controller
             $data['imagen'] = $request->file('imagen')->store('productos', 'public');
         }
 
-        $data['controla_inventario'] = $request->boolean('controla_inventario');
-        if ($data['controla_inventario']) {
-            $data['stock_actual'] = (float) ($data['stock_actual'] ?? $producto->stock_actual ?? 0);
-        } else {
+        $data['unidad_medida'] = $request->input('unidad_medida');
+        if ($this->esPesable($data['unidad_medida'])) {
             $data['stock_actual'] = 0;
+        } else {
+            $data['stock_actual'] = (float) ($data['stock_actual'] ?? $producto->stock_actual ?? 0);
         }
 
         $producto->update(collect($data)->except('presentaciones')->toArray());
-        $this->sincronizarPresentaciones($request, $producto, $data['costo_usd'], $request->input('presentaciones', []));
+        $this->sincronizarPresentaciones($request, $producto, $data['costo_usd'], $request->input('presentaciones', []), $data['unidad_medida']);
 
         return redirect()->route('productos.index')->with('success', 'Producto actualizado correctamente.');
     }
@@ -115,8 +115,7 @@ class ProductoController extends Controller
             'categoria_id' => 'nullable|exists:categorias,id',
             'imagen' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'costo_usd' => 'required|numeric|min:0',
-            'controla_inventario' => 'boolean',
-            'unidad_medida' => 'required|string|max:50',
+            'unidad_medida' => 'required|in:unidad,kg',
             'stock_actual' => 'nullable|numeric|min:0',
             'presentaciones' => 'required|array|min:1',
             'presentaciones.*.nombre' => 'required|string|max:100',
@@ -129,8 +128,25 @@ class ProductoController extends Controller
         ]);
     }
 
-    private function prepararPresentaciones(Request $request, float $costoUsd, array $presentaciones): array
+    private function esPesable(string $unidadMedida): bool
     {
+        return $unidadMedida === 'kg';
+    }
+
+    private function prepararPresentaciones(Request $request, float $costoUsd, array $presentaciones, string $unidadMedida): array
+    {
+        if ($this->esPesable($unidadMedida)) {
+            $margen = (float) ($presentaciones[0]['margen'] ?? 0);
+
+            return [[
+                'nombre' => 'Kilogramo',
+                'factor_conversion' => 1,
+                'margen' => $margen,
+                'precio_usd' => PrecioService::precioPresentacion($costoUsd, $margen, 1),
+                'activa' => true,
+            ]];
+        }
+
         $resultado = [];
         foreach ($presentaciones as $index => $presentacion) {
             $margen = (float) $presentacion['margen'];
@@ -147,8 +163,30 @@ class ProductoController extends Controller
         return $resultado;
     }
 
-    private function sincronizarPresentaciones(Request $request, Producto $producto, float $costoUsd, array $presentaciones): void
+    private function sincronizarPresentaciones(Request $request, Producto $producto, float $costoUsd, array $presentaciones, string $unidadMedida): void
     {
+        if ($this->esPesable($unidadMedida)) {
+            $idEnviado = (int) ($presentaciones[0]['id'] ?? 0);
+            $margen = (float) ($presentaciones[0]['margen'] ?? 0);
+            $datos = [
+                'nombre' => 'Kilogramo',
+                'factor_conversion' => 1,
+                'margen' => $margen,
+                'precio_usd' => PrecioService::precioPresentacion($costoUsd, $margen, 1),
+                'activa' => true,
+            ];
+
+            if ($idEnviado) {
+                $producto->presentaciones()->whereKeyNot($idEnviado)->delete();
+                $producto->presentaciones()->whereKey($idEnviado)->update($datos);
+            } else {
+                $producto->presentaciones()->delete();
+                $producto->presentaciones()->create($datos);
+            }
+
+            return;
+        }
+
         $idsEnviados = collect($presentaciones)
             ->pluck('id')
             ->filter()

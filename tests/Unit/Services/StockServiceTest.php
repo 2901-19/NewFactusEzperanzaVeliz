@@ -13,14 +13,14 @@ class StockServiceTest extends TestCase
 
     public function test_stock_actual_devuelve_decimal()
     {
-        $producto = new Producto(['stock_actual' => 2.5, 'controla_inventario' => true]);
+        $producto = new Producto(['stock_actual' => 2.5, 'unidad_medida' => 'unidad']);
 
         $this->assertSame(2.5, StockService::stockActual($producto));
     }
 
     public function test_agregar_incrementa_stock_actual()
     {
-        $producto = Producto::factory()->create(['stock_actual' => 10, 'controla_inventario' => true]);
+        $producto = Producto::factory()->create(['stock_actual' => 10, 'unidad_medida' => 'unidad']);
 
         StockService::agregar($producto, 3.5);
 
@@ -30,7 +30,7 @@ class StockServiceTest extends TestCase
 
     public function test_agregar_ignora_si_no_controla_inventario()
     {
-        $producto = Producto::factory()->create(['stock_actual' => 10, 'controla_inventario' => false]);
+        $producto = Producto::factory()->create(['stock_actual' => 10, 'unidad_medida' => 'kg']);
 
         StockService::agregar($producto, 5);
 
@@ -40,7 +40,7 @@ class StockServiceTest extends TestCase
 
     public function test_agregar_cantidad_no_positiva_retorna()
     {
-        $producto = Producto::factory()->create(['stock_actual' => 10, 'controla_inventario' => true]);
+        $producto = Producto::factory()->create(['stock_actual' => 10, 'unidad_medida' => 'unidad']);
 
         StockService::agregar($producto, 0);
 
@@ -50,7 +50,7 @@ class StockServiceTest extends TestCase
 
     public function test_descontar_descuenta_stock_actual()
     {
-        $producto = Producto::factory()->create(['stock_actual' => 10, 'controla_inventario' => true]);
+        $producto = Producto::factory()->create(['stock_actual' => 10, 'unidad_medida' => 'unidad']);
 
         StockService::descontar($producto, 4);
 
@@ -60,7 +60,7 @@ class StockServiceTest extends TestCase
 
     public function test_descontar_acepta_decimales()
     {
-        $producto = Producto::factory()->create(['stock_actual' => 5, 'controla_inventario' => true]);
+        $producto = Producto::factory()->create(['stock_actual' => 5, 'unidad_medida' => 'unidad']);
 
         StockService::descontar($producto, 2.75);
 
@@ -70,7 +70,7 @@ class StockServiceTest extends TestCase
 
     public function test_descontar_ignora_si_no_controla_inventario()
     {
-        $producto = Producto::factory()->create(['stock_actual' => 10, 'controla_inventario' => false]);
+        $producto = Producto::factory()->create(['stock_actual' => 10, 'unidad_medida' => 'kg']);
 
         StockService::descontar($producto, 5);
 
@@ -80,7 +80,7 @@ class StockServiceTest extends TestCase
 
     public function test_descontar_lanza_excepcion_sin_stock_suficiente()
     {
-        $producto = Producto::factory()->create(['stock_actual' => 2, 'controla_inventario' => true]);
+        $producto = Producto::factory()->create(['stock_actual' => 2, 'unidad_medida' => 'unidad']);
 
         $this->expectException(\RuntimeException::class);
 
@@ -89,7 +89,7 @@ class StockServiceTest extends TestCase
 
     public function test_descontar_cantidad_no_positiva_retorna()
     {
-        $producto = Producto::factory()->create(['stock_actual' => 10, 'controla_inventario' => true]);
+        $producto = Producto::factory()->create(['stock_actual' => 10, 'unidad_medida' => 'unidad']);
 
         StockService::descontar($producto, 0);
 

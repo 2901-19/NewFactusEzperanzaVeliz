@@ -181,21 +181,22 @@ class HerramientasController extends Controller
                         foreach ($data['inventario'] as $item) {
                             $existe = Producto::where('nombre', $item['nombre'])->exists();
                             if (! $existe) {
+                                $unidad = $this->normalizarUnidadMedida($item['unidad_medida'] ?? 'unidad');
+                                $esPesable = $unidad === 'kg';
                                 $producto = Producto::create([
                                     'nombre' => $item['nombre'],
                                     'categoria_id' => $item['categoria_id'] ?? null,
                                     'descripcion' => $item['descripcion'] ?? '',
                                     'imagen' => $item['imagen'] ?? null,
-                                    'controla_inventario' => (bool) ($item['controla_inventario'] ?? true),
-                                    'unidad_medida' => $item['unidad_medida'] ?? 'unidad',
-                                    'stock_actual' => (float) ($item['stock_actual'] ?? 0),
+                                    'unidad_medida' => $unidad,
+                                    'stock_actual' => $esPesable ? 0 : (float) ($item['stock_actual'] ?? 0),
                                     'estado' => 'no_disponible',
                                     'costo_usd' => 0,
                                     'impuesto_id' => null,
                                     'fuente_tasa' => 'promedio',
                                 ]);
                                 $producto->presentaciones()->create([
-                                    'nombre' => 'Unidad',
+                                    'nombre' => $esPesable ? 'Kilogramo' : 'Unidad',
                                     'factor_conversion' => 1,
                                     'margen' => 0,
                                     'precio_usd' => 0,
@@ -273,7 +274,17 @@ class HerramientasController extends Controller
                             }
 
                             $costoUsd = (float) ($item['costo_usd'] ?? 0);
-                            $presentaciones = $this->presentacionesDesdeLegacy($item, $costoUsd);
+                            $unidad = $this->normalizarUnidadMedida($item['unidad_medida'] ?? 'unidad');
+                            $esPesable = $unidad === 'kg';
+                            $presentaciones = $esPesable
+                                ? [[
+                                    'nombre' => 'Kilogramo',
+                                    'factor_conversion' => 1,
+                                    'margen' => 0,
+                                    'precio_usd' => PrecioService::precioPresentacion($costoUsd, 0, 1),
+                                    'activa' => true,
+                                ]]
+                                : $this->presentacionesDesdeLegacy($item, $costoUsd);
                             $estadoImportado = collect($presentaciones)->contains(fn ($pr) => $pr['precio_usd'] > 0) ? 'disponible' : 'no_disponible';
 
                             $producto = Producto::create([
@@ -282,9 +293,8 @@ class HerramientasController extends Controller
                                 'descripcion' => $item['descripcion'] ?? '',
                                 'imagen' => $item['imagen'] ?? null,
                                 'costo_usd' => $costoUsd,
-                                'stock_actual' => (float) ($item['stock_actual'] ?? 0),
-                                'controla_inventario' => (bool) ($item['controla_inventario'] ?? true),
-                                'unidad_medida' => $item['unidad_medida'] ?? 'unidad',
+                                'stock_actual' => $esPesable ? 0 : (float) ($item['stock_actual'] ?? 0),
+                                'unidad_medida' => $unidad,
                                 'impuesto_id' => $item['impuesto_id'] ?? null,
                                 'fuente_tasa' => $item['fuente_tasa'] ?? 'promedio',
                                 'estado' => $estadoImportado,
@@ -416,6 +426,7 @@ class HerramientasController extends Controller
                 'precio_unitario' => $item->precio_unitario_bs,
                 'cantidad' => $item->cantidad,
                 'total' => $item->subtotal,
+                'pesable' => $item->unidad_medida === 'kg',
             ];
         })->toArray();
 
@@ -538,7 +549,7 @@ class HerramientasController extends Controller
     /**
      * Construye presentaciones a partir del formato antiguo de productos
      * (margen_detal/mayor, precio_unitario_usd/precio_mayor_usd). Coherente
-     * con la conversión hecha en las migraciones 2026_08_08_*.
+     * con el esquema unificado de presentaciones.
      */
     private function presentacionesDesdeLegacy(array $item, float $costoUsd): array
     {
@@ -568,5 +579,12 @@ class HerramientasController extends Controller
         }
 
         return $presentaciones;
+    }
+
+    private function normalizarUnidadMedida(?string $unidad): string
+    {
+        $unidad = strtolower(trim((string) $unidad));
+
+        return in_array($unidad, ['kg', 'kilo', 'kilogramo'], true) ? 'kg' : 'unidad';
     }
 }

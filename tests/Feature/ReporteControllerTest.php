@@ -41,7 +41,6 @@ class ReporteControllerTest extends TestCase
             'nombre' => 'Producto Test',
             'costo_usd' => 5.00,
             'stock_actual' => 125,
-            'controla_inventario' => true,
             'unidad_medida' => 'unidad',
             'impuesto_id' => null,
             'fuente_tasa' => 'promedio',

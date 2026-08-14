@@ -18,11 +18,14 @@ class Producto extends Model
         'imagen',
         'costo_usd',
         'stock_actual',
-        'controla_inventario',
         'unidad_medida',
         'impuesto_id',
         'fuente_tasa',
         'estado',
+    ];
+
+    protected $appends = [
+        'controla_inventario',
     ];
 
     public function getCostoBsAttribute(): float
@@ -33,6 +36,11 @@ class Producto extends Model
     private function obtenerTasa(): float
     {
         return TasaCambioService::monto($this->fuente_tasa) ?? 1;
+    }
+
+    public function getControlaInventarioAttribute(): bool
+    {
+        return $this->unidad_medida === 'unidad';
     }
 
     public function getImagenUrlAttribute(): ?string
@@ -55,7 +63,6 @@ class Producto extends Model
     protected function casts(): array
     {
         return [
-            'controla_inventario' => 'boolean',
             'costo_usd' => 'float',
             'stock_actual' => 'float',
         ];

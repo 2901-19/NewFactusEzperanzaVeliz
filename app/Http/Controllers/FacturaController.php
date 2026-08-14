@@ -158,6 +158,7 @@ class FacturaController extends Controller
                     'precio_unitario_usd' => $precioUsd,
                     'precio_unitario_bs' => round($precioBs, 2),
                     'subtotal' => $subtotalItemBs,
+                    'unidad_medida' => $producto->unidad_medida,
                 ];
 
                 $subtotalBs = round($subtotalBs + $subtotalItemBs, 2);

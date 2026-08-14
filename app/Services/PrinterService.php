@@ -143,8 +143,9 @@ class PrinterService
 
         $subtotal = 0;
         foreach ($items as $item) {
-            $precio = number_format($item['precio_unitario'], 2);
-            $cant = $item['cantidad'];
+            $pesable = ! empty($item['pesable']);
+            $precio = $pesable ? number_format($item['precio_unitario'], 2).'/kg' : number_format($item['precio_unitario'], 2);
+            $cant = $pesable ? '—' : $item['cantidad'];
             $total = number_format($item['total'], 2);
             $subtotal += $item['total'];
             $nombreRestante = $item['nombre'];

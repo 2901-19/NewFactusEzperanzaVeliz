@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Configuracion;
+use App\Models\Producto;
 use App\Models\User;
 use Database\Seeders\PermisoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -140,7 +141,7 @@ class HerramientasTest extends TestCase
         $this->actingAs($this->admin);
 
         $json = json_encode(['inventario' => [
-            ['nombre' => 'Azúcar', 'controla_inventario' => true, 'unidad_medida' => 'kilo', 'stock_actual' => 25.5],
+            ['nombre' => 'Azúcar', 'unidad_medida' => 'unidad', 'stock_actual' => 25.5],
         ]]);
         $archivo = UploadedFile::fake()->createWithContent('datos.json', $json);
 
@@ -151,9 +152,34 @@ class HerramientasTest extends TestCase
         $response->assertSessionHas('success');
         $this->assertDatabaseHas('productos', [
             'nombre' => 'Azúcar',
-            'controla_inventario' => true,
-            'unidad_medida' => 'kilo',
+            'unidad_medida' => 'unidad',
             'stock_actual' => 25.5,
+        ]);
+    }
+
+    public function test_importar_inventario_kilo_se_normaliza_a_pesable()
+    {
+        $this->actingAs($this->admin);
+
+        $json = json_encode(['inventario' => [
+            ['nombre' => 'Harina Maíz', 'unidad_medida' => 'kilo', 'stock_actual' => 25.5],
+        ]]);
+        $archivo = UploadedFile::fake()->createWithContent('datos.json', $json);
+
+        $this->from('/herramientas/datos')->post('/herramientas/importar', [
+            'archivo' => $archivo,
+        ])->assertSessionHas('success');
+
+        $this->assertDatabaseHas('productos', [
+            'nombre' => 'Harina Maíz',
+            'unidad_medida' => 'kg',
+            'stock_actual' => 0,
+        ]);
+        $producto = Producto::where('nombre', 'Harina Maíz')->first();
+        $this->assertDatabaseHas('producto_presentaciones', [
+            'producto_id' => $producto->id,
+            'nombre' => 'Kilogramo',
+            'factor_conversion' => 1,
         ]);
     }
 
@@ -219,7 +245,7 @@ class HerramientasTest extends TestCase
         $this->actingAs($this->admin);
 
         $json = json_encode(['inventario' => [
-            ['nombre' => 'Aceite', 'controla_inventario' => true, 'unidad_medida' => 'botella', 'stock_actual' => 12],
+            ['nombre' => 'Aceite', 'unidad_medida' => 'botella', 'stock_actual' => 12],
         ]]);
         $archivo = UploadedFile::fake()->createWithContent('datos.json', $json);
 
@@ -227,6 +253,11 @@ class HerramientasTest extends TestCase
             'archivo' => $archivo,
         ])->assertSessionHas('success');
 
+        $this->assertDatabaseHas('productos', [
+            'nombre' => 'Aceite',
+            'unidad_medida' => 'unidad',
+            'stock_actual' => 12,
+        ]);
         $this->assertDatabaseHas('producto_presentaciones', [
             'nombre' => 'Unidad',
             'factor_conversion' => 1,

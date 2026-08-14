@@ -85,9 +85,22 @@
                             <button class="btn btn-sm btn-outline-danger py-0" @click="carrito.splice(index, 1)">&times;</button>
                         </div>
                         <div class="d-flex align-items-center gap-2 mt-1">
-                            <button class="btn btn-sm btn-outline-secondary" @click="item.cantidad > (item.controla_inventario ? 1 : 0.001) && (item.cantidad = Math.max(0.001, item.cantidad - 1))">-</button>
-                            <input type="number" :step="item.controla_inventario ? 1 : 0.001" :min="item.controla_inventario ? 1 : 0.001" :max="maxPresentaciones(index)" x-model.number="item.cantidad" @blur="item.cantidad = Math.max(item.controla_inventario ? 1 : 0.001, Math.min(parseFloat(item.cantidad) || (item.controla_inventario ? 1 : 0.001), maxPresentaciones(index)))" class="form-control form-control-sm text-center" style="width: 70px;">
-                            <button class="btn btn-sm btn-outline-secondary" @click="item.cantidad = Math.min((parseFloat(item.cantidad) || 0) + (item.controla_inventario ? 1 : 0.001), maxPresentaciones(index))" :disabled="item.controla_inventario && item.cantidad >= maxPresentaciones(index)">+</button>
+                            <template x-if="item.controla_inventario">
+                                <div class="d-flex align-items-center gap-2">
+                                    <button class="btn btn-sm btn-outline-secondary" @click="item.cantidad = Math.max(1, item.cantidad - 1)">-</button>
+                                    <input type="number" step="1" min="1" :max="maxPresentaciones(index)" x-model.number="item.cantidad" @blur="item.cantidad = Math.max(1, Math.min(parseFloat(item.cantidad) || 1, maxPresentaciones(index)))" class="form-control form-control-sm text-center" style="width: 70px;">
+                                    <button class="btn btn-sm btn-outline-secondary" @click="item.cantidad = Math.min((parseFloat(item.cantidad) || 0) + 1, maxPresentaciones(index))" :disabled="item.cantidad >= maxPresentaciones(index)">+</button>
+                                </div>
+                            </template>
+                            <template x-if="!item.controla_inventario">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="input-group input-group-sm" style="width: 160px;">
+                                        <span class="input-group-text">Bs</span>
+                                        <input type="number" step="0.01" min="0.01" x-model.number="item.montoBs" @input="sincronizarPeso(index)" @blur="sincronizarPeso(index)" class="form-control text-center" placeholder="Monto">
+                                    </div>
+                                    <span class="small text-muted text-nowrap" x-text="'≈ ' + pesoReferencia(index)"></span>
+                                </div>
+                            </template>
                             <span class="ms-auto small" x-text="'Bs ' + getBsPriceTotal(index).toFixed(2)"></span>
                         </div>
                         <div class="text-muted small" x-show="factorDe(item) !== 1 && factorDe(item) > 0" x-text="descripcionPresentacion(index)"></div>
@@ -188,7 +201,10 @@
                     <span>Total USD:</span>
                     <span x-text="'$' + totalUsdRef.toFixed(2)"></span>
                 </div>
-                <button class="btn btn-success w-100 mt-3" @click="confirmarFactura" :disabled="carrito.length === 0 || (tipoFactura === 'credito' && !clienteId) || (metodoPago === 'mixto' && !pagosValidos) || cargando">
+                <div x-show="pesablesIncompletos" class="small text-danger mt-2">
+                    <i class="bi bi-exclamation-triangle"></i> Complete el monto en Bs de los productos pesables.
+                </div>
+                <button class="btn btn-success w-100 mt-3" @click="confirmarFactura" :disabled="carrito.length === 0 || (tipoFactura === 'credito' && !clienteId) || (metodoPago === 'mixto' && !pagosValidos) || pesablesIncompletos || cargando">
                     <span x-show="!cargando"><i class="bi bi-check-lg"></i> Generar Factura</span>
                     <span x-show="cargando"><span class="spinner-border spinner-border-sm"></span> Procesando...</span>
                 </button>
@@ -219,12 +235,12 @@
                                 <tbody>
                                     <template x-for="(item, index) in carrito" :key="index">
                                         <tr>
-                                            <td class="cant" x-text="item.cantidad"></td>
+                                            <td class="cant" x-text="item.controla_inventario ? item.cantidad : '—'"></td>
                                             <td class="desc">
                                                 <span x-text="item.nombre"></span>
                                                 <span class="text-muted small" x-show="presNombre(index)" x-text="'(' + presNombre(index) + ')'"></span>
                                             </td>
-                                            <td class="num" x-text="(tipoFactura === 'credito' ? getUsdPrice(index) : getBsPrice(index)).toFixed(2)"></td>
+                                            <td class="num" x-text="(tipoFactura === 'credito' ? getUsdPrice(index) : getBsPrice(index)).toFixed(2) + (item.controla_inventario ? '' : '/kg')"></td>
                                             <td class="num fw-semibold" x-text="(tipoFactura === 'credito' ? getUsdPriceTotal(index) : getBsPriceTotal(index)).toFixed(2)"></td>
                                         </tr>
                                     </template>
@@ -409,19 +425,46 @@ document.addEventListener('alpine:init', () => {
             }
             const existente = this.carrito.find(i => i.id === p.id && i.presentacion_id === presId);
             if (existente) {
-                existente.cantidad++;
+                if (existente.controla_inventario) {
+                    existente.cantidad++;
+                }
             } else {
+                const pesable = !p.controla_inventario;
                 this.carrito.push({
                     id: p.id,
                     nombre: p.nombre,
-                    cantidad: 1,
+                    cantidad: pesable ? 0 : 1,
                     controla_inventario: !!p.controla_inventario,
+                    montoBs: pesable ? '' : undefined,
                     presentaciones,
                     presentacion_id: presId,
                     impuesto: p.impuesto || null,
                     fuente_tasa: p.fuente_tasa,
                 });
             }
+        },
+
+        sincronizarPeso(index) {
+            const it = this.carrito[index];
+            if (!it) return;
+            const precioBs = this.getBsPrice(index);
+            if (!(precioBs > 0)) {
+                it.cantidad = 0;
+                return;
+            }
+            const monto = parseFloat(it.montoBs) || 0;
+            it.cantidad = monto > 0 ? Math.max(0.001, monto / precioBs) : 0;
+        },
+
+        pesoReferencia(index) {
+            const it = this.carrito[index];
+            if (!it) return '';
+            const cantidad = parseFloat(it.cantidad) || 0;
+            return cantidad > 0 ? cantidad.toFixed(3) + ' kg' : '—';
+        },
+
+        get pesablesIncompletos() {
+            return this.carrito.some(i => !i.controla_inventario && !(parseFloat(i.montoBs) > 0));
         },
 
         factorDe(item) {

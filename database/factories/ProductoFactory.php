@@ -18,7 +18,6 @@ class ProductoFactory extends Factory
             'categoria_id' => Categoria::factory(),
             'costo_usd' => fake()->randomFloat(2, 0.3, 40),
             'stock_actual' => fake()->randomFloat(3, 0, 100),
-            'controla_inventario' => true,
             'unidad_medida' => 'unidad',
             'impuesto_id' => Impuesto::factory(),
             'fuente_tasa' => fake()->randomElement(['promedio', 'dolar', 'bcv']),

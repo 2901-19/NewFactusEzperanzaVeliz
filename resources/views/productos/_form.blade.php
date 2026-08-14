@@ -2,7 +2,6 @@
     $presentacionesIniciales = old('presentaciones', $producto?->presentaciones ?? [['nombre' => 'Unidad', 'factor_conversion' => 1, 'margen' => 0, 'activa' => true]]);
     $costoUsdInicial = old('costo_usd', $producto?->costo_usd ?? 0);
     $fuenteTasaInicial = old('fuente_tasa', $producto?->fuente_tasa ?? $opcionesTasa->keys()->first() ?? 'promedio');
-    $controlaInventario = old('controla_inventario', $producto?->controla_inventario ?? true) ? 'true' : 'false';
     $unidadMedidaInicial = old('unidad_medida', $producto?->unidad_medida ?? 'unidad');
     $stockInicial = old('stock_actual', $producto?->stock_actual ?? 0);
     $tieneImagen = ! empty($producto?->imagen);
@@ -65,16 +64,39 @@
     </div>
 </div>
 
-<div x-data="presentacionesEditor({{ $costoUsdInicial }}, window.__productoForm.presentaciones, window.__productoForm.mapaTasas, window.__productoForm.fuenteTasa)">
+<div x-data="productoForm(
+    {{ $costoUsdInicial }},
+    window.__productoForm.presentaciones,
+    window.__productoForm.mapaTasas,
+    window.__productoForm.fuenteTasa,
+    window.__productoForm.unidadMedida,
+    {{ $stockInicial }}
+)">
 <div class="card mb-4">
     <div class="card-header"><i class="bi bi-cash-coin me-1"></i> Costo e Inventario</div>
     <div class="card-body">
         <div class="row">
             <div class="col-md-6">
                 <div class="mb-3">
-                    <label class="form-label">Costo unitario (USD) *</label>
-                    <input type="number" step="0.01" min="0" name="costo_usd" x-model.number="costoUsd" class="form-control @error('costo_usd') is-invalid @enderror" value="{{ old('costo_usd', $producto?->costo_usd) }}">
-                    @error('costo_usd') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                    <div class="d-flex justify-content-between align-items-center">
+                        <label class="form-label mb-0">Costo (USD) *</label>
+                        <div class="btn-group btn-group-sm" role="group" aria-label="Modo de costo" x-show="medida === 'unidad'">
+                            <button type="button" class="btn btn-outline-primary py-0" :class="costoModo === 'unidad' ? 'active' : ''" @click="cambiarModo('unidad')">Unidad</button>
+                            <button type="button" class="btn btn-outline-primary py-0" :class="costoModo === 'lote' ? 'active' : ''" @click="cambiarModo('lote')">Lote</button>
+                        </div>
+                    </div>
+                    <div class="mt-1">
+                        <input type="number" step="0.01" min="0" name="costo_usd" x-model.number="costoUsd" x-show="costoModo === 'unidad'" class="form-control @error('costo_usd') is-invalid @enderror" value="{{ old('costo_usd', $producto?->costo_usd) }}">
+                        <div class="row g-2" x-show="medida === 'unidad' && costoModo === 'lote'">
+                            <div class="col-6">
+                                <input type="number" step="1" min="1" x-model.number="uniLote" @input="sincronizarLote" class="form-control" placeholder="Uni. Lote">
+                            </div>
+                            <div class="col-6">
+                                <input type="number" step="0.01" min="0" x-model.number="precioLote" @input="sincronizarLote" class="form-control" placeholder="Precio Lote (USD)">
+                            </div>
+                        </div>
+                    </div>
+                    @error('costo_usd') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Tasa del producto</label>
@@ -98,35 +120,16 @@
                     </select>
                 </div>
             </div>
-            <div class="col-md-6" x-data="inventarioControl(
-                {{ $controlaInventario }},
-                window.__productoForm.unidadMedida,
-                {{ $stockInicial }}
-            )">
+            <div class="col-md-6">
                 <div class="mb-3">
-                    <label class="form-label">Control de inventario</label>
-                    <div class="switch-form-control">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" role="switch" name="controla_inventario" id="controla_inventario" x-model="controla" value="1">
-                            <label class="form-check-label" for="controla_inventario">
-                                <span x-text="controla ? 'Activo' : 'Inactivo'"></span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Unidad de medida</label>
-                    <select name="unidad_medida" class="form-select" x-model="unidadMedida">
-                        @php $unidadesPredefinidas = ['unidad', 'kg', 'g', 'litro', 'ml', 'metro', 'caja', 'paquete']; @endphp
-                        @if (! in_array($unidadMedidaInicial, $unidadesPredefinidas, true))
-                            <option value="{{ $unidadMedidaInicial }}">{{ ucfirst($unidadMedidaInicial) }}</option>
-                        @endif
-                        @foreach ($unidadesPredefinidas as $um)
-                            <option value="{{ $um }}">{{ ucfirst($um) }}</option>
-                        @endforeach
+                    <label class="form-label">Unidad de medida *</label>
+                    <select name="unidad_medida" class="form-select" x-model="medida">
+                        <option value="unidad">Unidad</option>
+                        <option value="kg">Kilogramo (pesable)</option>
                     </select>
+                    @error('unidad_medida') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                 </div>
-                <div class="mb-3" x-show="controla">
+                <div class="mb-3" x-show="medida === 'unidad'">
                     <label class="form-label">Existencia actual</label>
                     <input type="number" name="stock_actual" step="0.001" min="0" x-model.number="stockActual" class="form-control @error('stock_actual') is-invalid @enderror" value="{{ old('stock_actual', $producto?->stock_actual ?? 0) }}">
                     @error('stock_actual') <div class="invalid-feedback">{{ $message }}</div> @enderror
@@ -139,60 +142,135 @@
 <div class="card mb-4">
     <div class="card-header"><i class="bi bi-boxes me-1"></i> Presentaciones y Precios</div>
     <div class="card-body">
-        <div>
-            <div class="table-responsive">
-                <table class="table table-sm align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="text-start" style="width:24%">Presentación</th>
-                            <th class="text-center" style="width:110px">Unidades</th>
-                            <th class="text-center" style="width:110px">Margen (%)</th>
-                            <th class="text-end" style="width:110px">Precio USD</th>
-                            <th class="text-end" style="width:130px">Precio Bs</th>
-                            <th class="text-center text-nowrap" style="width:140px">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <template x-for="(pres, i) in presentaciones" :key="i">
+        @error('presentaciones') <div class="text-danger small mb-2">{{ $message }}</div> @enderror
+
+        <template x-if="medida === 'unidad'">
+            <div>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead class="table-light">
                             <tr>
-                                <td class="text-start">
-                                    <input type="hidden" :name="'presentaciones[' + i + '][id]'" :value="pres.id || ''">
-                                    <input type="text" class="form-control" :name="'presentaciones[' + i + '][nombre]'" x-model="pres.nombre" required>
-                                </td>
-                                <td>
-                                    <input type="number" step="0.0001" min="0.0001" class="form-control text-center" :name="'presentaciones[' + i + '][factor_conversion]'" x-model.number="pres.factor_conversion" required>
-                                </td>
-                                <td>
-                                    <input type="number" step="0.01" min="0" class="form-control text-center" :name="'presentaciones[' + i + '][margen]'" x-model.number="pres.margen" required>
-                                </td>
-                                <td class="text-end">
-                                    <span class="fw-bold" x-text="'$' + precioPor(i).toFixed(2)"></span>
-                                </td>
-                                <td class="text-end">
-                                    <span class="fw-bold" x-text="'Bs ' + (precioPor(i) * (tasaActual() || 1)).toFixed(2)"></span>
-                                </td>
-                                <td class="text-center text-nowrap">
-                                    <div class="d-inline-flex align-items-center gap-2">
-                                        <input type="hidden" :name="'presentaciones[' + i + '][activa]'" :value="pres.activa ? '1' : '0'">
-                                        <div class="form-check form-switch mb-0">
-                                            <input class="form-check-input" type="checkbox" role="switch" x-model="pres.activa" :id="'activa-' + i">
-                                            <label class="form-check-label small text-muted" :for="'activa-' + i" x-text="pres.activa ? 'Sí' : 'No'"></label>
-                                        </div>
-                                        <button type="button" class="btn btn-sm btn-outline-danger" @click="quitar(i)" :disabled="presentaciones.length <= 1" title="Quitar presentación">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </div>
-                                </td>
+                                <th class="text-start" style="width:24%">Presentación</th>
+                                <th class="text-center" style="width:110px">Unidades</th>
+                                <th class="text-center" style="width:110px">Margen (%)</th>
+                                <th class="text-end" style="width:110px">Precio USD</th>
+                                <th class="text-end" style="width:130px">Precio Bs</th>
+                                <th class="text-center text-nowrap" style="width:140px">Acciones</th>
                             </tr>
-                        </template>
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            <template x-for="(pres, i) in presentaciones" :key="i">
+                                <tr>
+                                    <td class="text-start">
+                                        <input type="hidden" :name="'presentaciones[' + i + '][id]'" :value="pres.id || ''">
+                                        <input type="text" class="form-control" :name="'presentaciones[' + i + '][nombre]'" x-model="pres.nombre" required>
+                                    </td>
+                                    <td>
+                                        <input type="number" step="0.0001" min="0.0001" class="form-control text-center" :name="'presentaciones[' + i + '][factor_conversion]'" x-model.number="pres.factor_conversion" required>
+                                    </td>
+                                    <td>
+                                        <input type="number" step="0.01" min="0" class="form-control text-center" :name="'presentaciones[' + i + '][margen]'" x-model.number="pres.margen" required>
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="fw-bold" x-text="'$' + precioPor(i).toFixed(2)"></span>
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="fw-bold" x-text="'Bs ' + (precioPor(i) * (tasaActual() || 1)).toFixed(2)"></span>
+                                    </td>
+                                    <td class="text-center text-nowrap">
+                                        <div class="d-inline-flex align-items-center gap-2">
+                                            <input type="hidden" :name="'presentaciones[' + i + '][activa]'" :value="pres.activa ? '1' : '0'">
+                                            <div class="form-check form-switch mb-0">
+                                                <input class="form-check-input" type="checkbox" role="switch" x-model="pres.activa" :id="'activa-' + i">
+                                                <label class="form-check-label small text-muted" :for="'activa-' + i" x-text="pres.activa ? 'Sí' : 'No'"></label>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" @click="quitar(i)" :disabled="presentaciones.length <= 1" title="Quitar presentación">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-primary" @click="agregar">
+                    <i class="bi bi-plus-lg"></i> Agregar presentación
+                </button>
             </div>
-            <button type="button" class="btn btn-sm btn-outline-primary" @click="agregar">
-                <i class="bi bi-plus-lg"></i> Agregar presentación
-            </button>
-            @error('presentaciones') <div class="text-danger small mt-2">{{ $message }}</div> @enderror
-        </div>
+        </template>
+
+        <template x-if="medida === 'kg'">
+            <div>
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label">Presentación</label>
+                        <input type="text" class="form-control" value="Kilogramo" disabled>
+                        <input type="hidden" name="presentaciones[0][nombre]" value="Kilogramo">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Margen (%)</label>
+                        <input type="number" step="0.01" min="0" class="form-control" name="presentaciones[0][margen]" x-model.number="presentaciones[0].margen" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-muted">Precio por kilo</label>
+                        <div class="fw-bold" x-text="'$ ' + precioKiloUsd.toFixed(2) + ' / Bs ' + precioKiloBs.toFixed(2)"></div>
+                    </div>
+                </div>
+                <input type="hidden" name="presentaciones[0][id]" :value="presentaciones.length ? (presentaciones[0].id || '') : ''">
+                <input type="hidden" name="presentaciones[0][factor_conversion]" value="1">
+                <input type="hidden" name="presentaciones[0][activa]" value="1">
+            </div>
+        </template>
     </div>
 </div>
 </div>
+
+@push('scripts')
+<script>
+    function productoForm(costoUsd, presentaciones, tasas, fuenteTasa, medida, stockActual) {
+        return {
+            costoUsd: parseFloat(costoUsd) || 0,
+            costoModo: 'unidad',
+            uniLote: '',
+            precioLote: '',
+            tasas: tasas || {},
+            fuenteTasa: fuenteTasa || (Object.keys(tasas || {})[0] || ''),
+            medida: medida || 'unidad',
+            stockActual: parseFloat(stockActual) || 0,
+            presentaciones: (presentaciones && presentaciones.length ? presentaciones : [{ nombre: 'Unidad', factor_conversion: 1, margen: 0, activa: true }]),
+            get esPesable() { return this.medida === 'kg'; },
+            tasaActual() {
+                return parseFloat(this.tasas[this.fuenteTasa] || 0) || 0;
+            },
+            cambiarModo(modo) {
+                this.costoModo = modo;
+            },
+            sincronizarLote() {
+                this.costoUsd = this.uniLote > 0 ? (parseFloat(this.precioLote) || 0) / this.uniLote : 0;
+            },
+            agregar() {
+                this.presentaciones.push({ nombre: '', factor_conversion: 1, margen: 0, activa: true });
+            },
+            quitar(i) {
+                if (this.presentaciones.length <= 1) return;
+                this.presentaciones.splice(i, 1);
+            },
+            precioPor(i) {
+                const pres = this.presentaciones[i] || {};
+                const precioBase = (this.costoUsd || 0) * (1 + (parseFloat(pres.margen) || 0) / 100);
+                return this.redon2(precioBase * (parseFloat(pres.factor_conversion) || 1));
+            },
+            redon2(n) {
+                return Math.round((n + Number.EPSILON) * 100) / 100;
+            },
+            get precioKiloUsd() {
+                return this.precioPor(0);
+            },
+            get precioKiloBs() {
+                return this.precioKiloUsd * (this.tasaActual() || 1);
+            },
+        };
+    }
+</script>
+@endpush

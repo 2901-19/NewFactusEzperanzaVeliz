@@ -49,7 +49,6 @@ class FacturaControllerTest extends TestCase
             'nombre' => 'Producto Test',
             'costo_usd' => 10.00,
             'stock_actual' => 125,
-            'controla_inventario' => true,
             'unidad_medida' => 'unidad',
             'impuesto_id' => $this->iva->id,
             'fuente_tasa' => 'promedio',
@@ -131,7 +130,6 @@ class FacturaControllerTest extends TestCase
             'nombre' => 'Producto Sin Tasa',
             'costo_usd' => 5.00,
             'stock_actual' => 10,
-            'controla_inventario' => true,
             'unidad_medida' => 'unidad',
             'fuente_tasa' => 'paralelo',
             'estado' => 'disponible',
@@ -183,6 +181,50 @@ class FacturaControllerTest extends TestCase
             'producto_id' => $this->producto->id,
             'presentacion_id' => $this->presentacionUnidad->id,
             'cantidad' => 3,
+        ]);
+    }
+
+    public function test_store_guarda_unidad_medida_del_item_pesable()
+    {
+        $this->actingAs($this->cajero);
+
+        $productoPesable = Producto::factory()->create([
+            'nombre' => 'Queso',
+            'costo_usd' => 4.00,
+            'stock_actual' => 0,
+            'unidad_medida' => 'kg',
+            'fuente_tasa' => 'promedio',
+            'estado' => 'disponible',
+        ]);
+        $presentacionKg = ProductoPresentacion::factory()->create([
+            'producto_id' => $productoPesable->id,
+            'nombre' => 'Kilogramo',
+            'factor_conversion' => 1,
+            'margen' => 30,
+            'precio_usd' => 5.20,
+            'activa' => true,
+        ]);
+
+        $response = $this->postJson('/facturas', [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'efectivo',
+            'estado' => 'contado',
+            'items' => [
+                [
+                    'producto_id' => $productoPesable->id,
+                    'presentacion_id' => $presentacionKg->id,
+                    'cantidad' => 0.8,
+                ],
+            ],
+        ]);
+
+        $response->assertJson(['success' => true]);
+        $factura = Factura::first();
+        $this->assertDatabaseHas('items_factura', [
+            'factura_id' => $factura->id,
+            'producto_id' => $productoPesable->id,
+            'cantidad' => 0.8,
+            'unidad_medida' => 'kg',
         ]);
     }
 

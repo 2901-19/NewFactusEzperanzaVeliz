@@ -134,7 +134,7 @@ class ReporteController extends Controller
     {
         $productos = Producto::whereNull('deleted_at')
             ->where('estado', 'disponible')
-            ->where('controla_inventario', true)
+            ->where('unidad_medida', 'unidad')
             ->get()
             ->filter(fn ($p) => (float) $p->stock_actual <= CatalogoService::UMBRAL_STOCK_BAJO)
             ->sortBy('stock_actual');

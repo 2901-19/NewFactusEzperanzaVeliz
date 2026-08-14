@@ -61,18 +61,19 @@
             </thead>
             <tbody>
                 @foreach ($factura->items as $item)
+                @php $esPesable = $item->unidad_medida === 'kg'; @endphp
                 <tr>
-                    <td class="cant">{{ $item->cantidad }}</td>
+                    <td class="cant">{{ $esPesable ? '—' : $item->cantidad }}</td>
                     <td class="desc">
                         {{ $item->producto->nombre ?? 'Producto' }}
                         @if ($item->presentacion_nombre)<small class="text-muted"> ({{ $item->presentacion_nombre }})</small>@endif
                     </td>
                     @if ($esCredito)
-                    <td class="num">$ {{ number_format($item->precio_unitario_bs / $tasaCambio, 2) }}</td>
+                    <td class="num">{{ $esPesable ? '$ ' . number_format($item->precio_unitario_bs / $tasaCambio, 2) . ' /kg' : '$ ' . number_format($item->precio_unitario_bs / $tasaCambio, 2) }}</td>
                     <td class="num fw-semibold">$ {{ number_format($item->subtotal / $tasaCambio, 2) }}</td>
                     @else
-                    <td class="num">{{ number_format($item->precio_unitario_bs, 2) }}</td>
-                    <td class="num">$ {{ number_format($item->precio_unitario_bs / $tasaCambio, 2) }}</td>
+                    <td class="num">{{ $esPesable ? number_format($item->precio_unitario_bs, 2) . ' /kg' : number_format($item->precio_unitario_bs, 2) }}</td>
+                    <td class="num">{{ $esPesable ? '$ ' . number_format($item->precio_unitario_bs / $tasaCambio, 2) . ' /kg' : '$ ' . number_format($item->precio_unitario_bs / $tasaCambio, 2) }}</td>
                     <td class="num fw-semibold">{{ number_format($item->subtotal, 2) }}</td>
                     @endif
                 </tr>

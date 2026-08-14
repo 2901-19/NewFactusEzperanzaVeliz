@@ -18,6 +18,7 @@ class ItemFactura extends Model
         'precio_unitario_usd',
         'precio_unitario_bs',
         'subtotal',
+        'unidad_medida',
     ];
 
     public function factura()

@@ -61,7 +61,6 @@ class ProductoControllerTest extends TestCase
             'nombre' => 'Nuevo Producto',
             'categoria_id' => $categoria->id,
             'costo_usd' => 10.00,
-            'controla_inventario' => true,
             'unidad_medida' => 'unidad',
             'stock_actual' => 5,
             'impuesto_id' => null,
@@ -74,8 +73,65 @@ class ProductoControllerTest extends TestCase
 
         $response->assertRedirect('/productos');
         $response->assertSessionHas('success');
-        $this->assertDatabaseHas('productos', ['nombre' => 'Nuevo Producto']);
+        $this->assertDatabaseHas('productos', ['nombre' => 'Nuevo Producto', 'unidad_medida' => 'unidad']);
         $this->assertDatabaseHas('producto_presentaciones', ['nombre' => 'Unidad', 'precio_usd' => 12.50]);
+    }
+
+    public function test_store_crea_producto_pesable_sin_inventario()
+    {
+        $categoria = Categoria::factory()->create();
+        $this->actingAs($this->user);
+
+        $response = $this->post('/productos', [
+            'nombre' => 'Queso Fresco',
+            'categoria_id' => $categoria->id,
+            'costo_usd' => 4.00,
+            'unidad_medida' => 'kg',
+            'stock_actual' => 999,
+            'impuesto_id' => null,
+            'fuente_tasa' => 'promedio',
+            'estado' => 'disponible',
+            'presentaciones' => [
+                ['nombre' => 'Kilogramo', 'factor_conversion' => 1, 'margen' => 30, 'activa' => true],
+            ],
+        ]);
+
+        $response->assertRedirect('/productos');
+        $response->assertSessionHas('success');
+        $this->assertDatabaseHas('productos', [
+            'nombre' => 'Queso Fresco',
+            'unidad_medida' => 'kg',
+            'stock_actual' => 0,
+        ]);
+
+        $producto = Producto::where('nombre', 'Queso Fresco')->first();
+        $this->assertFalse($producto->controla_inventario);
+        $this->assertCount(1, $producto->presentaciones);
+        $this->assertDatabaseHas('producto_presentaciones', [
+            'producto_id' => $producto->id,
+            'nombre' => 'Kilogramo',
+            'factor_conversion' => 1,
+            'margen' => 30,
+            'precio_usd' => 5.20,
+        ]);
+    }
+
+    public function test_store_rechaza_unidad_de_medida_no_valida()
+    {
+        $this->actingAs($this->user);
+
+        $response = $this->post('/productos', [
+            'nombre' => 'Invalido',
+            'costo_usd' => 5,
+            'unidad_medida' => 'litro',
+            'fuente_tasa' => 'promedio',
+            'estado' => 'disponible',
+            'presentaciones' => [
+                ['nombre' => 'Unidad', 'factor_conversion' => 1, 'margen' => 0, 'activa' => true],
+            ],
+        ]);
+
+        $response->assertSessionHasErrors('unidad_medida');
     }
 
     public function test_store_valida_campos_requeridos()
@@ -115,7 +171,6 @@ class ProductoControllerTest extends TestCase
             'nombre' => 'Actualizado',
             'categoria_id' => $producto->categoria_id,
             'costo_usd' => $producto->costo_usd,
-            'controla_inventario' => $producto->controla_inventario,
             'unidad_medida' => 'unidad',
             'stock_actual' => $producto->stock_actual,
             'impuesto_id' => $producto->impuesto_id,
@@ -128,6 +183,52 @@ class ProductoControllerTest extends TestCase
 
         $response->assertRedirect('/productos');
         $this->assertDatabaseHas('productos', ['nombre' => 'Actualizado']);
+    }
+
+    public function test_update_convertir_a_kg_deja_una_sola_presentacion()
+    {
+        $producto = Producto::factory()->create(['nombre' => 'Granos', 'stock_actual' => 10]);
+        $unidad = ProductoPresentacion::factory()->create([
+            'producto_id' => $producto->id,
+            'nombre' => 'Unidad',
+            'factor_conversion' => 1,
+            'margen' => 20,
+            'precio_usd' => 12.00,
+            'activa' => true,
+        ]);
+        ProductoPresentacion::factory()->create([
+            'producto_id' => $producto->id,
+            'nombre' => 'Mayor',
+            'factor_conversion' => 5,
+            'margen' => 10,
+            'precio_usd' => 55.00,
+            'activa' => true,
+        ]);
+        $this->actingAs($this->user);
+
+        $response = $this->put("/productos/{$producto->id}", [
+            'nombre' => $producto->nombre,
+            'categoria_id' => $producto->categoria_id,
+            'costo_usd' => $producto->costo_usd,
+            'unidad_medida' => 'kg',
+            'stock_actual' => 999,
+            'impuesto_id' => $producto->impuesto_id,
+            'fuente_tasa' => $producto->fuente_tasa,
+            'estado' => $producto->estado,
+            'presentaciones' => [
+                ['id' => $unidad->id, 'nombre' => 'Kilogramo', 'factor_conversion' => 1, 'margen' => 20, 'activa' => true],
+            ],
+        ]);
+
+        $response->assertRedirect('/productos');
+        $producto->refresh();
+
+        $this->assertEquals('kg', $producto->unidad_medida);
+        $this->assertEquals(0, $producto->stock_actual);
+        $this->assertFalse($producto->controla_inventario);
+        $this->assertCount(1, $producto->presentaciones);
+        $this->assertEquals('Kilogramo', $producto->presentaciones->first()->nombre);
+        $this->assertEquals(1, $producto->presentaciones->first()->factor_conversion);
     }
 
     public function test_destroy_desactiva_producto()
