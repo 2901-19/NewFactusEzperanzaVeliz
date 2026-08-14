@@ -52,10 +52,10 @@ Laravel 12 + PHP 8.2 POS app (FACTUS — Esperanza Veliz). PostgreSQL in dev, Bo
 
 ## Lanzador de escritorio (launcher/)
 
-- `launcher/` es una app **Electron** que empaqueta el sistema para la PC del cliente como app de escritorio: levanta PHP portable (`php -S 127.0.0.1:8000 -t public public/index.php`, **no** `artisan serve`), abre una ventana y al cerrarla mata el árbol PHP (`taskkill /pid <pid> /T /F`). Cierre de ventana = apagado total, sin procesos huérfanos.
-- Build: `npm install` + `tools/preparar-php.ps1` (copia `C:\php` → `php-bundle`) + `tools/empaquetar-app.ps1` (vendor prod + `.env` cliente tomado del `.env` del repo) + `npm run dist:win` → `launcher/dist/FACTUS-Setup-*.exe`. Detalles en `docs/LANZADOR.md`.
-- El instalador NSIS es por-usuario (`%LocalAppData%\Programs\FACTUS`); `app-bundle`, `php-bundle`, `node_modules` y `dist` están en `.gitignore`.
-- Prueba automatizada del ciclo completo: `FACTUS_SMOKE=1` (+`FACTUS_SMOKE_WINDOW=1`) hace que el lanzador arranque el servidor y se cierre solo. **No uses `artisan serve` en el lanzador**: falla al hacer bind en el entorno empaquetado; siempre `php -S` directo.
+- `launcher/` es un lanzador de **un clic en PowerShell** (reemplazó a Electron): `FACTUS.vbs` (doble clic) ejecuta `factus-launcher.ps1` en consola oculta. Levanta el servidor con `php artisan serve --host=127.0.0.1 --port=8000`, abre el navegador en modo app y al cerrarse la ventana apaga todo: mata el navegador, hace `POST /lanzador/cerrar-sesion` y mata PHP. Cierre de ventana = apagado total, sin procesos huérfanos.
+- Config en `launcher/config.json`: `port`, `phpPath`, `appPath`, `browser` (`auto` = Edge → Chrome → Brave, o `edge`/`chrome`/`brave`). Estado en `%LOCALAPPDATA%\FACTUS\` (`php.pid`, `token.txt`, perfil del navegador).
+- **Cierre de sesión**: la tabla `lanzador_sesiones` (token → `session_id`) y el middleware `RegistrarLanzador` registran el token por petición. `LanzadorController@cerrarSesion` (`POST /lanzador/cerrar-sesion`, exento de CSRF) destruye solo la sesión vinculada. El middleware corre **antes que `auth`** (se registra en `prependToPriorityList(AuthenticatesRequests, ...)` en `bootstrap/app.php`) para capturar peticiones de invitados.
+- Tests: `tests/Feature/LanzadorControllerTest.php` (solo el de token desconocido → 204; el flujo completo se probó manualmente).
 - La app empaquetada escribe su `php.ini` portable en `%APPDATA%\FACTUS\factus-php.ini` y lo pasa vía `PHPRC`.
 
 ## Misc

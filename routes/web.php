@@ -7,6 +7,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FacturaController;
 use App\Http\Controllers\HerramientasController;
 use App\Http\Controllers\ImpuestoController;
+use App\Http\Controllers\LanzadorController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReporteController;
@@ -21,6 +22,9 @@ Route::get('/', function () {
 
 Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'permiso:ver-dashboard'])->name('dashboard');
+
+Route::post('/lanzador/cerrar-sesion', [LanzadorController::class, 'cerrarSesion'])
+    ->name('lanzador.cerrar-sesion');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
