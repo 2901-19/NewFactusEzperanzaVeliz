@@ -64,7 +64,7 @@ class ReporteControllerTest extends TestCase
         ]);
         TasaCambio::factory()->create(['tipo' => 'promedio', 'monto' => 50.00, 'fecha' => '2026-07-04']);
         TasaCambio::factory()->create(['tipo' => 'bcv', 'monto' => 45.00, 'fecha' => '2026-07-04']);
-        Impuesto::factory()->create(['porcentaje' => 16.00, 'fecha' => '2026-07-04']);
+        Impuesto::factory()->create(['porcentaje' => 16.00]);
     }
 
     private function crearFactura(array $datos = []): Factura

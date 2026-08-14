@@ -14,7 +14,6 @@ class ImpuestoFactory extends Factory
         return [
             'nombre' => 'IVA',
             'porcentaje' => 16.00,
-            'fecha' => fake()->date('Y-m-d'),
         ];
     }
 }

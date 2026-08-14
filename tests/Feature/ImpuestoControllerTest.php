@@ -39,7 +39,6 @@ class ImpuestoControllerTest extends TestCase
         $response = $this->from('/impuestos')->post('/impuestos', [
             'nombre' => 'IVA',
             'porcentaje' => 16.00,
-            'fecha' => '2026-07-04',
         ]);
 
         $response->assertRedirect('/impuestos');
@@ -52,7 +51,7 @@ class ImpuestoControllerTest extends TestCase
 
         $response = $this->post('/impuestos', []);
 
-        $response->assertSessionHasErrors(['nombre', 'porcentaje', 'fecha']);
+        $response->assertSessionHasErrors(['nombre', 'porcentaje']);
     }
 
     public function test_destroy_elimina_impuesto()

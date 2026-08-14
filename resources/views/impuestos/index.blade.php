@@ -11,7 +11,6 @@
             <tr>
                 <th class="text-start">Nombre</th>
                 <th>Porcentaje</th>
-                <th>Fecha</th>
                 <th>Acciones</th>
             </tr>
         </thead>
@@ -20,7 +19,6 @@
             <tr>
                 <td class="text-start">{{ $i->nombre }}</td>
                 <td>{{ $i->porcentaje }}%</td>
-                <td>{{ $i->fecha }}</td>
                 <td>
                     <a href="{{ route('impuestos.edit', $i->id) }}" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>
                     <button class="btn btn-sm btn-danger btn-delete" data-url="{{ route('impuestos.destroy', $i->id) }}"><i class="bi bi-trash"></i></button>

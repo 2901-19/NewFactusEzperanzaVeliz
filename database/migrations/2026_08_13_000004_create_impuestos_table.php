@@ -12,7 +12,6 @@ return new class extends Migration
             $table->id();
             $table->string('nombre');
             $table->decimal('porcentaje', 5, 2);
-            $table->date('fecha');
             $table->timestamps();
         });
     }

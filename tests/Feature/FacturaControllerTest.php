@@ -57,7 +57,6 @@ class FacturaControllerTest extends TestCase
         $categoria = Categoria::factory()->create();
         $this->iva = Impuesto::factory()->create([
             'porcentaje' => 16.00,
-            'fecha' => '2026-07-04',
         ]);
         $this->producto = Producto::factory()->create([
             'categoria_id' => $categoria->id,

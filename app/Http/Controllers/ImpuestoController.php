@@ -10,6 +10,7 @@ class ImpuestoController extends Controller
     public function index()
     {
         $impuestos = Impuesto::all();
+
         return view('impuestos.index', compact('impuestos'));
     }
 
@@ -23,7 +24,6 @@ class ImpuestoController extends Controller
         $data = $request->validate([
             'nombre' => 'required|string|max:50',
             'porcentaje' => 'required|numeric|min:0|max:100',
-            'fecha' => 'required|date',
         ]);
 
         Impuesto::create($data);
@@ -41,7 +41,6 @@ class ImpuestoController extends Controller
         $data = $request->validate([
             'nombre' => 'required|string|max:50',
             'porcentaje' => 'required|numeric|min:0|max:100',
-            'fecha' => 'required|date',
         ]);
 
         $impuesto->update($data);
@@ -52,6 +51,7 @@ class ImpuestoController extends Controller
     public function destroy(Impuesto $impuesto)
     {
         $impuesto->delete();
+
         return redirect()->route('impuestos.index')->with('success', 'Impuesto eliminado correctamente.');
     }
 }
