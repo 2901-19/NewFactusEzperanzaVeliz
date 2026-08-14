@@ -258,7 +258,6 @@ class HerramientasController extends Controller
                             if (! $existe) {
                                 Categoria::create([
                                     'nombre' => $item['nombre'],
-                                    'descripcion' => $item['descripcion'] ?? '',
                                 ]);
                                 $contadores['categorias']++;
                             }

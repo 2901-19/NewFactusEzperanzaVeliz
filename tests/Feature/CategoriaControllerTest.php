@@ -38,7 +38,6 @@ class CategoriaControllerTest extends TestCase
 
         $response = $this->post('/categorias', [
             'nombre' => 'Nueva Categoria',
-            'descripcion' => 'Descripcion de prueba',
         ]);
 
         $response->assertRedirect('/categorias');

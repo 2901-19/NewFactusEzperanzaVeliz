@@ -11,6 +11,7 @@ class CategoriaController extends Controller
     public function index()
     {
         $categorias = Categoria::withCount('productos')->orderBy('nombre')->get();
+
         return view('categorias.index', compact('categorias'));
     }
 
@@ -23,7 +24,6 @@ class CategoriaController extends Controller
     {
         $request->validate([
             'nombre' => 'required|string|max:100|unique:categorias,nombre',
-            'descripcion' => 'nullable|string|max:255',
         ]);
 
         Categoria::create($request->all());
@@ -36,10 +36,11 @@ class CategoriaController extends Controller
         $productos = Producto::whereNull('deleted_at')
             ->where(function ($q) use ($categoria) {
                 $q->whereNull('categoria_id')
-                  ->orWhere('categoria_id', $categoria->id);
+                    ->orWhere('categoria_id', $categoria->id);
             })
             ->orderBy('nombre')
             ->get();
+
         return view('categorias.form', compact('categoria', 'productos'));
     }
 
@@ -60,8 +61,7 @@ class CategoriaController extends Controller
     public function update(Request $request, Categoria $categoria)
     {
         $request->validate([
-            'nombre' => 'required|string|max:100|unique:categorias,nombre,' . $categoria->id,
-            'descripcion' => 'nullable|string|max:255',
+            'nombre' => 'required|string|max:100|unique:categorias,nombre,'.$categoria->id,
         ]);
 
         $categoria->update($request->all());

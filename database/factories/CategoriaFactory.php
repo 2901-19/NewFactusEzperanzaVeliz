@@ -13,7 +13,6 @@ class CategoriaFactory extends Factory
     {
         return [
             'nombre' => fake()->unique()->word(),
-            'descripcion' => fake()->sentence(),
         ];
     }
 }
