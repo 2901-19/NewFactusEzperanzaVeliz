@@ -46,3 +46,9 @@ php artisan serve
 - Alpine.js
 - mike42/escpos-php (impresión térmica)
 - dompdf (listas de precios PDF)
+
+## Despliegue en la PC del cliente (lanzador)
+
+Para instalar el sistema en la PC caja sin terminales ni navegador, se empaqueta un instalador
+Windows con Electron + PHP portable (`FACTUS-Setup.exe`): doble clic abre la app y al cerrar la
+ventana se apaga todo el servidor. Ver `docs/LANZADOR.md`.

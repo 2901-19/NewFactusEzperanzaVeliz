@@ -50,6 +50,14 @@ Laravel 12 + PHP 8.2 POS app (FACTUS — Esperanza Veliz). PostgreSQL in dev, Bo
 - DataTables is initialized with Spanish via `window.DataTableSpanish` in `resources/views/layouts/app.blade.php` — it passes a **literal Spanish object** (same shape as the defaults in `resources/js/app.js`). Do NOT switch it back to an async `url: '/js/i18n/es-ES.json'` fetch: the async load combined with `order` + `columnDefs:[{targets:'_all',defaultContent:''}]` makes DataTables 2.3.8 wipe all rows ("Ningún dato disponible").
 - Blades mix server-rendered HTML with DataTables/Alpine; UI copy is Spanish.
 
+## Lanzador de escritorio (launcher/)
+
+- `launcher/` es una app **Electron** que empaqueta el sistema para la PC del cliente como app de escritorio: levanta PHP portable (`php -S 127.0.0.1:8000 -t public public/index.php`, **no** `artisan serve`), abre una ventana y al cerrarla mata el árbol PHP (`taskkill /pid <pid> /T /F`). Cierre de ventana = apagado total, sin procesos huérfanos.
+- Build: `npm install` + `tools/preparar-php.ps1` (copia `C:\php` → `php-bundle`) + `tools/empaquetar-app.ps1` (vendor prod + `.env` cliente tomado del `.env` del repo) + `npm run dist:win` → `launcher/dist/FACTUS-Setup-*.exe`. Detalles en `docs/LANZADOR.md`.
+- El instalador NSIS es por-usuario (`%LocalAppData%\Programs\FACTUS`); `app-bundle`, `php-bundle`, `node_modules` y `dist` están en `.gitignore`.
+- Prueba automatizada del ciclo completo: `FACTUS_SMOKE=1` (+`FACTUS_SMOKE_WINDOW=1`) hace que el lanzador arranque el servidor y se cierre solo. **No uses `artisan serve` en el lanzador**: falla al hacer bind en el entorno empaquetado; siempre `php -S` directo.
+- La app empaquetada escribe su `php.ini` portable en `%APPDATA%\FACTUS\factus-php.ini` y lo pasa vía `PHPRC`.
+
 ## Misc
 
 - Thermal printing: see `docs/IMPRESORA.md` (mike42/escpos-php).
