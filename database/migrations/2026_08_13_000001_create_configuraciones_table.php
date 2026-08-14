@@ -8,15 +8,16 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('tasa_cambios', function (Blueprint $table) {
-            $table->unique('tipo');
+        Schema::create('configuraciones', function (Blueprint $table) {
+            $table->id();
+            $table->string('clave', 50)->unique();
+            $table->string('valor', 255);
+            $table->timestamps();
         });
     }
 
     public function down(): void
     {
-        Schema::table('tasa_cambios', function (Blueprint $table) {
-            $table->dropUnique(['tipo']);
-        });
+        Schema::dropIfExists('configuraciones');
     }
 };

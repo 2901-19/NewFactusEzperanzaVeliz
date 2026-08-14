@@ -6,23 +6,18 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('productos', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('categoria_id')->nullable()->constrained('categorias')->nullOnDelete();
             $table->string('nombre');
             $table->text('descripcion')->nullable();
             $table->string('imagen')->nullable();
-            $table->integer('unidades_por_paquete')->default(1);
-            $table->integer('stock_paquetes')->default(0);
-            $table->integer('stock_unidades')->default(0);
-            $table->decimal('precio_unitario_usd', 12, 2)->default(0);
-            $table->decimal('precio_mayor_usd', 12, 2)->default(0);
-            $table->integer('cantidad_minima_mayor')->default(0);
-            $table->boolean('tiene_iva')->default(true);
+            $table->decimal('stock_actual', 14, 4)->default(0);
+            $table->string('unidad_medida')->default('unidad');
+            $table->foreignId('impuesto_id')->nullable()->constrained('impuestos')->nullOnDelete();
+            $table->decimal('costo_usd', 12, 2)->default(0);
             $table->string('fuente_tasa')->default('promedio');
             $table->string('estado')->default('disponible');
             $table->softDeletes();
@@ -30,9 +25,6 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('productos');
