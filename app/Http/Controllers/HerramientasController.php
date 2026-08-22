@@ -526,6 +526,31 @@ class HerramientasController extends Controller
         return back()->with('success', 'Configuración guardada correctamente.');
     }
 
+    public function recordatorioGuardar(Request $request)
+    {
+        $request->validate([
+            // El switch no envía valor cuando se desmarca: se persiste siempre.
+            'recordatorio_tasa_activo' => 'nullable|boolean',
+            'recordatorio_tasa_hora1' => ['required', 'date_format:H:i'],
+            'recordatorio_tasa_hora2' => ['required', 'date_format:H:i', 'after:recordatorio_tasa_hora1'],
+        ], [
+            'recordatorio_tasa_hora2.after' => 'La segunda hora debe ser posterior a la primera.',
+        ]);
+
+        foreach ([
+            'recordatorio_tasa_activo' => $request->boolean('recordatorio_tasa_activo') ? '1' : '0',
+            'recordatorio_tasa_hora1' => $request->input('recordatorio_tasa_hora1'),
+            'recordatorio_tasa_hora2' => $request->input('recordatorio_tasa_hora2'),
+        ] as $clave => $valor) {
+            Configuracion::updateOrCreate(
+                ['clave' => $clave],
+                ['valor' => $valor]
+            );
+        }
+
+        return back()->with('success', 'Recordatorio de tasa guardado correctamente.');
+    }
+
     private function impuestoIdDesdeItem(array $item, ?int $actual = null): ?int
     {
         if (array_key_exists('impuesto_id', $item)) {

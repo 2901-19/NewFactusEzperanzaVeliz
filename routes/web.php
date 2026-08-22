@@ -8,6 +8,7 @@ use App\Http\Controllers\FacturaController;
 use App\Http\Controllers\HerramientasController;
 use App\Http\Controllers\ImpuestoController;
 use App\Http\Controllers\LanzadorController;
+use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReporteController;
@@ -28,6 +29,9 @@ Route::post('/lanzador/cerrar-sesion', [LanzadorController::class, 'cerrarSesion
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+
+    Route::get('/notificaciones/pendientes', [NotificacionController::class, 'pendientes'])->name('notificaciones.pendientes');
+    Route::post('/notificaciones/{tipo}/posponer', [NotificacionController::class, 'posponer'])->name('notificaciones.poner');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
@@ -86,6 +90,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/herramientas/configuracion', [HerramientasController::class, 'configuracion'])->name('herramientas.configuracion')->middleware('permiso:configuracion');
     Route::post('/herramientas/configuracion', [HerramientasController::class, 'configuracionGuardar'])->name('herramientas.configuracion.guardar')->middleware('permiso:configuracion');
+    Route::post('/herramientas/recordatorio', [HerramientasController::class, 'recordatorioGuardar'])->name('herramientas.recordatorio.guardar')->middleware('permiso:configuracion');
 
     Route::resource('usuarios', UserController::class)->except('show')->middleware('permiso:gestionar-usuarios');
     Route::resource('roles', RolController::class)->except('show')->parameters(['roles' => 'rol'])->middleware('permiso:gestionar-usuarios');

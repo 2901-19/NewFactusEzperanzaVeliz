@@ -30,8 +30,54 @@
         </main>
     </div>
 
+    {{-- Notificaciones vencidas (recordatorios programados) --}}
+    <div x-data="campanaNotificaciones()" x-init="iniciar()" class="position-fixed top-0 end-0 p-3" style="z-index: 1055; width: 380px; max-width: 94vw;" x-show="notificaciones.length > 0" x-cloak>
+        <template x-for="n in notificaciones" :key="n.tipo">
+            <div class="alert alert-warning shadow-sm border-0 d-flex align-items-start gap-2 mb-2 notif-banner" role="alert">
+                <i class="bi bi-bell-fill mt-1"></i>
+                <div class="flex-grow-1">
+                    <strong x-text="n.titulo"></strong>
+                    <div class="small" x-text="n.mensaje"></div>
+                    <div class="mt-1 d-flex gap-2">
+                        <a :href="n.accion_url" class="btn btn-sm btn-dark" x-show="n.accion_url" x-text="n.texto_accion || 'Ver'"></a>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" @click="posponer(n)">Recordar más tarde</button>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+
     <script>
     const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    function campanaNotificaciones() {
+        return {
+            notificaciones: [],
+            iniciar() {
+                this.consultar();
+                setInterval(() => this.consultar(), 60000);
+            },
+            async consultar() {
+                try {
+                    const r = await fetch('{{ route('notificaciones.pendientes') }}', { headers: { 'Accept': 'application/json' } });
+                    if (!r.ok) return;
+                    const json = await r.json();
+                    // No re-mostrar banners que el usuario ya pospuso en esta pestaña.
+                    this.notificaciones = json.data.filter(n => !this.ocultados.has(n.tipo));
+                } catch (e) { /* sin conexión: ignorar */ }
+            },
+            ocultados: new Set(),
+            async posponer(n) {
+                this.ocultados.add(n.tipo);
+                this.notificaciones = this.notificaciones.filter(x => x.tipo !== n.tipo);
+                try {
+                    await fetch(`{{ url('notificaciones') }}/${n.tipo}/posponer`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf },
+                    });
+                } catch (e) { /* se reintentará al recargar */ }
+            },
+        };
+    }
     window.DataTableSpanish = {
         processing: 'Procesando...',
         lengthMenu: 'Mostrar _MENU_ registros',

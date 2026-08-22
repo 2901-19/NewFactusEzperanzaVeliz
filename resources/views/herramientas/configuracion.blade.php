@@ -38,4 +38,37 @@
         </form>
     </div>
 </div>
+
+<div class="card mt-3">
+    <div class="card-header">Recordatorio de Tasa de Cambio</div>
+    <div class="card-body">
+        <form method="POST" action="{{ route('herramientas.recordatorio.guardar') }}">
+            @csrf
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" role="switch" id="recordatorio_activo"
+                        name="recordatorio_tasa_activo" value="1"
+                        @checked(old('recordatorio_tasa_activo', ($configs['recordatorio_tasa_activo'] ?? '1') === '1'))>
+                    <label class="form-check-label" for="recordatorio_activo">Habilitar recordatorio</label>
+                </div>
+            </div>
+            <p class="text-muted small">Avisa a quienes pueden gestionar tasas cuando la tasa de referencia no se ha actualizado después de cada hora programada.</p>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Primera hora del día</label>
+                    <input type="time" name="recordatorio_tasa_hora1" class="form-control @error('recordatorio_tasa_hora1') is-invalid @enderror"
+                        value="{{ old('recordatorio_tasa_hora1', $configs['recordatorio_tasa_hora1'] ?? '09:00') }}">
+                    @error('recordatorio_tasa_hora1') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Segunda hora del día</label>
+                    <input type="time" name="recordatorio_tasa_hora2" class="form-control @error('recordatorio_tasa_hora2') is-invalid @enderror"
+                        value="{{ old('recordatorio_tasa_hora2', $configs['recordatorio_tasa_hora2'] ?? '14:00') }}">
+                    @error('recordatorio_tasa_hora2') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+        </form>
+    </div>
+</div>
 @endsection

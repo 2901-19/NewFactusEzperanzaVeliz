@@ -58,6 +58,13 @@ Laravel 12 + PHP 8.2 POS app (FACTUS — Esperanza Veliz). PostgreSQL in dev, Bo
 - Tests: `tests/Feature/LanzadorControllerTest.php` (solo el de token desconocido → 204; el flujo completo se probó manualmente).
 - Instalación de cero en un equipo (PHP + PostgreSQL + despliegue en la PC del cliente sin Node/Composer/Git): ver `docs/INSTALACION.md`.
 
+## Notificaciones programadas
+
+- Componente genérico en `app/Services/Notificaciones/` (sin tablas nuevas, evaluación perezosa por request — no hay cron en la PC del cliente). Para **agregar un tipo nuevo**: crea una clase que implemente `Contracts/Notificacion.php` (`tipo`, `permisoRequerido`, `debeMostrar(Carbon $ahora)`, `titulo`, `mensaje`, `accionUrl`, `textoAccion`, `posponerHasta`) y regístrala en `config/notificaciones.php`. Nada más: el registro (`RegistroNotificaciones::pendientes(User)`), las rutas (`GET /notificaciones/pendientes`, `POST /notificaciones/{tipo}/posponer`) y el widget ya lo recogen.
+- El widget (Alpine `campanaNotificaciones()` en `layouts/app.blade.php`) consulta cada 60s y muestra banners fijos arriba a la derecha con Acción / "Recordar más tarde". "Posponer" guarda un flag de sesión hasta `posponerHasta()`.
+- Primer tipo: `Tipos/RecordatorioTasa` — avisa a quien tiene permiso `gestionar-tasas` cuando la tasa de referencia no se ha actualizado después del inicio de cada ventana. Interruptor y horas configurables desde `/herramientas/configuracion` (tarjeta propia, endpoint `POST /herramientas/recordatorio`, guardado por `HerramientasController::recordatorioGuardar`). Claves `Configuracion`: `recordatorio_tasa_activo` (`'1'`/`'0'`, defecto `'1'`), `recordatorio_tasa_hora1` (`'09:00'`), `recordatorio_tasa_hora2` (`'14:00'`); validación `hora2 > hora1`. El checkbox desmarcado **no viaja** en el POST: persistir siempre con `$request->boolean()`.
+- Tests: `tests/Feature/NotificacionesTest.php` (usa `$this->travelTo()`; para sembrar tasas viejas usa `$tasa->forceFill(['created_at' => ...])->save()` — `update(['created_at'])` se descarta por `$fillable`).
+
 ## Misc
 
 - **Manejo de errores en UI**: los flujos que pueden fallar deben redirigir con `withErrors(['error' => ...])` (el layout lo muestra como toast), nunca dejar 404/500 crudos. Guards vigentes: producto desactivado no se edita (`edit`/`update` cargan `withTrashed()` y redirigen; el botón Editar se oculta en filas trashed), impuesto con productos / cliente con facturas / último admin / auto-eliminación no se eliminan, `pagarCredito` sin tasa de referencia redirige con aviso (botón Cobrar se deshabilita sin `$tasaVigente`). Páginas de error propias (español) en `resources/views/errors/{403,404,500,503}.blade.php` — Laravel las usa automáticamente al existir.
