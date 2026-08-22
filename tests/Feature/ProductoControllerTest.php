@@ -248,4 +248,37 @@ class ProductoControllerTest extends TestCase
         $response->assertRedirect('/productos');
         $this->assertNotSoftDeleted($producto);
     }
+
+    public function test_edit_de_producto_desactivado_redirige_con_error()
+    {
+        $producto = Producto::factory()->create();
+        $producto->delete();
+        $this->actingAs($this->user);
+
+        $response = $this->get("/productos/{$producto->id}/edit");
+
+        $response->assertRedirect('/productos');
+        $response->assertSessionHasErrors('error');
+    }
+
+    public function test_update_de_producto_desactivado_redirige_con_error()
+    {
+        $producto = Producto::factory()->create();
+        $producto->delete();
+        $this->actingAs($this->user);
+
+        $response = $this->put("/productos/{$producto->id}", [
+            'nombre' => 'Intento de edicion',
+            'costo_usd' => 1,
+            'unidad_medida' => 'unidad',
+            'estado' => 'disponible',
+            'presentaciones' => [
+                ['nombre' => 'Unidad', 'factor_conversion' => 1, 'margen' => 10, 'fuente_tasa' => 'promedio', 'activa' => true],
+            ],
+        ]);
+
+        $response->assertRedirect('/productos');
+        $response->assertSessionHasErrors('error');
+        $this->assertDatabaseHas('productos', ['id' => $producto->id, 'nombre' => $producto->nombre]);
+    }
 }

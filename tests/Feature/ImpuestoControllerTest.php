@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Impuesto;
+use App\Models\Producto;
 use App\Models\User;
 use Database\Seeders\PermisoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -63,5 +64,18 @@ class ImpuestoControllerTest extends TestCase
 
         $response->assertRedirect('/impuestos');
         $this->assertDatabaseMissing('impuestos', ['id' => $impuesto->id]);
+    }
+
+    public function test_destroy_bloquea_impuesto_usado_por_productos()
+    {
+        $impuesto = Impuesto::factory()->create();
+        Producto::factory()->create(['impuesto_id' => $impuesto->id]);
+        $this->actingAs($this->admin);
+
+        $response = $this->from('/impuestos')->delete("/impuestos/{$impuesto->id}");
+
+        $response->assertRedirect('/impuestos');
+        $response->assertSessionHasErrors('error');
+        $this->assertDatabaseHas('impuestos', ['id' => $impuesto->id]);
     }
 }

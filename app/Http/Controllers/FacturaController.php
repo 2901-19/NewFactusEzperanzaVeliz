@@ -254,7 +254,13 @@ class FacturaController extends Controller
             'metodo_pago' => ['required', Rule::in(CatalogoService::metodosValidos())],
         ]);
 
-        $tasaVigente = TasaCambioService::montoOException(Configuracion::obtener('tasa_referencia', 'bcv'));
+        $tasaReferencia = TasaCambio::ultimaDe(Configuracion::obtener('tasa_referencia', 'bcv'));
+
+        if (! $tasaReferencia || (float) $tasaReferencia->monto <= 0) {
+            return back()->withErrors(['error' => 'No hay tasa de referencia activa. Configúrala en Tasas de Cambio antes de cobrar.']);
+        }
+
+        $tasaVigente = (float) $tasaReferencia->monto;
         $pagoUsd = (float) $factura->total_usd;
         $pagoBs = round($pagoUsd * $tasaVigente, 2);
 

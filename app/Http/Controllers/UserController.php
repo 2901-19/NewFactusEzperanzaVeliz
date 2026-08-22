@@ -74,6 +74,10 @@ class UserController extends Controller
             return back()->withErrors(['error' => 'No puedes eliminar tu propio usuario.']);
         }
 
+        if ($usuario->rol === 'admin' && User::where('rol', 'admin')->whereKeyNot($usuario->id)->doesntExist()) {
+            return back()->withErrors(['error' => 'No puedes eliminar al único administrador. Asigna el rol a otro usuario primero.']);
+        }
+
         $usuario->delete();
 
         return redirect()->route('usuarios.index')->with('success', 'Usuario eliminado correctamente.');

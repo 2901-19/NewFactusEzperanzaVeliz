@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cliente;
+use App\Models\Factura;
 use Illuminate\Http\Request;
 
 class ClienteController extends Controller
@@ -10,6 +11,7 @@ class ClienteController extends Controller
     public function index()
     {
         $clientes = Cliente::all();
+
         return view('clientes.index', compact('clientes'));
     }
 
@@ -39,7 +41,7 @@ class ClienteController extends Controller
     public function update(Request $request, Cliente $cliente)
     {
         $data = $request->validate([
-            'ci' => 'required|string|max:20|unique:clientes,ci,' . $cliente->id,
+            'ci' => 'required|string|max:20|unique:clientes,ci,'.$cliente->id,
             'nombre' => 'required|string|max:255',
             'telefono' => 'nullable|string|max:20',
         ]);
@@ -51,7 +53,14 @@ class ClienteController extends Controller
 
     public function destroy(Cliente $cliente)
     {
+        $facturas = Factura::where('cliente_id', $cliente->id)->count();
+
+        if ($facturas > 0) {
+            return back()->withErrors(['error' => 'No se puede eliminar el cliente porque tiene '.$facturas.' factura(s) asociada(s).']);
+        }
+
         $cliente->delete();
+
         return redirect()->route('clientes.index')->with('success', 'Cliente eliminado correctamente.');
     }
 

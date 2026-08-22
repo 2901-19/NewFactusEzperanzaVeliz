@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Cliente;
+use App\Models\Factura;
 use App\Models\User;
 use Database\Seeders\PermisoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -81,5 +82,18 @@ class ClienteControllerTest extends TestCase
 
         $response->assertRedirect('/clientes');
         $this->assertDatabaseMissing('clientes', ['id' => $cliente->id]);
+    }
+
+    public function test_destroy_bloquea_cliente_con_facturas()
+    {
+        $cliente = Cliente::factory()->create();
+        Factura::factory()->create(['cliente_id' => $cliente->id]);
+        $this->actingAs($this->user);
+
+        $response = $this->from('/clientes')->delete("/clientes/{$cliente->id}");
+
+        $response->assertRedirect('/clientes');
+        $response->assertSessionHasErrors('error');
+        $this->assertDatabaseHas('clientes', ['id' => $cliente->id]);
     }
 }

@@ -60,5 +60,6 @@ Laravel 12 + PHP 8.2 POS app (FACTUS — Esperanza Veliz). PostgreSQL in dev, Bo
 
 ## Misc
 
+- **Manejo de errores en UI**: los flujos que pueden fallar deben redirigir con `withErrors(['error' => ...])` (el layout lo muestra como toast), nunca dejar 404/500 crudos. Guards vigentes: producto desactivado no se edita (`edit`/`update` cargan `withTrashed()` y redirigen; el botón Editar se oculta en filas trashed), impuesto con productos / cliente con facturas / último admin / auto-eliminación no se eliminan, `pagarCredito` sin tasa de referencia redirige con aviso (botón Cobrar se deshabilita sin `$tasaVigente`). Páginas de error propias (español) en `resources/views/errors/{403,404,500,503}.blade.php` — Laravel las usa automáticamente al existir.
 - Thermal printing: see `docs/IMPRESORA.md` (mike42/escpos-php).
 - Git: `main` is the integration branch; `login-mejorado` is an open feature branch (login redesign). Local feature branches (e.g. `tasas-dinamicas`) get fast-forwarded into `main` after their feature tests pass. Keep commits in Spanish.

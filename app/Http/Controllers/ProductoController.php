@@ -57,8 +57,15 @@ class ProductoController extends Controller
         return redirect()->route('productos.index')->with('success', 'Producto creado correctamente.');
     }
 
-    public function edit(Producto $producto)
+    public function edit($id)
     {
+        $producto = Producto::withTrashed()->findOrFail($id);
+
+        if ($producto->trashed()) {
+            return redirect()->route('productos.index')
+                ->withErrors(['error' => 'El producto "'.$producto->nombre.'" está desactivado. Actívalo para poder editarlo.']);
+        }
+
         ['mapaTasas' => $mapaTasas, 'opcionesTasa' => $opcionesTasa] = $this->tasasParaVista();
         $producto->load('presentaciones');
 
@@ -73,8 +80,15 @@ class ProductoController extends Controller
         return view('productos.edit', compact('producto', 'mapaTasas', 'opcionesTasa', 'impuestos'));
     }
 
-    public function update(Request $request, Producto $producto)
+    public function update(Request $request, $id)
     {
+        $producto = Producto::withTrashed()->findOrFail($id);
+
+        if ($producto->trashed()) {
+            return redirect()->route('productos.index')
+                ->withErrors(['error' => 'El producto "'.$producto->nombre.'" está desactivado. Actívalo para poder editarlo.']);
+        }
+
         $data = $this->validar($request);
 
         if ($request->hasFile('imagen')) {

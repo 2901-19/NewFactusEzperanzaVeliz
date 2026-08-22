@@ -523,6 +523,28 @@ class FacturaControllerTest extends TestCase
         $this->assertNotNull($factura->fecha_pago);
     }
 
+    public function test_pagar_credito_sin_tasa_referencia_redirige_con_error()
+    {
+        TasaCambio::query()->delete();
+        $factura = Factura::factory()->create([
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'credito',
+            'estado' => 'credito',
+            'estado_credito' => 'pendiente',
+        ]);
+        $this->actingAs($this->cajero);
+
+        $response = $this->from(route('facturas.creditos'))
+            ->post("/facturas/{$factura->id}/pagar-credito", ['metodo_pago' => 'efectivo']);
+
+        $response->assertRedirect(route('facturas.creditos'));
+        $response->assertSessionHasErrors('error');
+
+        $factura->refresh();
+        $this->assertEquals('pendiente', $factura->estado_credito);
+        $this->assertNull($factura->fecha_pago);
+    }
+
     public function test_pagar_credito_usa_tasa_referencia_vigente_del_cobro()
     {
         $this->actingAs($this->cajero);

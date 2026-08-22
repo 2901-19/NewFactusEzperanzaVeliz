@@ -77,9 +77,11 @@
                     @endif
                 </td>
                 <td>
-                    <a href="{{ route('productos.edit', $p->id) }}" class="btn btn-sm btn-warning">
-                        <i class="bi bi-pencil"></i>
-                    </a>
+                    @unless ($p->trashed())
+                        <a href="{{ route('productos.edit', $p->id) }}" class="btn btn-sm btn-warning">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                    @endunless
                     @if ($p->trashed())
                     <button class="btn btn-sm btn-success btn-restore" data-url="{{ route('productos.restore', $p->id) }}">
                         <i class="bi bi-arrow-counterclockwise"></i>

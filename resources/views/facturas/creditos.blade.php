@@ -47,9 +47,15 @@
                         <i class="bi bi-eye"></i>
                     </button>
                     @if ($f->estado_credito === 'pendiente')
-                        <button class="btn btn-sm btn-success btn-abrir-cobro" data-id="{{ $f->id }}" data-url="{{ route('facturas.pagar-credito', $f->id) }}" data-correlativo="{{ $f->correlativo }}" data-usd="{{ number_format($f->total_usd, 2) }}" data-bs="{{ $tasaVigente ? number_format($f->total_usd * $tasaVigente, 2) : '' }}">
-                            <i class="bi bi-check-lg"></i> Cobrar
-                        </button>
+                        @if ($tasaVigente)
+                            <button class="btn btn-sm btn-success btn-abrir-cobro" data-id="{{ $f->id }}" data-url="{{ route('facturas.pagar-credito', $f->id) }}" data-correlativo="{{ $f->correlativo }}" data-usd="{{ number_format($f->total_usd, 2) }}" data-bs="{{ number_format($f->total_usd * $tasaVigente, 2) }}">
+                                <i class="bi bi-check-lg"></i> Cobrar
+                            </button>
+                        @else
+                            <button class="btn btn-sm btn-secondary" disabled title="No hay tasa de referencia activa. Configúrala en Tasas de Cambio para poder cobrar.">
+                                <i class="bi bi-check-lg"></i> Cobrar
+                            </button>
+                        @endif
                     @endif
                 </td>
             </tr>

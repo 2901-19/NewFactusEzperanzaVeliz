@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Impuesto;
+use App\Models\Producto;
 use Illuminate\Http\Request;
 
 class ImpuestoController extends Controller
@@ -50,6 +51,12 @@ class ImpuestoController extends Controller
 
     public function destroy(Impuesto $impuesto)
     {
+        $productos = Producto::where('impuesto_id', $impuesto->id)->count();
+
+        if ($productos > 0) {
+            return back()->withErrors(['error' => 'No se puede eliminar el impuesto "'.$impuesto->nombre.'" porque lo usan '.$productos.' producto(s).']);
+        }
+
         $impuesto->delete();
 
         return redirect()->route('impuestos.index')->with('success', 'Impuesto eliminado correctamente.');
