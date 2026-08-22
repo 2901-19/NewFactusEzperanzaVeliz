@@ -31,7 +31,7 @@ Laravel 12 + PHP 8.2 POS app (FACTUS — Esperanza Veliz). PostgreSQL in dev, Bo
 - Reference rate: `Configuracion` key `tasa_referencia` (default `'bcv'`), settable only on an active rate (`fijarReferencia`). `toggleEstado()` flips `activo` on the whole series of a tipo and is **blocked when the rate is the current reference**.
 - Historial (`historial()`): ordered `orderByDesc('created_at')->orderByDesc('id')` — the `id` tie-break matters since tests (and real edits) can insert in the same second. Paginated 20. `variacion` is computed per tipo against the **previous row of the same tipo** (skip other tipos) and attached to the newest row; null when not computable.
 - Import: `HerramientasController::importar()` inserts a new row with `origen='importado'` (badge in historial) instead of updating.
-- Invoices save a **snapshot** `tasa_cambio` at creation — later rate changes don't affect existing facturas. Products have `fuente_tasa` (source-type selector); price helpers use `ultimasPorTipo`/`mapaMontos`.
+- Invoices save a **snapshot** `tasa_cambio` at creation — later rate changes don't affect existing facturas. **Each presentation** (`producto_presentaciones.fuente_tasa`) carries its own source-type selector (default `promedio`, NOT NULL); `productos` no longer has the column (moved by migration `2026_08_14_000001`). Bs pricing per item uses the presentation's rate; POS USD totals still divide by the **reference** rate. Price helpers use `ultimasPorTipo`/`mapaMontos`; validation rule is `presentaciones.*.fuente_tasa` (required + exists). Import/export in Herramientas accepts both layouts: per-presentation `fuente_tasa` wins, falls back to legacy product-level key, else `promedio`.
 
 ## Créditos (facturas a crédito)
 

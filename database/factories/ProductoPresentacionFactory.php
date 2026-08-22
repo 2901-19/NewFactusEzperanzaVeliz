@@ -18,6 +18,7 @@ class ProductoPresentacionFactory extends Factory
             'factor_conversion' => 1,
             'margen' => fake()->randomElement([15, 20, 25, 30]),
             'precio_usd' => fake()->randomFloat(2, 0.5, 50),
+            'fuente_tasa' => 'promedio',
             'activa' => true,
         ];
     }

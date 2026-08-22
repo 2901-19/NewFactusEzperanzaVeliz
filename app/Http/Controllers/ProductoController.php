@@ -60,10 +60,14 @@ class ProductoController extends Controller
     public function edit(Producto $producto)
     {
         ['mapaTasas' => $mapaTasas, 'opcionesTasa' => $opcionesTasa] = $this->tasasParaVista();
-        if (! $opcionesTasa->has($producto->fuente_tasa) && $mapaTasas->has($producto->fuente_tasa)) {
-            $opcionesTasa->put($producto->fuente_tasa, $mapaTasas[$producto->fuente_tasa].' (inactiva)');
-        }
         $producto->load('presentaciones');
+
+        $producto->presentaciones->each(function ($presentacion) use ($mapaTasas, $opcionesTasa) {
+            if (! $opcionesTasa->has($presentacion->fuente_tasa) && $mapaTasas->has($presentacion->fuente_tasa)) {
+                $opcionesTasa->put($presentacion->fuente_tasa, $mapaTasas[$presentacion->fuente_tasa].' (inactiva)');
+            }
+        });
+
         $impuestos = Impuesto::orderBy('nombre')->get();
 
         return view('productos.edit', compact('producto', 'mapaTasas', 'opcionesTasa', 'impuestos'));
@@ -121,9 +125,9 @@ class ProductoController extends Controller
             'presentaciones.*.nombre' => 'required|string|max:100',
             'presentaciones.*.factor_conversion' => 'required|numeric|min:0.0001',
             'presentaciones.*.margen' => 'required|numeric|min:0',
+            'presentaciones.*.fuente_tasa' => ['required', Rule::exists('tasa_cambios', 'tipo')],
             'presentaciones.*.activa' => 'boolean',
             'impuesto_id' => 'nullable|exists:impuestos,id',
-            'fuente_tasa' => ['required', Rule::exists('tasa_cambios', 'tipo')],
             'estado' => 'required|in:disponible,no_disponible',
         ]);
     }
@@ -142,6 +146,7 @@ class ProductoController extends Controller
                 'nombre' => 'Kilogramo',
                 'factor_conversion' => 1,
                 'margen' => $margen,
+                'fuente_tasa' => $presentaciones[0]['fuente_tasa'] ?? 'promedio',
                 'precio_usd' => PrecioService::precioPresentacion($costoUsd, $margen, 1),
                 'activa' => true,
             ]];
@@ -155,6 +160,7 @@ class ProductoController extends Controller
                 'nombre' => $presentacion['nombre'],
                 'factor_conversion' => $factor,
                 'margen' => $margen,
+                'fuente_tasa' => $presentacion['fuente_tasa'],
                 'precio_usd' => PrecioService::precioPresentacion($costoUsd, $margen, $factor),
                 'activa' => $request->boolean("presentaciones.{$index}.activa"),
             ];
@@ -172,6 +178,7 @@ class ProductoController extends Controller
                 'nombre' => 'Kilogramo',
                 'factor_conversion' => 1,
                 'margen' => $margen,
+                'fuente_tasa' => $presentaciones[0]['fuente_tasa'] ?? 'promedio',
                 'precio_usd' => PrecioService::precioPresentacion($costoUsd, $margen, 1),
                 'activa' => true,
             ];
@@ -206,6 +213,7 @@ class ProductoController extends Controller
                 'nombre' => $presentacion['nombre'],
                 'factor_conversion' => $factor,
                 'margen' => $margen,
+                'fuente_tasa' => $presentacion['fuente_tasa'],
                 'precio_usd' => PrecioService::precioPresentacion($costoUsd, $margen, $factor),
                 'activa' => $request->boolean("presentaciones.{$index}.activa"),
             ];

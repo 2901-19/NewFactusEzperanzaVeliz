@@ -17,6 +17,7 @@ class ProductoPresentacion extends Model
         'nombre',
         'factor_conversion',
         'margen',
+        'fuente_tasa',
         'precio_usd',
         'activa',
     ];
@@ -33,8 +34,8 @@ class ProductoPresentacion extends Model
 
     private function obtenerTasa(): float
     {
-        return $this->producto?->fuente_tasa
-            ? (TasaCambioService::monto($this->producto->fuente_tasa) ?? 1)
+        return $this->fuente_tasa
+            ? (TasaCambioService::monto($this->fuente_tasa) ?? 1)
             : 1;
     }
 

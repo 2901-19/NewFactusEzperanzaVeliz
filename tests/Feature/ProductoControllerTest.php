@@ -64,17 +64,16 @@ class ProductoControllerTest extends TestCase
             'unidad_medida' => 'unidad',
             'stock_actual' => 5,
             'impuesto_id' => null,
-            'fuente_tasa' => 'promedio',
             'estado' => 'disponible',
             'presentaciones' => [
-                ['nombre' => 'Unidad', 'factor_conversion' => 1, 'margen' => 25, 'activa' => true],
+                ['nombre' => 'Unidad', 'factor_conversion' => 1, 'margen' => 25, 'fuente_tasa' => 'promedio', 'activa' => true],
             ],
         ]);
 
         $response->assertRedirect('/productos');
         $response->assertSessionHas('success');
         $this->assertDatabaseHas('productos', ['nombre' => 'Nuevo Producto', 'unidad_medida' => 'unidad']);
-        $this->assertDatabaseHas('producto_presentaciones', ['nombre' => 'Unidad', 'precio_usd' => 12.50]);
+        $this->assertDatabaseHas('producto_presentaciones', ['nombre' => 'Unidad', 'precio_usd' => 12.50, 'fuente_tasa' => 'promedio']);
     }
 
     public function test_store_crea_producto_pesable_sin_inventario()
@@ -89,10 +88,9 @@ class ProductoControllerTest extends TestCase
             'unidad_medida' => 'kg',
             'stock_actual' => 999,
             'impuesto_id' => null,
-            'fuente_tasa' => 'promedio',
             'estado' => 'disponible',
             'presentaciones' => [
-                ['nombre' => 'Kilogramo', 'factor_conversion' => 1, 'margen' => 30, 'activa' => true],
+                ['nombre' => 'Kilogramo', 'factor_conversion' => 1, 'margen' => 30, 'fuente_tasa' => 'promedio', 'activa' => true],
             ],
         ]);
 
@@ -124,10 +122,9 @@ class ProductoControllerTest extends TestCase
             'nombre' => 'Invalido',
             'costo_usd' => 5,
             'unidad_medida' => 'litro',
-            'fuente_tasa' => 'promedio',
             'estado' => 'disponible',
             'presentaciones' => [
-                ['nombre' => 'Unidad', 'factor_conversion' => 1, 'margen' => 0, 'activa' => true],
+                ['nombre' => 'Unidad', 'factor_conversion' => 1, 'margen' => 0, 'fuente_tasa' => 'promedio', 'activa' => true],
             ],
         ]);
 
@@ -140,7 +137,7 @@ class ProductoControllerTest extends TestCase
 
         $response = $this->post('/productos', []);
 
-        $response->assertSessionHasErrors(['nombre', 'costo_usd', 'unidad_medida', 'presentaciones', 'fuente_tasa', 'estado']);
+        $response->assertSessionHasErrors(['nombre', 'costo_usd', 'unidad_medida', 'presentaciones', 'estado']);
     }
 
     public function test_edit_muestra_formulario()
@@ -174,10 +171,9 @@ class ProductoControllerTest extends TestCase
             'unidad_medida' => 'unidad',
             'stock_actual' => $producto->stock_actual,
             'impuesto_id' => $producto->impuesto_id,
-            'fuente_tasa' => $producto->fuente_tasa,
             'estado' => $producto->estado,
             'presentaciones' => [
-                ['nombre' => 'Unidad', 'factor_conversion' => 1, 'margen' => 25, 'activa' => true],
+                ['nombre' => 'Unidad', 'factor_conversion' => 1, 'margen' => 25, 'fuente_tasa' => 'promedio', 'activa' => true],
             ],
         ]);
 
@@ -213,10 +209,9 @@ class ProductoControllerTest extends TestCase
             'unidad_medida' => 'kg',
             'stock_actual' => 999,
             'impuesto_id' => $producto->impuesto_id,
-            'fuente_tasa' => $producto->fuente_tasa,
             'estado' => $producto->estado,
             'presentaciones' => [
-                ['id' => $unidad->id, 'nombre' => 'Kilogramo', 'factor_conversion' => 1, 'margen' => 20, 'activa' => true],
+                ['id' => $unidad->id, 'nombre' => 'Kilogramo', 'factor_conversion' => 1, 'margen' => 20, 'fuente_tasa' => 'promedio', 'activa' => true],
             ],
         ]);
 

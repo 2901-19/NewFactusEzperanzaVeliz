@@ -42,12 +42,12 @@ class HerramientasController extends Controller
                 'nombre' => $p->nombre,
                 'costo_usd' => $p->costo_usd,
                 'impuesto' => $p->impuesto?->nombre,
-                'fuente_tasa' => $p->fuente_tasa,
                 'presentaciones' => $p->presentaciones->map(fn ($pr) => [
                     'nombre' => $pr->nombre,
                     'factor_conversion' => $pr->factor_conversion,
                     'margen' => $pr->margen,
                     'precio_usd' => $pr->precio_usd,
+                    'fuente_tasa' => $pr->fuente_tasa,
                     'activa' => $pr->activa,
                 ])->values(),
             ]);
@@ -137,6 +137,7 @@ class HerramientasController extends Controller
                                 $presentaciones = $this->presentacionesDesdeLegacy($item, $costoUsd);
                             }
 
+                            // Retrocompatibilidad: la tasa vivía a nivel de producto
                             $datosPresentaciones = collect($presentaciones)->map(fn ($pr) => [
                                 'nombre' => $pr['nombre'] ?? 'Unidad',
                                 'factor_conversion' => (float) ($pr['factor_conversion'] ?? 1),
@@ -146,6 +147,7 @@ class HerramientasController extends Controller
                                     (float) ($pr['margen'] ?? 0),
                                     (float) ($pr['factor_conversion'] ?? 1)
                                 ),
+                                'fuente_tasa' => $pr['fuente_tasa'] ?? ($item['fuente_tasa'] ?? 'promedio'),
                                 'activa' => (bool) ($pr['activa'] ?? true),
                             ])->values()->all();
 
@@ -157,7 +159,6 @@ class HerramientasController extends Controller
                                 $producto->update([
                                     'costo_usd' => $costoUsd,
                                     'impuesto_id' => $impuestoId,
-                                    'fuente_tasa' => $item['fuente_tasa'] ?? $producto->fuente_tasa,
                                     'estado' => $estadoImportado,
                                 ]);
                                 $producto->presentaciones()->delete();
@@ -167,7 +168,6 @@ class HerramientasController extends Controller
                                     'nombre' => $item['nombre'],
                                     'costo_usd' => $costoUsd,
                                     'impuesto_id' => $impuestoId,
-                                    'fuente_tasa' => $item['fuente_tasa'] ?? 'promedio',
                                     'estado' => $estadoImportado,
                                 ]);
                                 $producto->presentaciones()->createMany($datosPresentaciones);
@@ -192,13 +192,13 @@ class HerramientasController extends Controller
                                     'estado' => 'no_disponible',
                                     'costo_usd' => 0,
                                     'impuesto_id' => null,
-                                    'fuente_tasa' => 'promedio',
                                 ]);
                                 $producto->presentaciones()->create([
                                     'nombre' => $esPesable ? 'Kilogramo' : 'Unidad',
                                     'factor_conversion' => 1,
                                     'margen' => 0,
                                     'precio_usd' => 0,
+                                    'fuente_tasa' => 'promedio',
                                     'activa' => true,
                                 ]);
                                 $contadores['inventario']++;
@@ -274,15 +274,18 @@ class HerramientasController extends Controller
                             $costoUsd = (float) ($item['costo_usd'] ?? 0);
                             $unidad = $this->normalizarUnidadMedida($item['unidad_medida'] ?? 'unidad');
                             $esPesable = $unidad === 'kg';
+                            // Retrocompatibilidad: en el formato antiguo la tasa era del producto
+                            $fuenteTasa = $item['fuente_tasa'] ?? 'promedio';
                             $presentaciones = $esPesable
                                 ? [[
                                     'nombre' => 'Kilogramo',
                                     'factor_conversion' => 1,
                                     'margen' => 0,
                                     'precio_usd' => PrecioService::precioPresentacion($costoUsd, 0, 1),
+                                    'fuente_tasa' => $fuenteTasa,
                                     'activa' => true,
                                 ]]
-                                : $this->presentacionesDesdeLegacy($item, $costoUsd);
+                                : $this->presentacionesDesdeLegacy($item, $costoUsd, $fuenteTasa);
                             $estadoImportado = collect($presentaciones)->contains(fn ($pr) => $pr['precio_usd'] > 0) ? 'disponible' : 'no_disponible';
 
                             $producto = Producto::create([
@@ -294,7 +297,6 @@ class HerramientasController extends Controller
                                 'stock_actual' => $esPesable ? 0 : (float) ($item['stock_actual'] ?? 0),
                                 'unidad_medida' => $unidad,
                                 'impuesto_id' => $item['impuesto_id'] ?? null,
-                                'fuente_tasa' => $item['fuente_tasa'] ?? 'promedio',
                                 'estado' => $estadoImportado,
                             ]);
                             $producto->presentaciones()->createMany($presentaciones);
@@ -462,13 +464,13 @@ class HerramientasController extends Controller
                 'nombre' => $p->nombre,
                 'costo_usd' => $p->costo_usd,
                 'impuesto' => $p->impuesto?->nombre,
-                'fuente_tasa' => $p->fuente_tasa,
                 'presentaciones' => $p->presentaciones->map(fn ($pr) => [
                     'nombre' => $pr->nombre,
                     'factor_conversion' => $pr->factor_conversion,
                     'margen' => $pr->margen,
                     'precio_usd' => $pr->precio_usd,
-                    'precio_bs' => round($pr->precio_usd * ($tasas[$p->fuente_tasa] ?? 1), 2),
+                    'fuente_tasa' => $pr->fuente_tasa,
+                    'precio_bs' => round($pr->precio_usd * ($tasas[$pr->fuente_tasa] ?? 1), 2),
                     'activa' => $pr->activa,
                 ])->values(),
             ]);
@@ -549,7 +551,7 @@ class HerramientasController extends Controller
      * (margen_detal/mayor, precio_unitario_usd/precio_mayor_usd). Coherente
      * con el esquema unificado de presentaciones.
      */
-    private function presentacionesDesdeLegacy(array $item, float $costoUsd): array
+    private function presentacionesDesdeLegacy(array $item, float $costoUsd, ?string $fuenteTasa = null): array
     {
         $margenDetal = $item['margen_detal'] ?? null;
         if ($margenDetal === null) {
@@ -562,6 +564,7 @@ class HerramientasController extends Controller
             'factor_conversion' => 1,
             'margen' => (float) $margenDetal,
             'precio_usd' => PrecioService::precioPresentacion($costoUsd, (float) $margenDetal, 1),
+            'fuente_tasa' => $fuenteTasa ?? 'promedio',
             'activa' => true,
         ]];
 
@@ -572,6 +575,7 @@ class HerramientasController extends Controller
                 'factor_conversion' => 1,
                 'margen' => (float) ($item['margen_mayor'] ?? 0),
                 'precio_usd' => $precioMayor,
+                'fuente_tasa' => $fuenteTasa ?? 'promedio',
                 'activa' => true,
             ];
         }

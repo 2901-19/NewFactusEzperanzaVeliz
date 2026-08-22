@@ -57,10 +57,7 @@ class FacturaController extends Controller
         $productos = Producto::where('estado', 'disponible')->whereNull('deleted_at')->with(['presentaciones', 'impuesto'])->get();
         $tasas = TasaCambio::ultimasPorTipo();
 
-        $productos->each(function ($producto) use ($tasas) {
-            $producto->setAttribute('tasa_ok', $tasas->has($producto->fuente_tasa)
-                && (float) $tasas[$producto->fuente_tasa]->monto > 0);
-
+        $productos->each(function ($producto) {
             $producto->setAttribute('presentaciones', $producto->presentaciones
                 ->filter(fn ($pr) => $pr->activa)
                 ->values()
@@ -70,6 +67,7 @@ class FacturaController extends Controller
                     'factor_conversion' => (float) $pr->factor_conversion,
                     'margen' => (float) $pr->margen,
                     'precio_usd' => (float) $pr->precio_usd,
+                    'fuente_tasa' => $pr->fuente_tasa,
                 ]));
         });
 
@@ -144,7 +142,7 @@ class FacturaController extends Controller
                     throw new \Exception("El producto {$producto->nombre} no tiene precio configurado.");
                 }
 
-                $tasa = TasaCambioService::montoOException($producto->fuente_tasa);
+                $tasa = TasaCambioService::montoOException($presentacion->fuente_tasa);
                 $precioBs = $precioUsd * $tasa;
                 $subtotalItemBs = round($precioBs * $cantidad, 2);
 

@@ -26,15 +26,15 @@
         <tbody>
             @foreach ($productos as $p)
             @foreach ($p->presentaciones->where('activa', true) as $pr)
-            @php $tasaDisponible = $tasas->has($p->fuente_tasa); @endphp
+            @php $tasaDisponible = $tasas->has($pr->fuente_tasa); @endphp
             <tr>
                 <td class="text-start">{{ $p->nombre }}</td>
                 <td>{{ $pr->nombre }}</td>
                 <td>
                     @if ($tasaDisponible)
-                        Bs {{ number_format($pr->precio_usd * $tasas[$p->fuente_tasa], 2) }}
+                        Bs {{ number_format($pr->precio_usd * $tasas[$pr->fuente_tasa], 2) }}
                     @else
-                        <span class="badge bg-danger" title="Configure la tasa '{{ $p->fuente_tasa }}' en Tasas de Cambio">Sin tasa</span>
+                        <span class="badge bg-danger" title="Configure la tasa '{{ $pr->fuente_tasa }}' en Tasas de Cambio">Sin tasa</span>
                     @endif
                 </td>
                 <td>${{ number_format($pr->precio_usd, 2) }}</td>

@@ -34,7 +34,6 @@
         </thead>
         <tbody>
             @foreach ($productos as $p)
-            @php $tasaDisponible = $tasas->has($p->fuente_tasa); @endphp
             <tr class="{{ $p->trashed() ? 'table-secondary text-muted' : '' }}">
                 <td class="text-start">{{ $p->nombre }}</td>
                 <td>
@@ -55,13 +54,14 @@
                 <td>
                     @forelse ($p->presentaciones as $pres)
                         @if ($pres->activa)
+                        @php $tasaPres = $tasas->get($pres->fuente_tasa); @endphp
                         <div class="small text-nowrap">
                             {{ $pres->nombre }}:
-                            @if ($tasaDisponible)
-                                <span class="fw-bold">Bs {{ number_format($pres->precio_usd * $tasas[$p->fuente_tasa], 2) }}</span>
+                            @if ($tasaPres)
+                                <span class="fw-bold">Bs {{ number_format($pres->precio_usd * $tasaPres, 2) }}</span>
                                 <small class="text-muted">(${{ number_format($pres->precio_usd, 2) }})</small>
                             @else
-                                <span class="badge bg-danger" title="Configure la tasa '{{ $p->fuente_tasa }}' en Tasas de Cambio">Sin tasa</span>
+                                <span class="badge bg-danger" title="Configure la tasa '{{ $pres->fuente_tasa }}' en Tasas de Cambio">Sin tasa</span>
                             @endif
                         </div>
                         @endif

@@ -65,7 +65,6 @@ class FacturaControllerTest extends TestCase
             'stock_actual' => 125,
             'unidad_medida' => 'unidad',
             'impuesto_id' => $this->iva->id,
-            'fuente_tasa' => 'promedio',
             'estado' => 'disponible',
         ]);
         $this->presentacionUnidad = ProductoPresentacion::factory()->create([
@@ -74,6 +73,7 @@ class FacturaControllerTest extends TestCase
             'factor_conversion' => 1,
             'margen' => 0,
             'precio_usd' => 10.00,
+            'fuente_tasa' => 'promedio',
             'activa' => true,
         ]);
         $this->presentacionMayor = ProductoPresentacion::factory()->create([
@@ -82,6 +82,7 @@ class FacturaControllerTest extends TestCase
             'factor_conversion' => 12,
             'margen' => 0,
             'precio_usd' => 96.00,
+            'fuente_tasa' => 'promedio',
             'activa' => true,
         ]);
         $this->tasa = TasaCambio::factory()->create([
@@ -145,7 +146,6 @@ class FacturaControllerTest extends TestCase
             'costo_usd' => 5.00,
             'stock_actual' => 10,
             'unidad_medida' => 'unidad',
-            'fuente_tasa' => 'paralelo',
             'estado' => 'disponible',
         ]);
         ProductoPresentacion::factory()->create([
@@ -154,6 +154,7 @@ class FacturaControllerTest extends TestCase
             'factor_conversion' => 1,
             'margen' => 0,
             'precio_usd' => 5.00,
+            'fuente_tasa' => 'paralelo',
             'activa' => true,
         ]);
         $this->actingAs($this->cajero);
@@ -164,7 +165,7 @@ class FacturaControllerTest extends TestCase
         $response->assertSee('Producto Sin Tasa');
         $response->assertSee('Sin tasa');
         $response->assertDontSee('Bs 5.00');
-        $response->assertSee('"tasa_ok":false', false);
+        $response->assertSee('"fuente_tasa":"paralelo"', false);
     }
 
     public function test_store_crea_factura_contado()
@@ -207,7 +208,6 @@ class FacturaControllerTest extends TestCase
             'costo_usd' => 4.00,
             'stock_actual' => 0,
             'unidad_medida' => 'kg',
-            'fuente_tasa' => 'promedio',
             'estado' => 'disponible',
         ]);
         $presentacionKg = ProductoPresentacion::factory()->create([
@@ -265,6 +265,31 @@ class FacturaControllerTest extends TestCase
         $this->assertEquals($this->presentacionMayor->id, $item->presentacion_id);
         $this->assertEquals('Mayor', $item->presentacion_nombre);
         $this->assertEquals(96.00, (float) $item->precio_unitario_usd);
+    }
+
+    public function test_store_usa_la_tasa_de_cada_presentacion()
+    {
+        TasaCambio::factory()->create(['tipo' => 'bcv', 'monto' => 40.00, 'fecha' => '2026-07-04']);
+        Configuracion::updateOrCreate(['clave' => 'tasa_referencia'], ['valor' => 'promedio']);
+        $this->presentacionUnidad->update(['fuente_tasa' => 'bcv']);
+        $this->actingAs($this->cajero);
+
+        $response = $this->postJson('/facturas', [
+            'cliente_id' => $this->cliente->id,
+            'metodo_pago' => 'efectivo',
+            'estado' => 'contado',
+            'items' => [$this->crearItemData()],
+        ]);
+
+        $response->assertJson(['success' => true]);
+
+        // El precio en Bs usa la tasa de la presentación (bcv = 40), pero el
+        // total USD sigue calculándose con la tasa de referencia (promedio = 50).
+        $factura = Factura::first();
+        $item = $factura->items->first();
+        $this->assertEquals(400.0, (float) $factura->subtotal_bs);
+        $this->assertEquals(10.00, (float) $item->precio_unitario_usd);
+        $this->assertEquals(9.28, (float) $factura->total_usd);
     }
 
     public function test_store_calcula_total_usd_y_tasa_a_tasa_bcv()

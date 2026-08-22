@@ -43,7 +43,6 @@ class ReporteControllerTest extends TestCase
             'stock_actual' => 125,
             'unidad_medida' => 'unidad',
             'impuesto_id' => null,
-            'fuente_tasa' => 'promedio',
             'estado' => 'disponible',
         ]);
         $this->presentacionUnidad = ProductoPresentacion::factory()->create([

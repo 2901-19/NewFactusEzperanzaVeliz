@@ -20,7 +20,6 @@ class ProductoFactory extends Factory
             'stock_actual' => fake()->randomFloat(3, 0, 100),
             'unidad_medida' => 'unidad',
             'impuesto_id' => Impuesto::factory(),
-            'fuente_tasa' => fake()->randomElement(['promedio', 'dolar', 'bcv']),
             'estado' => 'disponible',
         ];
     }

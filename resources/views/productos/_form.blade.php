@@ -1,7 +1,7 @@
 @php
-    $presentacionesIniciales = old('presentaciones', $producto?->presentaciones ?? [['nombre' => 'Unidad', 'factor_conversion' => 1, 'margen' => 0, 'activa' => true]]);
+    $tasaPorDefecto = $opcionesTasa->keys()->first() ?? 'promedio';
+    $presentacionesIniciales = old('presentaciones', $producto?->presentaciones ?? [['nombre' => 'Unidad', 'factor_conversion' => 1, 'margen' => 0, 'fuente_tasa' => $tasaPorDefecto, 'activa' => true]]);
     $costoUsdInicial = old('costo_usd', $producto?->costo_usd ?? 0);
-    $fuenteTasaInicial = old('fuente_tasa', $producto?->fuente_tasa ?? $opcionesTasa->keys()->first() ?? 'promedio');
     $unidadMedidaInicial = old('unidad_medida', $producto?->unidad_medida ?? 'unidad');
     $stockInicial = old('stock_actual', $producto?->stock_actual ?? 0);
     $tieneImagen = ! empty($producto?->imagen);
@@ -10,7 +10,7 @@
     window.__productoForm = {
         mapaTasas: @json($mapaTasas),
         presentaciones: @json($presentacionesIniciales),
-        fuenteTasa: @json($fuenteTasaInicial),
+        tasaPorDefecto: @json($tasaPorDefecto),
         unidadMedida: @json($unidadMedidaInicial),
     };
 </script>
@@ -68,7 +68,7 @@
     {{ $costoUsdInicial }},
     window.__productoForm.presentaciones,
     window.__productoForm.mapaTasas,
-    window.__productoForm.fuenteTasa,
+    window.__productoForm.tasaPorDefecto,
     window.__productoForm.unidadMedida,
     {{ $stockInicial }}
 )">
@@ -97,16 +97,6 @@
                         </div>
                     </div>
                     @error('costo_usd') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Tasa del producto</label>
-                    <select name="fuente_tasa" x-model="fuenteTasa" class="form-select">
-                        @forelse ($opcionesTasa as $tipo => $nombre)
-                            <option value="{{ $tipo }}" {{ old('fuente_tasa', $producto?->fuente_tasa ?? $opcionesTasa->keys()->first() ?? '') == $tipo ? 'selected' : '' }}>{{ $nombre }}</option>
-                        @empty
-                            <option value="" disabled>No hay tasas activas. Créalas en Tasas de Cambio.</option>
-                        @endforelse
-                    </select>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Impuesto</label>
@@ -150,12 +140,13 @@
                     <table class="table table-sm align-middle">
                         <thead class="table-light">
                             <tr>
-                                <th class="text-start" style="width:24%">Presentación</th>
-                                <th class="text-center" style="width:110px">Unidades</th>
-                                <th class="text-center" style="width:110px">Margen (%)</th>
-                                <th class="text-end" style="width:110px">Precio USD</th>
-                                <th class="text-end" style="width:130px">Precio Bs</th>
-                                <th class="text-center text-nowrap" style="width:140px">Acciones</th>
+                                <th class="text-start" style="width:22%">Presentación</th>
+                                <th class="text-center" style="width:100px">Unidades</th>
+                                <th class="text-center" style="width:100px">Margen (%)</th>
+                                <th class="text-center" style="width:150px">Tipo de tasa</th>
+                                <th class="text-end" style="width:100px">Precio USD</th>
+                                <th class="text-end" style="width:120px">Precio Bs</th>
+                                <th class="text-center text-nowrap" style="width:130px">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -171,11 +162,20 @@
                                     <td>
                                         <input type="number" step="0.01" min="0" class="form-control text-center" :name="'presentaciones[' + i + '][margen]'" x-model.number="pres.margen" required>
                                     </td>
+                                    <td>
+                                        <select class="form-select form-select-sm" :name="'presentaciones[' + i + '][fuente_tasa]'" x-model="pres.fuente_tasa">
+                                            @forelse ($opcionesTasa as $tipo => $nombre)
+                                                <option value="{{ $tipo }}">{{ $nombre }}</option>
+                                            @empty
+                                                <option value="" disabled>No hay tasas activas</option>
+                                            @endforelse
+                                        </select>
+                                    </td>
                                     <td class="text-end">
                                         <span class="fw-bold" x-text="'$' + precioPor(i).toFixed(2)"></span>
                                     </td>
                                     <td class="text-end">
-                                        <span class="fw-bold" x-text="'Bs ' + (precioPor(i) * (tasaActual() || 1)).toFixed(2)"></span>
+                                        <span class="fw-bold" x-text="'Bs ' + (precioPor(i) * (tasaDe(pres.fuente_tasa) || 1)).toFixed(2)"></span>
                                     </td>
                                     <td class="text-center text-nowrap">
                                         <div class="d-inline-flex align-items-center gap-2">
@@ -203,16 +203,26 @@
         <template x-if="medida === 'kg'">
             <div>
                 <div class="row g-3 align-items-end">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label">Presentación</label>
                         <input type="text" class="form-control" value="Kilogramo" disabled>
                         <input type="hidden" name="presentaciones[0][nombre]" value="Kilogramo">
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label">Margen (%)</label>
                         <input type="number" step="0.01" min="0" class="form-control" name="presentaciones[0][margen]" x-model.number="presentaciones[0].margen" required>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
+                        <label class="form-label">Tipo de tasa</label>
+                        <select class="form-select" name="presentaciones[0][fuente_tasa]" x-model="presentaciones[0].fuente_tasa">
+                            @forelse ($opcionesTasa as $tipo => $nombre)
+                                <option value="{{ $tipo }}">{{ $nombre }}</option>
+                            @empty
+                                <option value="" disabled>No hay tasas activas</option>
+                            @endforelse
+                        </select>
+                    </div>
+                    <div class="col-md-3">
                         <label class="form-label text-muted">Precio por kilo</label>
                         <div class="fw-bold" x-text="'$ ' + precioKiloUsd.toFixed(2) + ' / Bs ' + precioKiloBs.toFixed(2)"></div>
                     </div>
@@ -228,20 +238,22 @@
 
 @push('scripts')
 <script>
-    function productoForm(costoUsd, presentaciones, tasas, fuenteTasa, medida, stockActual) {
+    function productoForm(costoUsd, presentaciones, tasas, tasaPorDefecto, medida, stockActual) {
+        const filas = (presentaciones && presentaciones.length ? presentaciones : [{ nombre: 'Unidad', factor_conversion: 1, margen: 0, activa: true }])
+            .map(p => ({ fuente_tasa: tasaPorDefecto, ...p }));
         return {
             costoUsd: parseFloat(costoUsd) || 0,
             costoModo: 'unidad',
             uniLote: '',
             precioLote: '',
             tasas: tasas || {},
-            fuenteTasa: fuenteTasa || (Object.keys(tasas || {})[0] || ''),
+            tasaPorDefecto: tasaPorDefecto || (Object.keys(tasas || {})[0] || ''),
             medida: medida || 'unidad',
             stockActual: parseFloat(stockActual) || 0,
-            presentaciones: (presentaciones && presentaciones.length ? presentaciones : [{ nombre: 'Unidad', factor_conversion: 1, margen: 0, activa: true }]),
+            presentaciones: filas,
             get esPesable() { return this.medida === 'kg'; },
-            tasaActual() {
-                return parseFloat(this.tasas[this.fuenteTasa] || 0) || 0;
+            tasaDe(tipo) {
+                return parseFloat(this.tasas[tipo] || 0) || 0;
             },
             cambiarModo(modo) {
                 this.costoModo = modo;
@@ -250,7 +262,7 @@
                 this.costoUsd = this.uniLote > 0 ? (parseFloat(this.precioLote) || 0) / this.uniLote : 0;
             },
             agregar() {
-                this.presentaciones.push({ nombre: '', factor_conversion: 1, margen: 0, activa: true });
+                this.presentaciones.push({ nombre: '', factor_conversion: 1, margen: 0, fuente_tasa: this.tasaPorDefecto, activa: true });
             },
             quitar(i) {
                 if (this.presentaciones.length <= 1) return;
@@ -268,7 +280,7 @@
                 return this.precioPor(0);
             },
             get precioKiloBs() {
-                return this.precioKiloUsd * (this.tasaActual() || 1);
+                return this.precioKiloUsd * (this.tasaDe(this.presentaciones[0]?.fuente_tasa) || 1);
             },
         };
     }

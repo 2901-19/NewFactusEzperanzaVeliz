@@ -22,6 +22,10 @@
                     <tbody>
                         @foreach ($productos as $p)
                         @forelse ($p->presentaciones as $pr)
+                        @php
+                            $tasaFila = $tasas->get($pr['fuente_tasa']);
+                            $filaOk = $tasaFila && (float) $tasaFila->monto > 0;
+                        @endphp
                         <tr>
                             <td class="text-start">{{ $p->nombre }}</td>
                             <td>
@@ -33,21 +37,21 @@
                             </td>
                             <td class="text-start">{{ $pr['nombre'] }}</td>
                             <td class="small text-nowrap">
-                                @if ($p->tasa_ok)
-                                    <strong>Bs {{ number_format($pr['precio_usd'] * $tasas[$p->fuente_tasa]->monto, 2) }}</strong>
+                                @if ($filaOk)
+                                    <strong>Bs {{ number_format($pr['precio_usd'] * $tasaFila->monto, 2) }}</strong>
                                     <small class="text-muted">
                                         @if ($tasaReferenciaMonto)
-                                            (${{ number_format($pr['precio_usd'] * $tasas[$p->fuente_tasa]->monto / $tasaReferenciaMonto, 2) }})
+                                            (${{ number_format($pr['precio_usd'] * $tasaFila->monto / $tasaReferenciaMonto, 2) }})
                                         @else
                                             (${{ number_format($pr['precio_usd'], 2) }})
                                         @endif
                                     </small>
                                 @else
-                                    <span class="badge bg-danger" title="Configure la tasa '{{ $p->fuente_tasa }}' en Tasas de Cambio para poder vender este producto">Sin tasa</span>
+                                    <span class="badge bg-danger" title="Configure la tasa '{{ $pr['fuente_tasa'] }}' en Tasas de Cambio para poder vender este producto">Sin tasa</span>
                                 @endif
                             </td>
                             <td class="text-center">
-                                <button class="btn btn-sm btn-outline-primary agregar-producto" data-id="{{ $p->id }}" data-presentacion="{{ $pr['id'] }}" title="Agregar al carrito" @disabled(! $p->tasa_ok)>
+                                <button class="btn btn-sm btn-outline-primary agregar-producto" data-id="{{ $p->id }}" data-presentacion="{{ $pr['id'] }}" title="Agregar al carrito" @disabled(! $filaOk)>
                                     <i class="bi bi-cart-plus"></i>
                                 </button>
                             </td>
@@ -421,10 +425,6 @@ document.addEventListener('alpine:init', () => {
         },
 
         agregar(p, presId) {
-            if (!p.tasa_ok) {
-                this.mostrarError('El producto ' + p.nombre + ' no tiene tasa de cambio configurada. Actualícela en Tasas de Cambio.');
-                return;
-            }
             const presentaciones = p.presentaciones || [];
             if (!presentaciones.length) {
                 this.mostrarError('Este producto no tiene presentaciones activas.');
@@ -432,6 +432,12 @@ document.addEventListener('alpine:init', () => {
             }
             if (!presentaciones.some(pr => pr.id === presId)) {
                 presId = presentaciones[0].id;
+            }
+            const prSel = presentaciones.find(pr => pr.id === presId);
+            const tasaFila = this.tasas[prSel.fuente_tasa];
+            if (!tasaFila || !(parseFloat(tasaFila.monto) > 0)) {
+                this.mostrarError('La presentación "' + prSel.nombre + '" de ' + p.nombre + ' no tiene tasa de cambio configurada. Actualícela en Tasas de Cambio.');
+                return;
             }
             if (!this.hayStockPara(p, presId)) {
                 const pr = presentaciones.find(pr => pr.id === presId);
@@ -457,7 +463,7 @@ document.addEventListener('alpine:init', () => {
                     presentaciones,
                     presentacion_id: presId,
                     impuesto: p.impuesto || null,
-                    fuente_tasa: p.fuente_tasa,
+                    fuente_tasa: prSel.fuente_tasa,
                 });
             }
         },
